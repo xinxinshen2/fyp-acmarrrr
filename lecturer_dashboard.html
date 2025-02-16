@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="dumbbell.png" type="image/icon type">
+    <title>Lecturer Dashboard</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            display: flex;
+            height: 100vh;
+            background-color: #f0f2f5;
+            color: #333;
+        }
+
+        .sidebar {
+            width: 250px;
+            background-color: #fff;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+
+        .sidebar .profile {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .sidebar .profile img {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            margin-bottom: 10px;
+        }
+
+        .sidebar .menu {
+            list-style: none;
+        }
+
+        .sidebar .menu li {
+            margin: 20px 0;
+        }
+
+        .sidebar .menu a {
+            text-decoration: none;
+            color: #333;
+            font-weight: bold;
+        }
+
+        .content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .card {
+            background-color: #fff;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .card h2 {
+            margin-bottom: 10px;
+        }
+
+        .statistics, .leave-info {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .statistics div, .leave-info div {
+            width: 48%;
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+    </style>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-app.js";
+        import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-auth.js";
+        import { getFirestore, collection, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "REMOVED",
+            authDomain: "advanceas-d8db4.firebaseapp.com",
+            databaseURL: "https://advanceas-d8db4-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "advanceas-d8db4",
+            storageBucket: "advanceas-d8db4.firebasestorage.app",
+            messagingSenderId: "878892786344",
+            appId: "1:878892786344:web:33bb5a97d99daf049d189d",
+            measurementId: "G-PLRRKT6RWW"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        async function loadLecturerName() {
+            const lectureID = sessionStorage.getItem('lectureID');
+            console.log("Lecture ID from session:", lectureID); // Debugging line
+            if (!lectureID) {
+                console.error("Lecture ID not found in session.");
+                window.location.href = 'login.html'; // Redirect to login if lectureID is not found
+                return;
+            }
+
+            const lecturerRef = doc(db, "lecturer", lectureID);
+            const lecturerDoc = await getDoc(lecturerRef);
+
+            if (lecturerDoc.exists()) {
+                const lecturerData = lecturerDoc.data();
+                console.log("Lecturer data retrieved:", lecturerData); // Debugging line
+                document.getElementById('lecturerName').textContent = lecturerData.name;
+            } else {
+                console.error("No such document!");
+            }
+        }
+
+        window.onload = function() {
+            loadLecturerName();
+        };
+
+        window.logout = function() {
+            signOut(auth).then(() => {
+                window.location.href = 'login.html';
+            }).catch((error) => {
+                console.error("Logout error:", error);
+            });
+        };
+    </script>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="profile">
+            <img src="profile.png" alt="Profile Picture">
+            <p>Welcome, <span id="lecturerName"></span></p>
+        </div>
+        <ul class="menu">
+            <li><a href="#">Home</a></li>
+            <li><a href="#">Calendar</a></li>
+            <li><a href="#">Statistics</a></li>
+            <li><a href="attendance.html">Mark Attendance</a></li>
+            <li><a href="#">Account Settings</a></li>
+            <li><a href="#" onclick="logout()">Logout</a></li>
+        </ul>
+    </div>
+
+    <div class="content">
+        <div class="card">
+            <h2>My Statistics</h2>
+            <div class="statistics">
+                <div>
+                    <h3>Attendance Rate</h3>
+                    <p>85%</p>
+                </div>
+                <div>
+                    <h3>Leave Requests</h3>
+                    <p>5 Pending</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Leave Information</h2>
+            <div class="leave-info">
+                <div>
+                    <h3>Approved Leaves</h3>
+                    <p>10</p>
+                </div>
+                <div>
+                    <h3>Rejected Leaves</h3>
+                    <p>2</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
