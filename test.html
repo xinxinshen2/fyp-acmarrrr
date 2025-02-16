@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Firebase 数据展示</title>
+</head>
+<body>
+  <div id="data-container"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyAwfjKWy2tWrppcsdOGphrhkaj8Bp2fCgo",
+      authDomain: "advanceas-d8db4.firebaseapp.com",
+      projectId: "advanceas-d8db4",
+      storageBucket: "advanceas-d8db4.firebasestorage.app",
+      messagingSenderId: "878892786344",
+      appId: "1:878892786344:web:33bb5a97d99daf049d189d",
+      measurementId: "G-PLRRKT6RWW"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    const dataContainer = document.getElementById("data-container");
+
+    let allDataString = "";
+
+    db.collection("course").get().then((coursesSnapshot) => {
+      coursesSnapshot.forEach((courseDoc) => {
+        const courseId = courseDoc.id;
+
+        db.collection("course").doc(courseId).collection("subject").get().then((subjectsSnapshot) => {
+          subjectsSnapshot.forEach((subjectDoc) => {
+            const subjectId = subjectDoc.id;
+            const subjectData = subjectDoc.data();
+            const subjectName = subjectData.name;
+
+            allDataString += `${courseId}+${subjectId}+${subjectName}<br>`;
+          });
+
+          dataContainer.innerHTML = allDataString;
+        });
+      });
+    });
+  </script>
+</body>
+</html>
