@@ -138,6 +138,10 @@
                 console.error("Logout error:", error);
             });
         };
+
+        if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+            window.location.href = 'mobile_attendance.html';
+        }
     </script>
 </head>
 <body>
