@@ -5,8 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" href="dumbbell.png" type="image/icon type">
     <title>Advanced Attendance System-Login</title>
-
-    <style>
+        <!-- <script src="cannotView.js"></script> -->
+    <link rel="stylesheet" href="login.css">
+    <!-- <style>
         * {
             margin: 0;
             padding: 0;
@@ -16,6 +17,7 @@
 
         body {
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             height: 100vh;
@@ -23,6 +25,7 @@
             background-size: cover;
             position: relative;
         }
+
 
         a {
             text-decoration: none;
@@ -49,9 +52,9 @@
             color: #fff;
         }
 
-        .admin-link {
+        .about-us {
             position: absolute;
-            top: 35px;
+            top: 3%;     
             right: 20px;
             font-size: 16px;
             font-weight: bold;
@@ -114,11 +117,16 @@
             padding: 10px;
             /* background-color: #333; */
             color: white;
-            border: none;
-            border-radius: 8px;
+            /* border: none; */
+            /* border-radius: 8px; */
             cursor: pointer;
             transition: background-color 0.3s ease;
             animation: buttonHover 5s ease infinite;
+            /* background-color: rgba(255, 255, 255, 0.5);  */
+            backdrop-filter: blur(10px); 
+            border-radius: 15px; 
+            border: 1px solid rgba(255, 255, 255, 0.3); 
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); 
         }
 
         @keyframes buttonHover {
@@ -161,9 +169,79 @@
             display: none; /* Initially hidden */
             margin-top: 10px; /* Spacing */
         }
-    </style>
 
-    <script type="module">
+        .tutorial-tips {
+            font-size: 14px;
+            color: #555;
+            text-align: center;
+            padding: 10px;
+            opacity: 0; /* Start fully transparent */
+            transition: opacity 1s ease-in-out; /* Smooth transition */
+        }
+
+        @media (max-width: 768px) {
+        
+    .container {
+        max-width: 90%;
+        padding: 30px;
+    }
+
+    .container > h1 {
+        font-size: 200%;
+    }
+
+    .input-login-container input,
+    .password-container {
+        width: 80%; 
+    }
+
+    .password-container input {
+        width: 100%;
+    }
+
+    .button input {
+        width: 70%;
+    }
+
+    .tutorial-tips {
+        font-size: 13px;
+        padding: 8px;
+    }
+}
+
+
+/*  phone（ 480px） */
+@media (max-width: 480px) {
+
+    .title{
+        font-size: 120%;
+    }
+
+    .container {
+        max-width: 95%;
+        padding: 20px;
+    }
+
+    .container > h1 {
+        font-size: 180%;
+    }
+
+    .tutorial-tips {
+        font-size: 12px;
+        padding: 5px;
+    }
+
+    .button input {
+        width: 90%; 
+    }
+}
+       
+    </style> -->
+    
+    <script type="module" src="login-Firebase.js"></script>
+    <!-- <script type="module">
+
+                
         // Import the functions you need from the SDKs you need
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-auth.js";
@@ -216,54 +294,86 @@
 
                     // 根据角色跳转到不同的页面
                     if (userData.role === 'student') {
-                        window.location.href = 'student_dashboard.html';//改自己student的啊啊啊
-                        sessionStorage.setItem('studentID', userData.ID)
+                        window.location.href = 'student_dashboard.html';
                     } else if (userData.role === 'lecturer') {
-                        sessionStorage.setItem('lectureID', userData.ID);
                         window.location.href = 'lecturer_dashboard.html';
-                    } else {
-                        messageDiv.textContent = "未知角色";
+                    } else if (userData.role === "admin"){
+                            window.location.href = 'admin_dashboard.html';
+                    }else {
+                        messageDiv.textContent = "unknown user";
+                        messageDiv.style.color = "red";
+
                     }
                 } else {
-                    messageDiv.textContent = "登录成功，但用户数据不存在";
+                    messageDiv.textContent = "Login successfull, but no data exist.";
+                    messageDiv.style.color = "yellow";
                 }
                 
             } catch (error) {
-                console.error("登录错误:", error);
-                messageDiv.textContent = "账户或密码错误";
+                    console.error("Login error:", error);
+                    const email = document.getElementById("email").value.trim();
+                    const password = document.getElementById("password").value.trim();
+                    const messageDiv = document.getElementById("message");
+
+                    if(email === "" && password ===""){
+                        messageDiv.textContent = "Email and password cannot be empty"
+                    }
+
+                    else if (email === "") {
+                       messageDiv.textContent = "Email cannot be empty";
+                     } else if (password === "") {
+                        messageDiv.textContent = "Password cannot be empty";
+                     } else {
+                         messageDiv.textContent = "Wrong email or password";
+                     }
+                 messageDiv.style.color = "red";
             }
+
         }
-    </script>
+    </script> -->
+
 </head>
 <body>
     <div class="logo-title-container">
         <p class="title">Advanced Attendance System</p>
     </div>
-
-    <a class="admin-link" href="admin.html">Admin Login</a>
+    <!-- void(x): x can be any data type, it will return undefined but the value is different -->
+    <a id="toggle-button" class="about-us" href="javascript:void(0);" onclick="togglePage()">About Us</a>
 
     <div class="container">
-        <h1 style="margin-bottom: 60px;">Login</h1>
+        <h1 id="container-title" class="container-title" style="  margin-bottom: 40px;">Login</h1>
 
-        <div class="input-login-container">
-            <input type="email" id="email" placeholder="Email" required>
-            
-            <div class="password-container">
-                <input type="password" id="password" placeholder="Password" required>
-                <span class="toggle-password" onclick="togglePassword()">Show</span>
+        <div id="login-content">
+            <div class="input-login-container">
+                <input type="email" id="email" placeholder="Email" onkeydown="focusPassword(event)" required>
+                <div class="password-container">
+                    <input type="password" id="password" placeholder="Password" onkeydown="triggerLogin(event)" required>
+                    <span class="toggle-password" onclick="togglePassword()">Show</span>
+                </div>
+                <div id="message"></div>
             </div>
-            <div id="message"></div>
-        </div>
 
-        <div class="button">
-            <input type="button" onclick="login()" value="Login">
-        </div>
+            <div class="button">
+                <input type="button" onclick="login()" value="Login" id="loginBtn">
+            </div>
 
-        <div class="links-container">
-            <a href="forgot-password.html">Forgot password?</a>
+            <div class="links-container">
+                <a href="reset-password.html">Forgot password?</a>
+            </div>
+        </div>
+        <div id="about-us-content" style="display: none; text-align:justify;">
+            <p>About Us - Advanced Attendance System</p>
+            <br>
+            <p>The Advanced Attendance System is designed to enhance efficiency and accuracy in attendance tracking while preventing student cheating.
+                Utilizing NFC or barcode scanning technology, our system extracts student information directly from ID cards, ensuring seamless and reliable verification.
+                By automating attendance processes, we aim to improve institutional integrity and streamline administrative tasks.
+            </p>
+               
         </div>
     </div>
+    <div id="tutorial" class="tutorial-tips"></div>
 
+</body>
     <script>
         function togglePassword() {
             const passwordInput = document.getElementById("password");
@@ -277,6 +387,105 @@
                 passwordToggle.textContent = "Show";
             }
         }
+        
+        document.addEventListener("keydown", function (event) {
+    if (event.key === "Enter") {
+        const activeElement = document.activeElement;
+        const emailInput = document.getElementById("email");
+        const passwordInput = document.getElementById("password");
+
+        // If nothing is focused, focus on email input
+        if (activeElement === document.body) {
+            emailInput.focus();
+            return;
+        }
+
+        // When Enter is pressed in the email input
+        if (activeElement === emailInput) {
+            event.preventDefault();
+            const email = emailInput.value.trim();
+            if (email !== "") {
+                passwordInput.focus();
+            } else {
+                showMessage("Email cannot be empty");
+            }
+            return;
+        }
+
+        // When Enter is pressed in the password input
+        if (activeElement === passwordInput) {
+            event.preventDefault();
+            
+            // Shift + Enter moves focus back to email input
+            if (event.shiftKey) {
+                emailInput.focus();
+                return;
+            }
+
+            const email = emailInput.value.trim();
+            const password = passwordInput.value.trim();
+
+            if (password !== "") {
+                if (email !== "") {
+                    document.getElementById("loginBtn").click();
+                } else {
+                    showMessage("Email cannot be empty");
+                }
+            } else {
+                showMessage("Password cannot be empty");
+            }
+            return;
+        }
+    }
+});
+
+// Function to show error messages in red
+function showMessage(text) {
+    const messageDiv = document.getElementById("message");
+    messageDiv.textContent = text;
+    messageDiv.style.color = "red";
+}
+
+const tips = [
+        "Enter → Move to email field.",
+        "Shift + Enter → Back to email field.",
+        "Enter (on password) → Trigger login if both fields are filled."
+    ];
+
+    let currentTip = 0;
+    const tutorialElement = document.getElementById("tutorial");
+
+    function showNextTip() {
+        tutorialElement.style.opacity = 0; // Fade out
+        setTimeout(() => {
+            tutorialElement.textContent = tips[currentTip]; // Change tip
+            tutorialElement.style.opacity = 1; // Fade in
+            currentTip = (currentTip + 1) % tips.length; // Loop back after last tip
+        }, 1000); // Wait 1s before changing text
+    }
+
+    setInterval(showNextTip, 6000); // Change every 3 seconds
+    showNextTip(); // Show first tip immediately
+
+    function togglePage() {
+            let toggleButton = document.getElementById("toggle-button");
+            let containerTitle = document.getElementById("container-title");
+            let loginContent = document.getElementById("login-content");
+            let aboutUsContent = document.getElementById("about-us-content");
+
+            if (toggleButton.innerText === "About Us") {
+                // 切换到 About Us
+                toggleButton.innerText = "Login";
+                containerTitle.innerText = "About Us";
+                loginContent.style.display = "none";
+                aboutUsContent.style.display = "block";
+            } else {
+                // 切换回 Login
+                toggleButton.innerText = "About Us";
+                containerTitle.innerText = "Login";
+                loginContent.style.display = "block";
+                aboutUsContent.style.display = "none";
+            }
+        }
     </script>
-</body>
 </html>

@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <!-- <script src="cannotView.js"></script> -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-app.js";
+        import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-auth.js";
+        import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-firestore.js";
+    
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "REMOVED",
+            authDomain: "advanceas-d8db4.firebaseapp.com",
+            databaseURL: "https://advanceas-d8db4-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "advanceas-d8db4",
+            storageBucket: "advanceas-d8db4.firebasestorage.app",
+            messagingSenderId: "878892786344",
+            appId: "1:878892786344:web:33bb5a97d99daf049d189d",
+            measurementId: "G-PLRRKT6RWW"
+        };
+    
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+    
+        // Auth State Listener
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                console.log("User is signed in:", user.email);
+                try {
+                    const adminRef = collection(db, "admin");
+                    const q = query(adminRef, where("email", "==", user.email));
+                    const querySnapshot = await getDocs(q);
+    
+                    if (!querySnapshot.empty) {
+                        const adminData = querySnapshot.docs[0].data();
+                        document.getElementById("username").textContent = adminData.ID;
+                        console.log("Admin found:", adminData.ID);
+                    } else {
+                        console.log("Admin not found in Firestore.");
+                        document.getElementById("username").textContent = "Unknown User";
+                    }
+                } catch (error) {
+                    console.error("Error fetching user data:", error);
+                }
+            } else {
+                console.log("No user is signed in. Redirecting...");
+                window.location.href = "login.html";
+            }
+        });
+    
+        // Logout function
+        window.logout = function () {
+            signOut(auth).then(() => {
+                console.log("User signed out successfully.");
+                window.location.href = "login.html";
+            }).catch(error => {
+                console.error("Error logging out:", error);
+            });
+        };
+    
+        // Long Press Logic with Progress Bar
+    const logoutButton = document.getElementById("logoutButton");
+    const progressRect = document.querySelector(".progress-ring-rect");
+    let pressTimer;
+    let progressInterval;
+
+    const startProgress = () => {
+        let time = 0;
+        const totalTime = 3000; // 3 seconds
+        const circumference = 284; // 矩形周长 (2 * (width + height) - 8 * rx)
+
+        progressInterval = setInterval(() => {
+            time += 10; // Update every 10ms
+            const progress = (time / totalTime) * circumference;
+            progressRect.style.strokeDashoffset = circumference - progress;
+
+            if (time >= totalTime) {
+                clearInterval(progressInterval);
+                logout(); // Call logout after 3 seconds
+            }
+        }, 10);
+    };
+
+    const resetProgress = () => {
+        clearInterval(progressInterval);
+        progressRect.style.strokeDashoffset = 284; // Reset progress
+    };
+
+    // Mouse Events
+    logoutButton.addEventListener("mousedown", startProgress);
+    logoutButton.addEventListener("mouseup", resetProgress);
+    logoutButton.addEventListener("mouseleave", resetProgress);
+
+    // Touch Events
+    logoutButton.addEventListener("touchstart", startProgress);
+    logoutButton.addEventListener("touchend", resetProgress);
+
+
+
+    const userContainer = document.querySelector(".currentOpen");
+const searchInput = document.getElementById("searchInput");
+const filterButton = document.querySelector(".changeUser-role");
+const filterIcon = filterButton.querySelector("i");
+
+// 当前过滤状态
+let filterState = "all"; // 默认显示所有用户
+let longPressTimer = null;
+let longPressActive = false;
+
+// 角色对应的图标
+const roleIcons = {
+    all: "fas fa-user",          // 默认 👤
+    student: "fas fa-user-graduate", // 🎓 学生
+    lecturer: "fas fa-chalkboard-teacher" // 👨‍🏫 讲师
+};
+
+// 更新按钮的图标
+function updateIcon() {
+    filterIcon.className = roleIcons[filterState];
+}
+
+// 监听筛选按钮（点击切换）
+filterButton.addEventListener("click", () => {
+    if (longPressActive) {
+        longPressActive = false;
+        return;
+    }
+
+    if (filterState === "all") {
+        filterState = "student";
+    } else if (filterState === "student") {
+        filterState = "lecturer";
+    } else {
+        filterState = "all";
+    }
+
+    updateIcon();
+    fetchUsers();
+});
+
+// 长按重置为 "ALL"
+filterButton.addEventListener("mousedown", () => {
+    longPressTimer = setTimeout(() => {
+        filterState = "all";
+        longPressActive = true;
+        updateIcon();
+        fetchUsers();
+    }, 2000);
+});
+
+filterButton.addEventListener("mouseup", () => clearTimeout(longPressTimer));
+filterButton.addEventListener("mouseleave", () => clearTimeout(longPressTimer));
+
+// 页面加载时获取用户数据
+document.addEventListener("DOMContentLoaded", () => {
+    filterState = "all";
+    updateIcon();
+    fetchUsers();
+});
+
+// 获取用户数据
+async function fetchUsers() {
+    console.log("当前筛选状态:", filterState);
+    userContainer.innerHTML = "<p>Loading...</p>";
+
+    let users = [];
+
+    try {
+        // 获取 "admin" 数据
+        const adminSnapshot = await getDocs(collection(db, "admin"));
+        adminSnapshot.forEach(doc => {
+            users.push({ id: doc.data().ID, name: doc.data().name, email: doc.data().email, role: "admin" });
+        });
+
+        // 获取 "lecturer" 数据
+        const lecturerSnapshot = await getDocs(collection(db, "lecturer"));
+        lecturerSnapshot.forEach(doc => {
+            users.push({ id: doc.data().ID, name: doc.data().name, email: doc.data().email, role: "lecturer" });
+        });
+
+        // 获取 "student" 数据
+        const studentSnapshot = await getDocs(collection(db, "student"));
+        studentSnapshot.forEach(doc => {
+            users.push({ id: doc.data().ID, name: doc.data().name, email: doc.data().email, role: "student" });
+        });
+
+        // 过滤数据
+        let filteredUsers = users;
+        if (filterState === "student") {
+            filteredUsers = users.filter(user => user.role === "student");
+        } else if (filterState === "lecturer") {
+            filteredUsers = users.filter(user => user.role === "lecturer");
+        }
+
+        displayUsers(filteredUsers);
+
+    } catch (error) {
+        console.error("获取数据时出错:", error);
+        userContainer.innerHTML = "<p>数据加载失败，请检查数据库连接。</p>";
+    }
+}
+
+// 显示用户数据（表格）
+function displayUsers(users) {
+    userContainer.innerHTML = ""; // 清空内容
+
+    if (users.length === 0) {
+        userContainer.innerHTML = "<p>No users found.</p>";
+        return;
+    }
+
+    // 创建表格
+    const table = document.createElement("table");
+    table.border = "1";
+    table.style.width = "100%";
+    table.style.borderCollapse = "collapse";
+
+    // 创建表头
+    const thead = document.createElement("thead");
+    thead.innerHTML = `
+        <tr style="background-color: #f2f2f2; text-align: left;">
+            <th style="padding: 10px;">No.</th>
+            <th style="padding: 10px;">ID</th>
+            <th style="padding: 10px;">Name</th>
+            <th style="padding: 10px;">Email</th>
+            <th style="padding: 10px;">Role</th>
+        </tr>
+    `;
+    table.appendChild(thead);
+
+    // 创建表格主体
+    const tbody = document.createElement("tbody");
+
+    users.forEach((user, index) => {
+        const row = document.createElement("tr");
+
+        row.innerHTML = `
+            <td style="padding: 10px; text-align: center;">${index + 1}</td>
+            <td style="padding: 10px;">${user.id}</td>
+            <td style="padding: 10px;">${user.name}</td>
+            <td style="padding: 10px;">${user.email}</td>
+            <td style="padding: 10px;">${user.role}</td>
+        `;
+
+        tbody.appendChild(row);
+    });
+
+    table.appendChild(tbody);
+    userContainer.appendChild(table);
+}
+
+// 搜索功能
+searchInput.addEventListener("input", (e) => {
+    const query = e.target.value.toLowerCase();
+    const users = document.querySelectorAll(".currentOpen table tbody tr");
+
+    users.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(query) ? "table-row" : "none";
+    });
+});
+
+// 初始加载所有用户
+fetchUsers();
+
+    </script>
+
+    
+
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            font-family: 'Poppins', sans-serif;
+            box-sizing: border-box;
+        }
+        a{
+            text-decoration: none;
+        }
+        body{
+            padding: 0;
+            margin: 0;
+            margin-top: 10%;
+            background-color: #ECEAFF;
+
+            
+        }
+        nav{
+            width: 100%;
+            top:0;
+            margin: 0;
+            position: fixed;
+             z-index: 1;
+        }
+    nav h1, nav p, nav ul {
+     margin: 0;
+     padding: 0;
+    }
+
+        .header{
+            /* background-color: #1A1A1A; */
+            /* background-color: rgba(193,191,209, 0.2); */
+            background-color: #fff;
+            /* background-color: black; */
+            display: flex;
+            align-items: center;
+             /* 垂直居中 */
+            padding: 10px 30px;
+            border-bottom: 1px solid rgb(156, 156, 156);
+            /* box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.3); */
+            /* border-radius: 0px 0px 15px 15px;  */
+       }
+       .nav1{
+        justify-content: space-between; /* 左右对齐 */
+
+       }
+
+       .nav2{
+        /* display: flex; */
+        flex-basis: auto;
+        flex-direction: row;
+        /* background-color:  rgba(193,191,209, 0.9); */
+        background-color:#343A40;
+        color: white;
+       }
+       
+
+       .nav2>.nav-btn{
+            font-size: larger;
+            font-weight: bolder;
+            margin: 0px 3% 0px 3%;
+            cursor:pointer;
+       }
+       .nav-btn>p:hover{
+        /* text-shadow: 1px 1px 1px#ffffffcc; */
+        background: linear-gradient(-229deg, rgb(213, 158, 255), rgb(143, 173, 255));
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        /* font-weight:lighter;  */
+        /* border-bottom: 2px solid  #5782f5; */
+      
+        /* box-shadow: 1px 1px 1px #ffff; */
+
+        
+       }
+
+       .nav2>.nav-btn:active{
+            /* border-bottom: #e43f51 block 1px; */
+            cursor: grab;
+
+       }
+
+    
+
+        /* Title Section */
+        .title {
+            /* margin: 2% 2% 0 2%; */
+            font-size: 20px;
+            background: linear-gradient(-229deg, #cf91ff, #5782f5);
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+
+    .welcome {
+        font-size: 16px;
+        color: #ff4b5c; /* 让欢迎信息更突出 */
+    }
+
+
+
+ /* Logout Button */
+.logout-container {
+    position: absolute;
+    /* top: vb; */
+    right: 20px;
+    width: 100px; /* 与按钮宽度一致 */
+    height: 50px; /* 与按钮高度一致 */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* 按钮样式 */
+.logout {
+    padding: 10px 15px;
+    background-color: #ff4b5c;
+    color: white;
+    border: none;
+    border-radius: 10px; /* 圆角矩形 */
+    cursor: pointer;
+    font-size: 1em;
+    transition: background 0.3s;
+    position: relative;
+    z-index: 1; /* 确保按钮在进度条上方 */
+}
+
+    .logout:hover {
+        background-color: #e43f51;
+    }
+
+/* 进度条样式 */
+    .progress-ring {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+    }
+
+    .progress-ring-rect {
+        stroke-dasharray: 284; /* 矩形周长 (2 * (width + height) - 8 * rx) */
+        stroke-dashoffset: 284; /* 初始状态为 0% */
+        transition: stroke-dashoffset 0.1s linear;
+        /* background-color: #ff1e38; */
+    }
+
+        /* Edit User Space */
+        .AllSpace {
+            margin: 5% auto;
+            width: 90%;
+            padding: 20px;
+            /* background: linear-gradient(-229deg, #cf91ff, #5782f5); */
+            /* background-color: rgba(255, 255, 255, 0.5); */
+            background: linear-gradient(-229deg, rgba(207, 145, 255, 0.7), rgba(87, 130, 245, 0.7));
+            backdrop-filter: blur(10px); /* 模糊效果 */
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* 阴影 */
+        }
+
+        .AllSpace > p {
+            font-weight: bold;
+            font-size: 4vb;
+            margin: 1%;
+        }
+
+        .functionSpace{
+
+            min-height: 500px;
+
+        }
+
+        .function-Btn{
+            display: inline-flex;
+            width: 15%;
+            align-items: center;
+            justify-content: center;
+        }
+        .function-Btn, input.search-bar{
+            height: 60px;
+            vertical-align: middle;
+            margin: 10px;
+            transition: background 0.3s;
+            background-color: rgba(255, 255, 255, 0.5);
+            backdrop-filter: blur(10px);
+            border-radius: 15px; 
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            
+        }
+
+        .search-bar {
+            text-align: left;
+            min-width: 35%;
+            max-width: 40%;
+            padding-left: 25px;
+            font-size: 1em;
+        }
+        .function-Btn i {
+           color: black;
+           font-size: 2em;
+           transition: color 0.3s;
+           width: auto;
+                }
+
+        .search-bar:hover , .function-Btn:hover {
+            background-color: rgb(255, 255, 255,0.7);
+            border-radius: 15px;
+        }
+
+        
+
+        .function-Btn:active i {
+             background: linear-gradient(-229deg, #cf91ff, #5782f5);
+            background-clip: text;
+             -webkit-text-fill-color: transparent;
+             
+        }
+
+        /* 当按钮被点击后保持颜色 */
+        .function-Btn.clicked i {
+           background: linear-gradient(-229deg, #cf91ff, #5782f5);
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        @media (max-width: 1024px) {
+            body{
+                margin-top: 20%;
+            }
+            .AllSpace {
+                width: 95%;
+            }
+            .function-Btn {
+                width: 16%;
+                height: 60px;
+            }
+            .function-Btn i {
+                font-size: 1.4em;
+            }
+
+            .function-Btn {
+                width: 20%; /* 让按钮稍微变大 */
+            }
+        
+            .search-bar {
+                min-width: 50%; /* 让搜索框更长 */
+                font-size: 0.9em; /* 适当缩小字体 */
+            }
+        }
+
+        /* Mobile Responsive */
+        @media screen and (max-width: 768px) {
+            body{
+                margin-top: 20%;
+            }
+            
+            .AllSpace {
+                width: 95%;
+            }
+            .functionSpace {
+        flex-wrap: wrap; /* 允许元素换行 */
+        justify-content: center; /* 居中排列 */
+    }
+            /* .function-Btn {
+                width: 16%;
+                height: 60px;
+            } */
+            .function-Btn {
+        width: 25%; /* 按钮缩小 */
+        height: 50px;
+        font-size: 0.8em; /* 字体变小 */
+    }
+            .function-Btn i {
+                font-size: 1.4em;
+            }
+            .search-bar {
+        width: 80%; /* 搜索框占满一行 */
+        font-size: 0.8em;
+        height: 50px;
+    }
+        }
+    
+
+        @media screen and (max-width: 500px) {
+            body {
+                margin-top: 30%;
+
+            }
+            .title {
+                font-size: 1em;
+            }
+            .AllSpace {
+                width: 100%;
+                margin: 10px auto;
+            }
+            /* .function-Btn {
+                width: 16%;
+                height: 40px;
+            } */
+            .function-Btn {
+        width: 30%; /* 让按钮更小 */
+        height: 45px;
+    }
+            
+            .function-Btn i {
+                font-size: 1.3em;
+            }
+            .search-bar {
+        width: 100%; /* 搜索框单独一行 */
+        height: 45px;
+    }
+        }
+        
+        
+               /* 表格样式 */
+         .currentOpen table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid #ddd;
+            
+        }
+
+        /* 表头样式 */
+         .currentOpen thead {
+            background-color: #f2f2f2;
+        } 
+
+        /* 表头和单元格 */
+         .currentOpen th, .currentOpen td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }  
+
+        /* 鼠标悬停效果 */
+        .currentOpen tbody tr:hover {
+            background-color: #ffffff83;
+        }
+
+       
+
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="header nav1">
+            <div class="title">
+                <h2>Advanced Attendance System</h2>
+                <h2 class="welcome">Welcome, <span id="username"></span></h2>
+            </div>
+
+            <div class="logout-container">
+                <button class="logout" id="logoutButton">Logout</button>
+                <svg class="progress-ring" width="100" height="50">
+                <rect class="progress-ring-rect" x="7" y="2.7" width="86" height="45.5" rx="13" ry="13" stroke="#ff4b5c" stroke-width="3" fill="transparent" />
+                </svg>
+            </div>
+        </div>
+        <div class="header nav2">
+            
+            <div class="nav-btn"> <p> Home  </p> </div>
+            <div class="nav-btn"> <p> View User  </p> </div>
+            <div class="nav-btn"> <p> Data Analysis </p></div>
+            <div class="nav-btn"> <p> Setting  </p> </div>
+
+        </div>
+    </nav>
+    
+    <div class="homeSpace AllSpace">
+        <p> Home</p>
+    </div>
+
+    <div class="dataSpace AllSpace">
+        <p> Data Analysis</p>
+    </div>
+
+    <div class="functionSpace AllSpace">
+        <p class="currentOpen-text">View User</p>    
+        <span class="changeUser-role function-Btn"><i class="fas fa-user"></i></a></span> 
+        <span class="AddUser function-Btn"><i class="fas fa-user-plus"></i></a></span>
+        <span class="DeleteUser function-Btn"><i class="fas fa-user-minus"></i></a></span>
+        <input type="text" id="searchInput" class="search-bar" placeholder="Search users...">
+        <div class="currentOpen"></div>
+    </div>
+
+    
+</body>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+    const homeBtn = document.querySelector(".nav-btn:nth-child(1)");
+    const viewUserBtn = document.querySelector(".nav-btn:nth-child(2)"); // View User 按钮
+    const dataAnalysisBtn = document.querySelector(".nav-btn:nth-child(3)"); // Data Analysis 按钮
+    const dataSpace = document.querySelector(".dataSpace"); // 数据分析区域
+    const functionSpace = document.querySelector(".functionSpace"); // 用户管理功能区域
+    const homeSpace = document.querySelector(".homeSpace");
+
+    // 初始状态：显示 Data Analysis，隐藏 functionSpace
+    homeSpace.style.display = "block";
+    dataSpace.style.display = "block";
+    functionSpace.style.display = "block";
+
+
+    // 点击 "View User" 按钮时
+    viewUserBtn.addEventListener("click", function () {
+        dataSpace.style.display = "none";  // 隐藏数据分析
+        homeSpace.style.display = "none";
+        functionSpace.style.display = "block"; // 显示用户管理功能
+    });
+
+    // 点击 "Data Analysis" 按钮时
+    dataAnalysisBtn.addEventListener("click", function () {
+        homeSpace.style.display="none";
+        dataSpace.style.display = "block";  // 显示数据分析
+        functionSpace.style.display = "none"; // 隐藏用户管理功能
+    });
+
+    homeBtn.addEventListener("click",function(){
+        homeSpace.style.display="block";
+        functionSpace.style.display = "block"; 
+        dataSpace.style.display = "block";
+
+    });
+});
+
+</script>
+</html>
