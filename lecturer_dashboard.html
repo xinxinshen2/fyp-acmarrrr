@@ -146,15 +146,7 @@
         }
 
 
-                // Logout function
-                window.logout = function () {
-            signOut(auth).then(() => {
-                console.log("User signed out successfully.");
-                window.location.href = "login.html";
-            }).catch(error => {
-                console.error("Error logging out:", error);
-            });
-        };
+        
     
         // Long Press Logic with Progress Bar
     const logoutButton = document.getElementById("logoutButton");
@@ -214,7 +206,7 @@
         <div class="header nav1">
             <div class="title">
                 <h2>Advanced Attendance System</h2>
-                <h2 class="welcome">Welcome, <span id="username"></span></h2>
+                <h2 class="welcome">Welcome, <span id="lecturerName"></span></h2>
             </div>
 
             <div class="logout-container">
@@ -264,4 +256,42 @@
         </div>
     </div>
 </body>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+    const homeBtn = document.querySelector(".nav-btn:nth-child(1)");
+    const viewUserBtn = document.querySelector(".nav-btn:nth-child(2)"); // View User 按钮
+    const dataAnalysisBtn = document.querySelector(".nav-btn:nth-child(3)"); // Data Analysis 按钮
+    const dataSpace = document.querySelector(".dataSpace"); // 数据分析区域
+    const functionSpace = document.querySelector(".functionSpace"); // 用户管理功能区域
+    const homeSpace = document.querySelector(".homeSpace");
+
+    // 初始状态：显示 Data Analysis，隐藏 functionSpace
+    homeSpace.style.display = "block";
+    dataSpace.style.display = "block";
+    functionSpace.style.display = "block";
+
+
+    // 点击 "View User" 按钮时
+    viewUserBtn.addEventListener("click", function () {
+        dataSpace.style.display = "none";  // 隐藏数据分析
+        homeSpace.style.display = "none";
+        functionSpace.style.display = "block"; // 显示用户管理功能
+    });
+
+    // 点击 "Data Analysis" 按钮时
+    dataAnalysisBtn.addEventListener("click", function () {
+        homeSpace.style.display="none";
+        dataSpace.style.display = "block";  // 显示数据分析
+        functionSpace.style.display = "none"; // 隐藏用户管理功能
+    });
+
+    homeBtn.addEventListener("click",function(){
+        homeSpace.style.display="block";
+        functionSpace.style.display = "block"; 
+        dataSpace.style.display = "block";
+
+    });
+});
+
+</script>
 </html>
