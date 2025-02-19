@@ -54,8 +54,8 @@
                         sessionStorage.setItem('studentID', userData.ID)
                         window.location.href = 'student_dashboard.html';
                     } else if (userData.role === 'lecturer') {
-                        sessionStorage.setItem('lectureID', userData.ID);
                         window.location.href = 'lecturer_dashboard.html';
+                        sessionStorage.setItem('lectureID', userData.ID);
                     } else if (userData.role === "admin"){
                         sessionStorage.setItem('adminID', userData.ID);
                          window.location.href = 'admin_dashboard.html';
