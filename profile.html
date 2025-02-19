@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile & Settings</title>
+    <link rel="stylesheet" href="studentdashboard-style.css">
+</head>
+<body>
+    <main class="main-content">
+        <header>
+            <h1>👤 Profile & Settings</h1>
+        </header>
+
+        <section class="profile-container">
+            <div class="profile-card">
+                <!-- Profile Picture Upload -->
+                <label for="profilePicUpload">
+                    <img id="previewImage" src="profile-placeholder.jpg" alt="Profile Picture" class="profile-pic">
+                </label>
+                <input type="file" id="profilePicUpload" accept="image/*">
+                
+                <div class="profile-info">
+                    <p><strong>Name:</strong> <span id="displayName">Justin Chai</span></p>
+                    <p><strong>Email:</strong> <span id="displayEmail">123456@imail.edu.sunway.my</span></p>
+                    <p><strong>Course:</strong> <span id="displayCourse">Diploma in IT</span></p>
+                    <p><strong>Year:</strong> 2nd Year</p>
+                </div>
+            </div>
+
+            <!-- Editable Profile Settings -->
+            <div class="profile-settings">
+                <h3>📝 Edit Profile</h3>
+                <label for="name">Full Name</label>
+                <input type="text" id="name" value="Justin Chai">
+                
+                <label for="email">Email</label>
+                <input type="email" id="email" value="123456@imail.edu.sunway.my">
+                
+                <label for="course">Course</label>
+                <input type="text" id="course" value="Diploma in IT">
+                
+                <button class="save-btn" onclick="saveChanges()">💾 Save Changes</button>
+            </div>
+
+            <!-- Password Change -->
+            <div class="profile-settings">
+                <h3>🔑 Change Password</h3>
+                <label for="currentPassword">Current Password</label>
+                <input type="password" id="currentPassword" placeholder="Enter current password">
+                
+                <label for="newPassword">New Password</label>
+                <input type="password" id="newPassword" placeholder="Enter new password">
+                
+                <button class="save-btn" onclick="changePassword()">🔑 Update Password</button>
+            </div>
+
+            <!-- Notification Preferences -->
+            <div class="profile-settings">
+                <h3>📩 Notification Preferences</h3>
+                <label><input type="checkbox" id="emailNotif" checked> Receive Email Notifications</label>
+                <label><input type="checkbox" id="smsNotif"> Receive SMS Notifications</label>
+                <button class="save-btn" onclick="savePreferences()">💾 Save Preferences</button>
+            </div>
+            
+            <!-- Back Button -->
+            <button class="back-btn" onclick="window.history.back()">⬅️ Go Back</button>
+        </section>
+
+        <footer>
+            <p>&copy; 2025 Student Dashboard | All Rights Reserved</p>
+        </footer>
+    </main>
+
+    <script src="profile.js"></script>
+</body>
+</html>

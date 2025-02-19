@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard</title>
+    <link rel="stylesheet" href="studentdashboard-style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+    <aside class="aside">
+        <h2>Student Dashboard</h2>
+        <ul>
+            <li><a href="#">📌 Dashboard</a></li>
+            <li><a href="#">✅ Attendance Records</a></li>
+            <li><a href="#">🏫 Class Schedule</a></li>
+            <li><a href="#">📋 Assignments & Exams</a></li>
+            <li><a href="announcements.html">📢 Announcements</a></li>
+            <li><a href="#">📊 Attendance Statistics</a></li>
+            <li><a href="profile.html">👤 Profile & Settings</a></li>
+            <li><a href="#">📖 Academic Resources</a></li>
+            <li><a href="#">💬 Chat Support</a></li>
+            <li><a href="#">⚙️ Settings</a></li>
+        </ul>
+    </aside>
+    
+    <button id="logoutBtn">Logout</button>
+
+    <main class="main-content">
+        <header>
+            <h1>Welcome to the Student Dashboard</h1>
+            <p>Here you can track your attendance, view schedules, and access academic resources.</p>
+        </header>
+
+        <section class="chart-container">
+            <canvas id="attendanceChart"></canvas>
+        </section>
+
+        <footer>
+            <p>&copy; 2025 Student Dashboard | All Rights Reserved</p>
+        </footer>
+    </main>
+
+    <script>
+        document.getElementById("profileBtn").addEventListener("click", function() {
+            document.getElementById("profileSection").style.display = "block";
+        });
+    </script>
+    
+</body>
+</html>
