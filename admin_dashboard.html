@@ -31,8 +31,8 @@
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 console.log("User is signed in:", user.email);
-                try {
-                    const adminRef = collection(db, "admin");
+                try {       
+                    const adminRef = collection(db, "admin"); 
                     const q = query(adminRef, where("email", "==", user.email));
                     const querySnapshot = await getDocs(q);
     
@@ -112,19 +112,17 @@ let filterState = "all"; // 默认显示所有用户
 let longPressTimer = null;
 let longPressActive = false;
 
-// 角色对应的图标
+
 const roleIcons = {
-    all: "fas fa-user",          // 默认 👤
-    student: "fas fa-user-graduate", // 🎓 学生
-    lecturer: "fas fa-chalkboard-teacher" // 👨‍🏫 讲师
+    all: "fas fa-user",          
+    student: "fas fa-user-graduate", 
+    lecturer: "fas fa-chalkboard-teacher" 
 };
 
-// 更新按钮的图标
 function updateIcon() {
     filterIcon.className = roleIcons[filterState];
 }
 
-// 监听筛选按钮（点击切换）
 filterButton.addEventListener("click", () => {
     if (longPressActive) {
         longPressActive = false;
@@ -143,7 +141,6 @@ filterButton.addEventListener("click", () => {
     fetchUsers();
 });
 
-// 长按重置为 "ALL"
 filterButton.addEventListener("mousedown", () => {
     longPressTimer = setTimeout(() => {
         filterState = "all";
@@ -266,6 +263,9 @@ searchInput.addEventListener("input", (e) => {
     });
 });
 
+
+
+
 // 初始加载所有用户
 fetchUsers();
 
@@ -277,6 +277,9 @@ fetchUsers();
       addUserBtn.addEventListener('click', () => {
         document.querySelector('.currentOpen').innerHTML = `
           <form id="addUserForm">
+            <h2>Add New User </h2>
+            <br>
+            <br>
             <div>
               <label for="name">Name:</label>
               <input type="text" id="name" name="name" required>
@@ -288,7 +291,7 @@ fetchUsers();
             <div>
               <label for="course">Course:</label>
                <select id="course" name="course" required>
-                <option value="">请选择课程</option>
+                <option value="">Choose Course</option>
               </select>
             </div>
             <div>
@@ -332,47 +335,43 @@ populateCourseOptions();
 
 // 为 course 下拉框绑定 change 事件，用于生成新学生 ID 并显示
 document.getElementById("course").addEventListener("change", async (e) => {
-  const course = e.target.value;
-  // 从表单中读取 role（确保 role 默认已经选择了，比如 "student"）
+  const selectedCourse = e.target.value;
+  // 假设只有 student 角色才使用自动生成 id
   const role = document.getElementById("role").value;
   if (role !== "student") {
-    // 如果不是 student，不进行自动生成处理
     return;
   }
-  
-  const courseDigitsMatch = course.match(/\d+$/);
-  if (!courseDigitsMatch) {
-    alert("课程格式不正确，未能提取数字部分！");
-    return;
-  }
-  const courseDigits = courseDigitsMatch[0];
   
   try {
-    // 注意：集合名称是否正确（此处假设集合名称为 "student" 或 "students"）
-    const studentsQuery = query(collection(db, "student"), where("course", "==", course));
+    // 查询 student 集合中，course 字段等于所选 course 的所有记录
+    const studentsQuery = query(
+      collection(db, "student"),
+      where("course", "==", selectedCourse)
+    );
     const querySnapshot = await getDocs(studentsQuery);
-    let maxSuffix = 0;
+    
+    // 遍历每个文档，取文档 id 转换为数字后找最大值
+    let maxId = 0;
     querySnapshot.forEach((docSnap) => {
-      const data = docSnap.data();
-      if (data && data.id && data.id.startsWith(courseDigits)) {
-        const suffixStr = data.id.substring(courseDigits.length);
-        const suffixNum = parseInt(suffixStr, 10);
-        if (!isNaN(suffixNum) && suffixNum > maxSuffix) {
-          maxSuffix = suffixNum;
-        }
+      const currentId = parseInt(docSnap.id, 10);
+      if (!isNaN(currentId) && currentId > maxId) {
+        maxId = currentId;
       }
     });
-    const newSuffix = maxSuffix + 1;
-    const newSuffixStr = newSuffix.toString().padStart(4, '0');
-    const newStudentId = courseDigits + newSuffixStr;
-    console.log("生成的新学生 ID:", newStudentId);
-    // 更新页面上显示的 ID（确保页面中有 id 为 idDisplay 的元素）
-    document.getElementById("idDisplay").textContent = newStudentId;
+    
+    // 新的 student id = 最大值 + 1；如果没有记录，则默认从 1 开始
+    const newID = (maxId + 1).toString();
+    console.log("New Student ID:", newID);
+    
+    // 更新页面上显示的 ID（确保页面中有 id 为 "idDisplay" 的元素）
+    document.getElementById("idDisplay").textContent = newID;
+    
   } catch (error) {
     console.error("查询学生记录出错：", error);
     alert("查询学生记录出错，请检查控制台了解详细信息。");
   }
 });
+
 
 // 绑定表单提交事件
 const form = document.getElementById("addUserForm");
@@ -385,6 +384,7 @@ form.addEventListener("submit", async (e) => {
   const course = form.course.value;
   const inputUID = form.uid.value;   // 输入的 UID (card_id)
   // 此处不再需要 inputID，因为 ID 是自动生成且显示在 idDisplay 中
+  const newID = document.getElementById("idDisplay").textContent;
   const role = form.role.value;
 
   // 此处可以继续执行创建用户、在 Firestore 中写入记录等操作
@@ -397,31 +397,35 @@ form.addEventListener("submit", async (e) => {
             // 2. 在 Firestore 的 "users" 集合中创建一个文档，文档 ID 为 authUid，存储 role 与 inputID
             await setDoc(doc(db, "user", authUid), {
               role: role,
-              ID: inputID
+              ID: newID
             });
             
             // 3. 如果角色为 student，则在 "students" 集合中创建一个文档，文档 ID 为输入的 ID
             if (role === "student") {
-              await setDoc(doc(db, "student", newStudentId), {
+              await setDoc(doc(db, "student", newID), {
                 name: name,
                 email: email,
-                ID: inputID,
+                ID: newID,
                 UID: inputUID,  // 此处是输入的 card_id，与 Firebase Authentication 生成的 authUid 不同
                 course: course
               });
             } else if (role === "lecturer") {
-              await setDoc(doc(db, "lecturer", inputID), {
+              await setDoc(doc(db, "lecturer", newID), {
                 name: name,
                 email: email,
-                ID: inputID,
+                ID: newID,
                 UID: inputUID,  // 此处是输入的 card_id，与 Firebase Authentication 生成的 authUid 不同
                 course: course
               });
             }
             
             alert("用户创建成功！");
-            // 清空或关闭表单区域
-            document.querySelector('.currentOpen').innerHTML = "";
+                // 重置表单
+                const form = document.getElementById("addUserForm");
+                form.reset();
+                // 清空显示生成的 ID
+                document.getElementById("idDisplay").textContent = "";
+
           } catch (error) {
             console.error("创建用户出错：", error);
             alert("创建用户时出错，请检查控制台了解详细信息。");
@@ -779,6 +783,107 @@ form.addEventListener("submit", async (e) => {
         .currentOpen tbody tr:hover {
             background-color: #ffffff83;
         }
+
+        /* 表单整体样式 */
+        #addUserForm {
+          max-width: 95%;
+          margin: 20px auto;
+          padding: 20px;
+          font-family: Arial, sans-serif;
+          background-color: rgba(255, 255, 255, 0.5);
+            backdrop-filter: blur(10px);
+            border-radius: 15px; 
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+           
+        }
+        
+        /* 每个表单项 */
+        #addUserForm div {
+          margin-bottom: 15px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        
+        /* label 样式 */
+        #addUserForm label {
+          flex: 0 0 120px;
+          margin-right: 10px;
+          font-weight: bold;
+        }
+        
+        /* 输入框和下拉框样式 */
+        #addUserForm input[type="text"],
+        #addUserForm input[type="email"],
+        #addUserForm select {
+            max-width: 50%;
+          flex: 1;
+          padding: 8px;
+          border: 1px solid #ccc;
+          border-radius: 4px;
+        }
+        
+        /* 只读显示的 ID 样式 */
+        #addUserForm span#idDisplay {
+          flex: 1;
+          padding: 8px;
+          background-color: #eaeaea;
+          border: 1px solid #ccc;
+          border-radius: 4px;
+          height: 34px;
+          max-width: 50%;
+
+        }
+        
+        /* 提交按钮样式 */
+        #addUserForm button {
+           
+            padding: 10px 20px;
+          background-color: #007BFF;
+          color: #fff;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+          font-size: 16px;
+        }
+        @keyframes buttonHover {
+            0% {
+              background-color: #333;
+            }
+            25%{
+              background-color: #5782f5;
+            }
+            50% {
+              background-color: #cf91ff;
+            }
+        
+            100% {
+              background-color: #333;
+            }
+        }
+        
+        /* 提交按钮悬停效果 */
+        #addUserForm button:hover {
+            animation: buttonHover 5s ease infinite;
+        }
+        #addUserForm button:active {
+            background-color: #777;
+
+        }
+
+        /* 
+
+
+
+.button input:hover {
+    background: linear-gradient(-229deg, #cf91ff, #5782f5);
+}
+
+.button input:active {
+    background-color: #777;
+} */
+
 
        
 
