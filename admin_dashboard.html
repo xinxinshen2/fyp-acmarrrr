@@ -7,8 +7,8 @@
     <!-- <script src="cannotView.js"></script> -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-app.js";
-        import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-auth.js";
-        import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-firestore.js";
+        import { getAuth, signOut, onAuthStateChanged, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-auth.js";
+        import { getFirestore, collection, query, where, getDocs, doc, setDoc } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-firestore.js";
     
         // Firebase Configuration
         const firebaseConfig = {
@@ -252,6 +252,7 @@ function displayUsers(users) {
 
     table.appendChild(tbody);
     userContainer.appendChild(table);
+    
 }
 
 // 搜索功能
@@ -268,6 +269,172 @@ searchInput.addEventListener("input", (e) => {
 // 初始加载所有用户
 fetchUsers();
 
+//ADDUSER
+    // DOM 加载完成后设置事件监听
+    document.addEventListener('DOMContentLoaded', () => {
+      // 绑定 AddUser 按钮点击事件，显示表单
+      const addUserBtn = document.querySelector('.AddUser');
+      addUserBtn.addEventListener('click', () => {
+        document.querySelector('.currentOpen').innerHTML = `
+          <form id="addUserForm">
+            <div>
+              <label for="name">Name:</label>
+              <input type="text" id="name" name="name" required>
+            </div>
+            <div>
+              <label for="email">Email:</label>
+              <input type="email" id="email" name="email" required>
+            </div>
+            <div>
+              <label for="course">Course:</label>
+               <select id="course" name="course" required>
+                <option value="">请选择课程</option>
+              </select>
+            </div>
+            <div>
+              <label for="uid">UID (card_id):</label>
+              <input type="text" id="uid" name="uid" required>
+            </div>
+            <div>
+              <label for="idDisplay">ID:</label>
+              <span id="idDisplay"></span>
+            </div>
+
+            <div>
+              <label for="role">Role:</label>
+              <select id="role" name="role">
+                <option value="student">Student</option>
+                <option value="lecturer">Lecturer</option>
+              </select>
+            </div>
+            <div>
+              <button type="submit">Submit</button>
+            </div>
+          </form>
+        `;
+// 先填充课程下拉框
+async function populateCourseOptions() {
+  const courseSelect = document.getElementById("course");
+  try {
+    const coursesSnapshot = await getDocs(collection(db, "course"));
+    coursesSnapshot.forEach(docSnap => {
+      const option = document.createElement("option");
+      option.value = docSnap.id;
+      option.textContent = docSnap.id;
+      courseSelect.appendChild(option);
+    });
+  } catch (error) {
+    console.error("获取课程列表出错:", error);
+    alert("获取课程列表出错，请检查控制台了解详细信息。");
+  }
+}
+populateCourseOptions();
+
+// 为 course 下拉框绑定 change 事件，用于生成新学生 ID 并显示
+document.getElementById("course").addEventListener("change", async (e) => {
+  const course = e.target.value;
+  // 从表单中读取 role（确保 role 默认已经选择了，比如 "student"）
+  const role = document.getElementById("role").value;
+  if (role !== "student") {
+    // 如果不是 student，不进行自动生成处理
+    return;
+  }
+  
+  const courseDigitsMatch = course.match(/\d+$/);
+  if (!courseDigitsMatch) {
+    alert("课程格式不正确，未能提取数字部分！");
+    return;
+  }
+  const courseDigits = courseDigitsMatch[0];
+  
+  try {
+    // 注意：集合名称是否正确（此处假设集合名称为 "student" 或 "students"）
+    const studentsQuery = query(collection(db, "student"), where("course", "==", course));
+    const querySnapshot = await getDocs(studentsQuery);
+    let maxSuffix = 0;
+    querySnapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      if (data && data.id && data.id.startsWith(courseDigits)) {
+        const suffixStr = data.id.substring(courseDigits.length);
+        const suffixNum = parseInt(suffixStr, 10);
+        if (!isNaN(suffixNum) && suffixNum > maxSuffix) {
+          maxSuffix = suffixNum;
+        }
+      }
+    });
+    const newSuffix = maxSuffix + 1;
+    const newSuffixStr = newSuffix.toString().padStart(4, '0');
+    const newStudentId = courseDigits + newSuffixStr;
+    console.log("生成的新学生 ID:", newStudentId);
+    // 更新页面上显示的 ID（确保页面中有 id 为 idDisplay 的元素）
+    document.getElementById("idDisplay").textContent = newStudentId;
+  } catch (error) {
+    console.error("查询学生记录出错：", error);
+    alert("查询学生记录出错，请检查控制台了解详细信息。");
+  }
+});
+
+// 绑定表单提交事件
+const form = document.getElementById("addUserForm");
+form.addEventListener("submit", async (e) => {
+  e.preventDefault(); // 阻止默认提交
+
+  // 获取表单输入的值
+  const name = form.name.value;
+  const email = form.email.value;
+  const course = form.course.value;
+  const inputUID = form.uid.value;   // 输入的 UID (card_id)
+  // 此处不再需要 inputID，因为 ID 是自动生成且显示在 idDisplay 中
+  const role = form.role.value;
+
+  // 此处可以继续执行创建用户、在 Firestore 中写入记录等操作
+  try {
+            // 1. 使用 Firebase Authentication 创建新用户（默认密码："abcd1234"）
+            const userCredential = await createUserWithEmailAndPassword(auth, email, "abcd1234");
+            const authUid = userCredential.user.uid;  // Firebase 自动生成的 UID
+            console.log("Firebase Authentication UID:", authUid);
+            
+            // 2. 在 Firestore 的 "users" 集合中创建一个文档，文档 ID 为 authUid，存储 role 与 inputID
+            await setDoc(doc(db, "user", authUid), {
+              role: role,
+              ID: inputID
+            });
+            
+            // 3. 如果角色为 student，则在 "students" 集合中创建一个文档，文档 ID 为输入的 ID
+            if (role === "student") {
+              await setDoc(doc(db, "student", newStudentId), {
+                name: name,
+                email: email,
+                ID: inputID,
+                UID: inputUID,  // 此处是输入的 card_id，与 Firebase Authentication 生成的 authUid 不同
+                course: course
+              });
+            } else if (role === "lecturer") {
+              await setDoc(doc(db, "lecturer", inputID), {
+                name: name,
+                email: email,
+                ID: inputID,
+                UID: inputUID,  // 此处是输入的 card_id，与 Firebase Authentication 生成的 authUid 不同
+                course: course
+              });
+            }
+            
+            alert("用户创建成功！");
+            // 清空或关闭表单区域
+            document.querySelector('.currentOpen').innerHTML = "";
+          } catch (error) {
+            console.error("创建用户出错：", error);
+            alert("创建用户时出错，请检查控制台了解详细信息。");
+          }
+        });        
+        });
+      });
+
+
+
+          
+
+    
     </script>
 
     
@@ -637,6 +804,7 @@ fetchUsers();
             <div class="nav-btn"> <p> Home  </p> </div>
             <div class="nav-btn"> <p> View User  </p> </div>
             <div class="nav-btn"> <p> Data Analysis </p></div>
+            <div class="nav-btn"> <p> Timetable  </p> </div>
             <div class="nav-btn"> <p> Setting  </p> </div>
 
         </div>
