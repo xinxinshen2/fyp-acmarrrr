@@ -615,6 +615,11 @@ form.addEventListener("submit", async (e) => {
             min-height: 500px;
 
         }
+        .btnSpace{
+            /* display: flex; */
+            /* align-content: center; */
+            justify-content: center;
+        }
 
         .function-Btn{
             display: inline-flex;
@@ -786,7 +791,7 @@ form.addEventListener("submit", async (e) => {
 
         /* 表单整体样式 */
         #addUserForm {
-          max-width: 95%;
+          max-width: 75%;
           margin: 20px auto;
           padding: 20px;
           font-family: Arial, sans-serif;
@@ -796,6 +801,11 @@ form.addEventListener("submit", async (e) => {
             border: 1px solid rgba(255, 255, 255, 0.3);
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
            
+        }
+        #addUserForm>h2{
+
+            margin: 10px;
+
         }
         
         /* 每个表单项 */
@@ -924,11 +934,13 @@ form.addEventListener("submit", async (e) => {
     </div>
 
     <div class="functionSpace AllSpace">
-        <p class="currentOpen-text">View User</p>    
+        <p class="currentOpen-text">View User</p>
+        <div class="btnSpace">  
         <span class="changeUser-role function-Btn"><i class="fas fa-user"></i></a></span> 
         <span class="AddUser function-Btn"><i class="fas fa-user-plus"></i></a></span>
         <span class="DeleteUser function-Btn"><i class="fas fa-user-minus"></i></a></span>
         <input type="text" id="searchInput" class="search-bar" placeholder="Search users...">
+        </div>
         <div class="currentOpen"></div>
     </div>
 
