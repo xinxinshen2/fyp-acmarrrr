@@ -8,7 +8,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-app.js";
         import { getAuth, signOut, onAuthStateChanged, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-auth.js";
-        import { getFirestore, collection, query, where, getDocs, doc, setDoc } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-firestore.js";
+        import { getFirestore, collection, query, where, getDocs, getDoc, doc, setDoc } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-firestore.js";
     
         // Firebase Configuration
         const firebaseConfig = {
@@ -29,29 +29,75 @@
     
         // Auth State Listener
         onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                console.log("User is signed in:", user.email);
-                try {       
-                    const adminRef = collection(db, "admin"); 
-                    const q = query(adminRef, where("email", "==", user.email));
-                    const querySnapshot = await getDocs(q);
-    
-                    if (!querySnapshot.empty) {
-                        const adminData = querySnapshot.docs[0].data();
-                        document.getElementById("username").textContent = adminData.ID;
-                        console.log("Admin found:", adminData.ID);
-                    } else {
-                        console.log("Admin not found in Firestore.");
-                        document.getElementById("username").textContent = "Unknown User";
-                    }
-                } catch (error) {
-                    console.error("Error fetching user data:", error);
+          if (user) {
+            console.log("User is signed in:", user.email);
+            try {
+              const userDocRef = doc(db, "user", user.uid);
+              const userDocSnap = await getDoc(userDocRef);
+              if (userDocSnap.exists()) {
+                const userData = userDocSnap.data();
+                const role = userData.role;
+                const userID = userData.ID; 
+                let displayText = "";
+            
+                if (role === "student") {
+                  const studentDocRef = doc(db, "student", userID);
+                  const studentDocSnap = await getDoc(studentDocRef);
+
+                  if (studentDocSnap.exists()) {
+                    const studentData = studentDocSnap.data();
+                    displayText = `${studentData.name} (${studentData.ID})`;
+                  } else {
+                    console.log("Student document not found");
+                    displayText = "Student document not found";
+                  }
+
+                } else if (role === "teacher") {
+                  const teacherDocRef = doc(db, "teacher", userID);
+                  const teacherDocSnap = await getDoc(teacherDocRef);
+
+                  if (teacherDocSnap.exists()) {
+                    const teacherData = teacherDocSnap.data();
+                    displayText = `${teacherData.name} (${teacherData.ID})`;
+                  } else {
+                    console.log("Teacher document not found");
+                    displayText = "Teacher document not found";
+                  }
+                  
+                } else if (role === "admin") {
+                  const adminRef = collection(db, "admin");
+                  const q = query(adminRef, where("email", "==", user.email));
+                  const querySnapshot = await getDocs(q);
+
+                  if (!querySnapshot.empty) {
+                    const adminData = querySnapshot.docs[0].data();
+                    displayText = `${adminData.name} (${adminData.ID})`;
+                    console.log("Admin found:", adminData.ID);
+                  } else {
+                    console.log("Admin not found in Firestore.");
+                    displayText = "Unknown User";
+                    window.location.href = "login.html";
+                  }
+
                 }
-            } else {
-                console.log("No user is signed in. Redirecting...");
+            
+                // 5. 更新页面上显示的用户名信息
+                document.getElementById("username").textContent = displayText;
+              } else {
+                console.log("User document not found.");
+                document.getElementById("username").textContent = "Unknown User";
                 window.location.href = "login.html";
+              }
+            } catch (error) {
+              console.error("Error fetching user data:", error);
             }
+          } else {
+            console.log("No user is signed in. Redirecting...");
+            window.location.href = "login.html";
+          }
         });
+
+
     
         // Logout function
         window.logout = function () {
