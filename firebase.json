@@ -1,7 +1,6 @@
 {
   "hosting": {
-    "site": "advanceattendance",
-    "public": ".",
+    "public": "public", 
     "ignore": [
       "firebase.json",
       "**/.*",
@@ -10,8 +9,9 @@
     "rewrites": [
       {
         "source": "**",
-        "destination": "/index.html"
+        "destination": "/mobile_attendance.html"
       }
-    ]
+    ],
+        "site": "advanceattendance"
   }
 }
