@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>全屏条形码扫描器</title>
+    <style>
+        /*  全屏摄像头样式 */
+        html, body {
+            height: 100%; /*  确保 html 和 body 占据整个视口高度 */
+            overflow: hidden; /*  防止出现滚动条 */
+            margin: 0; /*  移除默认 margin */
+        }
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding-top: 0; /*  移除 body 的 paddingTop */
+            background-color: #000; /*  纯黑色背景，全屏时可能更佳 */
+        }
+        h1 {
+            color: #eee; /*  浅色标题 */
+            position: absolute; /*  绝对定位，使其位于摄像头画面上方 */
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%); /*  水平居中 */
+            z-index: 1; /*  确保标题在遮罩层和扫描线上方 */
+        }
+        #video-container {
+            position: fixed; /*  固定定位，覆盖整个视口 */
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden; /*  裁剪溢出部分 */
+        }
+        #video {
+            display: block;
+            min-width: 100%; /*  确保视频宽度至少撑满容器 */
+            min-height: 100%; /*  确保视频高度至少撑满容器 */
+            width: auto;     /*  宽度和高度设置为 auto，保持视频比例，并允许超出容器 */
+            height: auto;
+            filter: none; /*  移除灰度滤镜，恢复正常色彩 */
+            object-fit: cover; /*  使用 cover 模式，填充容器，可能会裁剪 */
+        }
+
+        /*  半透明遮罩层 */
+      .overlay {
+            position: absolute;
+            left: 0;
+            width: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 2;
+            pointer-events: none;
+        }
+        #overlay-top {
+            top: 0;
+            height: 40%;
+        }
+        #overlay-bottom {
+            bottom: 0;
+            height: 40%;
+        }
+
+        /*  扫描线 */
+        #scan-line {
+            position: absolute;
+            top: 50%;
+            left: 10%;
+            width: 80%;
+            height: 2px;
+            background-color: #00ff00;
+            transform: translateY(-50%);
+            z-index: 3;
+            box-shadow: 0 0 10px #00ff00;
+        }
+
+        #scan-result {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 30px;
+            background-color: rgba(255, 255, 255, 0.95);
+            border: 2px solid #5cb85c;
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+            display: none;
+            z-index: 10;
+        }
+        #result-text {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 15px;
+        }
+        #result-message {
+            font-size: 16px;
+            color: #777;
+        }
+    </style>
+    <script src="https://unpkg.com/@zxing/library@latest"></script>
+</head>
+<body>
+    <h1>全屏条形码扫描器</h1>
+    <div id="video-container">
+        <video id="video" autoplay playsinline></video>
+        <div class="overlay" id="overlay-top"></div>
+        <div class="overlay" id="overlay-bottom"></div>
+        <div id="scan-line"></div>
+    </div>
+    <div id="scan-result">
+        <div id="result-text"></div>
+        <div id="result-message">扫描成功！信息将在3秒后消失。</div>
+    </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const videoContainer = document.getElementById('video-container');
+        const resultElement = document.getElementById('result-text');
+        const scanResultDiv = document.getElementById('scan-result');
+        let codeReader;
+        let scanActive = false;
+
+        function startScanning() {
+            if (scanActive) return;
+            scanActive = true;
+
+            codeReader = new ZXing.BrowserBarcodeReader();
+
+            codeReader.getVideoInputDevices()
+              .then((videoInputDevices) => {
+                    const selectedDeviceId = videoInputDevices.find(device => device.label.toLowerCase().includes('back')) || videoInputDevices;
+
+                    codeReader.decodeFromInputVideoDevice(selectedDeviceId.deviceId, 'video')
+                  .then((result) => {
+                        scanActive = false;
+                        if (result) {
+                            displayScanResult(result.text);
+                        }
+                    })
+                  .catch((err) => {
+                        scanActive = false;
+                        console.error("条码扫描错误:", err);
+                        alert("无法扫描条形码，请确保摄像头权限已授予且条形码清晰可见。");
+                        stopScanning();
+                    });
+
+                    navigator.mediaDevices.getUserMedia({
+                        video: {
+                            deviceId: { exact: selectedDeviceId.deviceId },
+                            facingMode: 'environment'
+                        }
+                    }).then(stream => {
+                        video.srcObject = stream;
+                    }).catch(err => {
+                        scanActive = false;
+                        console.error("getUserMedia 错误:", err);
+                        alert("无法访问摄像头，请检查权限设置。");
+                        stopScanning();
+                    });
+
+
+                })
+              .catch((err) => {
+                    scanActive = false;
+                    console.error("获取视频输入设备错误:", err);
+                    alert("无法访问摄像头列表，请检查设备和权限。");
+                    stopScanning();
+                });
+        }
+
+
+        function displayScanResult(text) {
+            resultElement.innerText = text;
+            scanResultDiv.style.display = 'block';
+
+            setTimeout(function() {
+                scanResultDiv.style.display = 'none';
+                resultElement.innerText = '';a
+            }, 3000);
+        }
+
+        function stopScanning() {
+            if (codeReader) {
+                codeReader.reset();
+                codeReader = null;
+            }
+            if (video.srcObject) {
+                video.srcObject.getVideoTracks().forEach(track => track.stop());
+                video.srcObject = null;
+            }
+            scanActive = false;
+        }
+
+
+        window.addEventListener('load', startScanning);
+        window.addEventListener('beforeunload', stopScanning);
+        window.addEventListener('pagehide', stopScanning);
+
+
+    </script>
+</body>
+</html>

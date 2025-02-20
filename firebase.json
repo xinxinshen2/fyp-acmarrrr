@@ -9,7 +9,7 @@
     "rewrites": [
       {
         "source": "**",
-        "destination": "/mobile_attendance.html"
+        "destination": "/barcode-scanner.html"
       }
     ],
         "site": "advanceattendance"
