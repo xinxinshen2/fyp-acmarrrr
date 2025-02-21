@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="dumbbell.png" type="image/icon type">
+    <link rel="stylesheet" href="navigation.css">
+    <title>Lecturer Dashboard</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            display: flex;
+            height: 100vh;
+            background-color: #f0f2f5;
+            color: #333;
+            margin-top: 10%;
+        }
+/* 
+        .sidebar {
+            width: 250px;
+            background-color: #fff;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+
+        .sidebar .profile {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .sidebar .profile img {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            margin-bottom: 10px;
+        }
+
+        .sidebar .menu {
+            list-style: none;
+        }
+
+        .sidebar .menu li {
+            margin: 20px 0;
+        }
+
+        .sidebar .menu a {
+            text-decoration: none;
+            color: #333;
+            font-weight: bold;
+        } */
+        
+        .content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .card {
+            background-color: #fff;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .card h2 {
+            margin-bottom: 10px;
+        }
+
+        .statistics, .leave-info {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .statistics div, .leave-info div {
+            width: 48%;
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+    </style>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-app.js";
+        import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-auth.js";
+        import { getFirestore, collection, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "REMOVED",
+            authDomain: "advanceas-d8db4.firebaseapp.com",
+            databaseURL: "https://advanceas-d8db4-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "advanceas-d8db4",
+            storageBucket: "advanceas-d8db4.firebasestorage.app",
+            messagingSenderId: "878892786344",
+            appId: "1:878892786344:web:33bb5a97d99daf049d189d",
+            measurementId: "G-PLRRKT6RWW"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        async function loadLecturerName() {
+            const lectureID = sessionStorage.getItem('lectureID');
+            console.log("Lecture ID from session:", lectureID); // Debugging line
+            if (!lectureID) {
+                console.error("Lecture ID not found in session.");
+                window.location.href = 'login.html'; // Redirect to login if lectureID is not found
+                return;
+            }
+
+            const lecturerRef = doc(db, "lecturer", lectureID);
+            const lecturerDoc = await getDoc(lecturerRef);
+
+            if (lecturerDoc.exists()) {
+                const lecturerData = lecturerDoc.data();
+                console.log("Lecturer data retrieved:", lecturerData); // Debugging line
+                document.getElementById('lecturerName').textContent = lecturerData.name;
+            } else {
+                console.error("No such document!");
+            }
+        }
+
+        window.onload = function() {
+            loadLecturerName();
+        };
+
+        window.logout = function() {
+            signOut(auth).then(() => {
+                window.location.href = 'login.html';
+            }).catch((error) => {
+                console.error("Logout error:", error);
+            });
+        };
+
+        if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+            window.location.href = 'mobile_attendance.html';
+        }
+
+
+        
+    
+        // Long Press Logic with Progress Bar
+    const logoutButton = document.getElementById("logoutButton");
+    const progressRect = document.querySelector(".progress-ring-rect");
+    let pressTimer;
+    let progressInterval;
+
+    const startProgress = () => {
+        let time = 0;
+        const totalTime = 3000; // 3 seconds
+        const circumference = 284; // 矩形周长 (2 * (width + height) - 8 * rx)
+
+        progressInterval = setInterval(() => {
+            time += 10; // Update every 10ms
+            const progress = (time / totalTime) * circumference;
+            progressRect.style.strokeDashoffset = circumference - progress;
+
+            if (time >= totalTime) {
+                clearInterval(progressInterval);
+                logout(); // Call logout after 3 seconds
+            }
+        }, 10);
+    };
+
+    const resetProgress = () => {
+        clearInterval(progressInterval);
+        progressRect.style.strokeDashoffset = 284; // Reset progress
+    };
+
+    // Mouse Events
+    logoutButton.addEventListener("mousedown", startProgress);
+    logoutButton.addEventListener("mouseup", resetProgress);
+    logoutButton.addEventListener("mouseleave", resetProgress);
+
+    // Touch Events
+    logoutButton.addEventListener("touchstart", startProgress);
+    logoutButton.addEventListener("touchend", resetProgress);
+    </script>
+</head>
+<body>
+    <!-- <div class="sidebar">
+        <div class="profile">
+            <img src="profile.png" alt="Profile Picture">
+            <p>Welcome, <span id="lecturerName"></span></p>
+        </div>
+        <ul class="menu">
+            <li><a href="#">Home</a></li>
+            <li><a href="#">Calendar</a></li>
+            <li><a href="#">Statistics</a></li>
+            <li><a href="attendance.html">Mark Attendance</a></li>
+            <li><a href="#">Account Settings</a></li>
+            <li><a href="#" onclick="logout()">Logout</a></li>
+        </ul>
+    </div> -->
+
+    <nav>
+        <div class="header nav1">
+            <div class="title">
+                <h2>Advanced Attendance System</h2>
+                <h2 class="welcome">Welcome, <span id="lecturerName"></span></h2>
+            </div>
+
+            <div class="logout-container">
+                <button class="logout" id="logoutButton">Logout</button>
+                <svg class="progress-ring" width="100" height="50">
+                <rect class="progress-ring-rect" x="7" y="2.7" width="86" height="45.5" rx="13" ry="13" stroke="#ff4b5c" stroke-width="3" fill="transparent" />
+                </svg>
+            </div>
+        </div>
+        <div class="header nav2">
+            
+            <div class="nav-btn"> <p> Home  </p> </div>
+            <div class="nav-btn"> <p> View User  </p> </div>
+            <div class="nav-btn"> <p> Data Analysis </p></div>
+            <div class="nav-btn"> <p> Setting  </p> </div>
+
+        </div>
+    </nav>
+
+    <div class="content">
+        <div class="card">
+            <h2>My Statistics</h2>
+            <div class="statistics">
+                <div>
+                    <h3>Attendance Rate</h3>
+                    <p>85%</p>
+                </div>
+                <div>
+                    <h3>Leave Requests</h3>
+                    <p>5 Pending</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Leave Information</h2>
+            <div class="leave-info">
+                <div>
+                    <h3>Approved Leaves</h3>
+                    <p>10</p>
+                </div>
+                <div>
+                    <h3>Rejected Leaves</h3>
+                    <p>2</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+    const homeBtn = document.querySelector(".nav-btn:nth-child(1)");
+    const viewUserBtn = document.querySelector(".nav-btn:nth-child(2)"); // View User 按钮
+    const dataAnalysisBtn = document.querySelector(".nav-btn:nth-child(3)"); // Data Analysis 按钮
+    const dataSpace = document.querySelector(".dataSpace"); // 数据分析区域
+    const functionSpace = document.querySelector(".functionSpace"); // 用户管理功能区域
+    const homeSpace = document.querySelector(".homeSpace");
+
+    // 初始状态：显示 Data Analysis，隐藏 functionSpace
+    homeSpace.style.display = "block";
+    dataSpace.style.display = "block";
+    functionSpace.style.display = "block";
+
+
+    // 点击 "View User" 按钮时
+    viewUserBtn.addEventListener("click", function () {
+        dataSpace.style.display = "none";  // 隐藏数据分析
+        homeSpace.style.display = "none";
+        functionSpace.style.display = "block"; // 显示用户管理功能
+    });
+
+    // 点击 "Data Analysis" 按钮时
+    dataAnalysisBtn.addEventListener("click", function () {
+        homeSpace.style.display="none";
+        dataSpace.style.display = "block";  // 显示数据分析
+        functionSpace.style.display = "none"; // 隐藏用户管理功能
+    });
+
+    homeBtn.addEventListener("click",function(){
+        homeSpace.style.display="block";
+        functionSpace.style.display = "block"; 
+        dataSpace.style.display = "block";
+
+    });
+});
+
+</script>
+</html>
