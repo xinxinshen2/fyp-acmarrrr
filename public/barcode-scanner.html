@@ -145,7 +145,10 @@
                     navigator.mediaDevices.getUserMedia({
                         video: {
                             deviceId: { exact: selectedDeviceId.deviceId },
-                            facingMode: 'environment'
+                            facingMode: 'environment',
+                            advanced: [
+                                { focusMode: 'continuous' }
+                            ]
                         }
                     }).then(stream => {
                         video.srcObject = stream;
