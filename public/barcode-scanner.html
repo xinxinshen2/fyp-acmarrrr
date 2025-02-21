@@ -1,297 +1,311 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>全屏条形码扫描器</title>
-    <style>
-        /*  全屏摄像头样式 */
-        html, body {
-            height: 100%; /*  确保 html 和 body 占据整个视口高度 */
-            overflow: hidden; /*  防止出现滚动条 */
-            margin: 0; /*  移除默认 margin */
-        }
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            padding-top: 0; /*  移除 body 的 paddingTop */
-            background-color: #000; /*  纯黑色背景，全屏时可能更佳 */
-        }
-        h1 {
-            color: #eee; /*  浅色标题 */
-            position: absolute; /*  绝对定位，使其位于摄像头画面上方 */
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%); /*  水平居中 */
-            z-index: 1; /*  确保标题在遮罩层和扫描线上方 */
-        }
-        #video-container {
-            position: fixed; /*  固定定位，覆盖整个视口 */
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden; /*  裁剪溢出部分 */
-        }
-        #video {
-            display: block;
-            min-width: 100%; /*  确保视频宽度至少撑满容器 */
-            min-height: 100%; /*  确保视频高度至少撑满容器 */
-            width: auto;     /*  宽度和高度设置为 auto，保持视频比例，并允许超出容器 */
-            height: auto;
-            filter: none; /*  移除灰度滤镜，恢复正常色彩 */
-            object-fit: cover; /*  使用 cover 模式，填充容器，可能会裁剪 */
-        }
-
-        /*  半透明遮罩层 */
-      .overlay {
-            position: absolute;
-            left: 0;
-            width: 100%;
-            background-color: rgba(0, 0, 0, 0.7);
-            z-index: 2;
-            pointer-events: none;
-        }
-        #overlay-top {
-            top: 0;
-            height: 40%;
-        }
-        #overlay-bottom {
-            bottom: 0;
-            height: 40%;
-        }
-
-        /*  扫描线 */
-        #scan-line {
-            position: absolute;
-            top: 50%;
-            left: 10%;
-            width: 80%;
-            height: 2px;
-            background-color: #00ff00;
-            transform: translateY(-50%);
-            z-index: 3;
-            box-shadow: 0 0 10px #00ff00;
-        }
-
-        #scan-result {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            padding: 30px;
-            background-color: rgba(255, 255, 255, 0.95);
-            border: 2px solid #5cb85c;
-            border-radius: 12px;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
-            display: none;
-            z-index: 10;
-        }
-        #result-text {
-            font-size: 24px;
-            color: #333;
-            margin-bottom: 15px;
-        }
-        #result-message {
-            font-size: 16px;
-            color: #777;
-        }
-    </style>
-    <script src="https://unpkg.com/@zxing/library@latest"></script>
-</head>
-<body>
-    <h1>全屏条形码扫描器</h1>
-    <div id="video-container">
-        <video id="video" autoplay playsinline></video>
-        <div class="overlay" id="overlay-top"></div>
-        <div class="overlay" id="overlay-bottom"></div>
-        <div id="scan-line"></div>
-    </div>
-    <div id="scan-result">
-        <div id="result-text"></div>
-        <div id="result-message">扫描成功！信息将在3秒后消失。</div>
-    </div>
-
-    <script>
-        const video = document.getElementById('video');
-        const videoContainer = document.getElementById('video-container');
-        const resultElement = document.getElementById('result-text');
-        const scanResultDiv = document.getElementById('scan-result');
-        let codeReader;
-        let scanActive = false;
-
-        // 添加Firebase配置（与attendance.html相同）
-        const firebaseConfig = {
-            apiKey: "REMOVED",
-            authDomain: "advanceas-d8db4.firebaseapp.com",
-            projectId: "advanceas-d8db4",
-            storageBucket: "advanceas-d8db4.appspot.com",
-            messagingSenderId: "878892786344",
-            appId: "1:878892786344:web:33bb5a97d99daf049d189d"
-        };
-
-        // 初始化Firebase
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-
-        // 从URL参数获取session信息
-        let sessionId, courseId, subjectId, lectureId;
-
-        function startScanning() {
-            if (scanActive) return;
-            scanActive = true;
-
-            codeReader = new ZXing.BrowserBarcodeReader();
-
-            codeReader.getVideoInputDevices()
-              .then((videoInputDevices) => {
-                    const selectedDeviceId = videoInputDevices.find(device => device.label.toLowerCase().includes('back')) || videoInputDevices;
-
-                    function decode() { // 定义一个递归函数来进行持续解码
-                        codeReader.decodeFromInputVideoDevice(selectedDeviceId.deviceId, 'video')
-                            .then((result) => {
-                                scanActive = false;
-                                if (result) {
-                                    displayScanResult(result.text);
-                                }
-                                setTimeout(decode, 0); // 立即进行下一次扫描
-                            })
-                            .catch((err) => {
-                                scanActive = false;
-                                console.error("条码扫描错误:", err);
-                                // alert("无法扫描条形码，请确保摄像头权限已授予且条形码清晰可见。"); // 避免重复弹窗
-                                setTimeout(decode, 0); // 发生错误后，也尝试继续扫描
-                            });
-                    }
-
-                    navigator.mediaDevices.getUserMedia({
-                        video: {
-                            deviceId: { exact: selectedDeviceId.deviceId },
-                            facingMode: 'environment'
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>全屏条形码扫描器</title>
+        <style>
+            /*  全屏摄像头样式 */
+            html, body {
+                height: 100%; /*  确保 html 和 body 占据整个视口高度 */
+                overflow: hidden; /*  防止出现滚动条 */
+                margin: 0; /*  移除默认 margin */
+            }
+            body {
+                font-family: Arial, sans-serif;
+                text-align: center;
+                padding-top: 0; /*  移除 body 的 paddingTop */
+                background-color: #000; /*  纯黑色背景，全屏时可能更佳 */
+            }
+            h1 {
+                color: #eee; /*  浅色标题 */
+                position: absolute; /*  绝对定位，使其位于摄像头画面上方 */
+                top: 20px;
+                left: 50%;
+                transform: translateX(-50%); /*  水平居中 */
+                z-index: 1; /*  确保标题在遮罩层和扫描线上方 */
+            }
+            #video-container {
+                position: fixed; /*  固定定位，覆盖整个视口 */
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                overflow: hidden; /*  裁剪溢出部分 */
+            }
+            #video {
+                display: block;
+                min-width: 100%; /*  确保视频宽度至少撑满容器 */
+                min-height: 100%; /*  确保视频高度至少撑满容器 */
+                width: auto;     /*  宽度和高度设置为 auto，保持视频比例，并允许超出容器 */
+                height: auto;
+                filter: none; /*  移除灰度滤镜，恢复正常色彩 */
+                object-fit: cover; /*  使用 cover 模式，填充容器，可能会裁剪 */
+            }
+    
+            /*  半透明遮罩层 */
+          .overlay {
+                position: absolute;
+                left: 0;
+                width: 100%;
+                background-color: rgba(0, 0, 0, 0.7);
+                z-index: 2;
+                pointer-events: none;
+            }
+            #overlay-top {
+                top: 0;
+                height: 40%;
+            }
+            #overlay-bottom {
+                bottom: 0;
+                height: 40%;
+            }
+    
+            /*  扫描线 */
+            #scan-line {
+                position: absolute;
+                top: 50%;
+                left: 10%;
+                width: 80%;
+                height: 2px;
+                background-color: #00ff00;
+                transform: translateY(-50%);
+                z-index: 3;
+                box-shadow: 0 0 10px #00ff00;
+            }
+    
+            #scan-result {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                padding: 30px;
+                background-color: rgba(255, 255, 255, 0.95);
+                border: 2px solid #5cb85c;
+                border-radius: 12px;
+                box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+                display: none;
+                z-index: 10;
+            }
+            #result-text {
+                font-size: 24px;
+                color: #333;
+                margin-bottom: 15px;
+            }
+            #result-message {
+                font-size: 16px;
+                color: #777;
+            }
+        </style>
+        <script src="https://unpkg.com/@zxing/library@latest"></script>
+    </head>
+    <body>
+        <h1>全屏条形码扫描器</h1>
+        <div id="video-container">
+            <video id="video" autoplay playsinline></video>
+            <div class="overlay" id="overlay-top"></div>
+            <div class="overlay" id="overlay-bottom"></div>
+            <div id="scan-line"></div>
+        </div>
+        <div id="scan-result">
+            <div id="result-text"></div>
+            <div id="result-message">扫描成功！信息将在3秒后消失。</div>
+        </div>
+    
+        <script>
+            const video = document.getElementById('video');
+            const videoContainer = document.getElementById('video-container');
+            const resultElement = document.getElementById('result-text');
+            const scanResultDiv = document.getElementById('scan-result');
+            let codeReader;
+            let scanActive = false;
+    
+            // 添加Firebase配置（与attendance.html相同）
+            const firebaseConfig = {
+                apiKey: "REMOVED",
+                authDomain: "advanceas-d8db4.firebaseapp.com",
+                projectId: "advanceas-d8db4",
+                storageBucket: "advanceas-d8db4.appspot.com",
+                messagingSenderId: "878892786344",
+                appId: "1:878892786344:web:33bb5a97d99daf049d189d"
+            };
+    
+            // 初始化Firebase
+            firebase.initializeApp(firebaseConfig);
+            const db = firebase.firestore();
+    
+            // 从URL参数获取session信息
+            let sessionId, courseId, subjectId, lectureId;
+    
+            function startScanning() {
+                if (scanActive) return;
+                scanActive = true;
+    
+                codeReader = new ZXing.BrowserBarcodeReader();
+    
+                codeReader.getVideoInputDevices()
+                  .then((videoInputDevices) => {
+                        const selectedDeviceId = videoInputDevices.find(device => device.label.toLowerCase().includes('back')) || videoInputDevices;
+    
+                        function decode() { // 定义一个递归函数来进行持续解码
+                            codeReader.decodeFromInputVideoDevice(selectedDeviceId.deviceId, 'video')
+                                .then((result) => {
+                                    scanActive = false;
+                                    if (result) {
+                                        displayScanResult(result.text);
+                                    }
+                                    setTimeout(decode, 0); // 立即进行下一次扫描
+                                })
+                                .catch((err) => {
+                                    scanActive = false;
+                                    console.error("条码扫描错误:", err);
+                                    // alert("无法扫描条形码，请确保摄像头权限已授予且条形码清晰可见。"); // 避免重复弹窗
+                                    setTimeout(decode, 0); // 发生错误后，也尝试继续扫描
+                                });
                         }
-                    }).then(stream => {
-                        video.srcObject = stream;
-                        decode(); // 开始持续扫描
-                    }).catch(err => {
+    
+                        navigator.mediaDevices.getUserMedia({
+                            video: {
+                                deviceId: { exact: selectedDeviceId.deviceId },
+                                facingMode: 'environment'
+                            }
+                        }).then(stream => {
+                            video.srcObject = stream;
+                            decode(); // 开始持续扫描
+                        }).catch(err => {
+                            scanActive = false;
+                            console.error("getUserMedia 错误:", err);
+                            alert("无法访问摄像头，请检查权限设置。");
+                            stopScanning();
+                        });
+    
+    
+                    })
+                  .catch((err) => {
                         scanActive = false;
-                        console.error("getUserMedia 错误:", err);
-                        alert("无法访问摄像头，请检查权限设置。");
+                        console.error("获取视频输入设备错误:", err);
+                        alert("无法访问摄像头列表，请检查设备和权限。");
                         stopScanning();
                     });
-
-
-                })
-              .catch((err) => {
-                    scanActive = false;
-                    console.error("获取视频输入设备错误:", err);
-                    alert("无法访问摄像头列表，请检查设备和权限。");
-                    stopScanning();
-                });
-        }
-
-
-        // 修改扫描结果处理
-        async function displayScanResult(text) {
-            try {
-                const studentId = text;
-                const result = await markAttendance(studentId);
-                
-                resultElement.innerHTML = result.success ? 
-                    `<span style="color:#4CAF50">✓ ${studentId}<br>${result.message}</span>` :
-                    `<span style="color:#f44336">✕ ${studentId}<br>${result.message}</span>`;
+            }
+    
+    
+            // 修改扫描结果处理
+            async function displayScanResult(text) {
+                try {
+                    const studentId = text;
+                    const result = await markAttendance(studentId);
                     
-                scanResultDiv.style.display = 'block';
-                setTimeout(() => scanResultDiv.style.display = 'none', 3000);
+                    resultElement.innerHTML = result.success ? 
+                        `<span style="color:#4CAF50">✓ ${studentId}<br>${result.message}</span>` :
+                        `<span style="color:#f44336">✕ ${studentId}<br>${result.message}</span>`;
+                        
+                    scanResultDiv.style.display = 'block';
+                    setTimeout(() => scanResultDiv.style.display = 'none', 3000);
+                    
+                } catch (error) {
+                    console.error("考勤处理错误:", error);
+                    resultElement.innerHTML = `<span style="color:#f44336">错误: ${error.message}</span>`;
+                    scanResultDiv.style.display = 'block';
+                    setTimeout(() => scanResultDiv.style.display = 'none', 3000);
+                }
+            }
+    
+            // 从attendance.html迁移的签到逻辑
+            async function markAttendance(studentId) {
+                const attendanceRef = db.collection("attendance")
+                    .doc(courseId)
+                    .collection(subjectId)
+                    .doc(sessionId)
+                    .collection("students")
+                    .doc(studentId);
+    
+                // 检查是否已签到
+                const doc = await attendanceRef.get();
+                if (doc.exists) {
+                    return { success: false, message: "已签到过" };
+                }
+    
+                // 写入考勤记录
+                await attendanceRef.set({
+                    status: "present",
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    lectureId: lectureId
+                });
+    
+                // 更新统计
+                await updateAttendanceCounts();
+                return { success: true, message: "签到成功" };
+            }
+    
+            async function updateAttendanceCounts() {
+                const studentsRef = db.collection("student");
+                const studentsSnapshot = await studentsRef.get();
                 
-            } catch (error) {
-                console.error("考勤处理错误:", error);
-                resultElement.innerHTML = `<span style="color:#f44336">错误: ${error.message}</span>`;
-                scanResultDiv.style.display = 'block';
-                setTimeout(() => scanResultDiv.style.display = 'none', 3000);
+                const attendanceRef = db.collection("attendance")
+                    .doc(courseId)
+                    .collection(subjectId)
+                    .doc(sessionId);
+    
+                // 获取总学生数
+                const total = (await studentsRef.where("course", "==", courseId).get()).size;
+                
+                // 获取已签到数
+                const present = (await attendanceRef.collection("students").get()).size;
+                
+                // 更新统计
+                await attendanceRef.update({
+                    totalStudents: total,
+                    presentStudents: present,
+                    absentStudents: total - present,
+                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                });
             }
-        }
+    
+            // 初始化时获取参数
+            document.addEventListener('DOMContentLoaded', () => {
+                const sessionData = JSON.parse(sessionStorage.getItem('attendanceSession'));
+                
+                if (!sessionData) {
+                    alert("无效的课程参数");
+                    window.location.href = 'mobile_attendance.html';
+                    return;
+                }
 
-        // 从attendance.html迁移的签到逻辑
-        async function markAttendance(studentId) {
-            const attendanceRef = db.collection("attendance")
-                .doc(courseId)
-                .collection(subjectId)
-                .doc(sessionId)
-                .collection("students")
-                .doc(studentId);
-
-            // 检查是否已签到
-            const doc = await attendanceRef.get();
-            if (doc.exists) {
-                return { success: false, message: "已签到过" };
-            }
-
-            // 写入考勤记录
-            await attendanceRef.set({
-                status: "present",
-                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                lectureId: lectureId
+                // 从sessionStorage解构参数
+                ({sessionId, courseId, subjectId, lectureId} = sessionData);
+                
+                // 验证必要参数
+                if (!sessionId || !courseId || !subjectId || !lectureId) {
+                    alert("缺少必要课程参数");
+                    window.location.href = 'mobile_attendance.html';
+                }
+                
+                // 可选：清除存储（如果需要防止重复使用）
+                sessionStorage.removeItem('attendanceSession');
             });
-
-            // 更新统计
-            await updateAttendanceCounts();
-            return { success: true, message: "签到成功" };
-        }
-
-        async function updateAttendanceCounts() {
-            const studentsRef = db.collection("student");
-            const studentsSnapshot = await studentsRef.get();
-            
-            const attendanceRef = db.collection("attendance")
-                .doc(courseId)
-                .collection(subjectId)
-                .doc(sessionId);
-
-            // 获取总学生数
-            const total = (await studentsRef.where("course", "==", courseId).get()).size;
-            
-            // 获取已签到数
-            const present = (await attendanceRef.collection("students").get()).size;
-            
-            // 更新统计
-            await attendanceRef.update({
-                totalStudents: total,
-                presentStudents: present,
-                absentStudents: total - present,
-                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-            });
-        }
-
-        // 初始化时获取参数
-        document.addEventListener('DOMContentLoaded', () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            sessionId = urlParams.get('sessionId');
-            courseId = urlParams.get('courseId');
-            subjectId = urlParams.get('subjectId');
-            lectureId = urlParams.get('lectureId');
-
-            if (!sessionId || !courseId || !subjectId) {
-                alert("无效的课程参数");
-                window.location.href = 'mobile_attendance.html';
+    
+            function stopScanning() {
+                if (codeReader) {
+                    codeReader.reset();
+                    codeReader = null;
+                }
+                if (video.srcObject) {
+                    video.srcObject.getVideoTracks().forEach(track => track.stop());
+                    video.srcObject = null;
+                }
+                scanActive = false;
             }
-        });
-
-        function stopScanning() {
-            if (codeReader) {
-                codeReader.reset();
-                codeReader = null;
-            }
-            if (video.srcObject) {
-                video.srcObject.getVideoTracks().forEach(track => track.stop());
-                video.srcObject = null;
-            }
-            scanActive = false;
-        }
-
-
-        window.addEventListener('load', startScanning);
-        window.addEventListener('beforeunload', stopScanning);
-        window.addEventListener('pagehide', stopScanning);
-
-
-    </script>
-</body>
-</html>
+    
+    
+            window.addEventListener('load', startScanning);
+            window.addEventListener('beforeunload', stopScanning);
+            window.addEventListener('pagehide', stopScanning);
+    
+    
+        </script>
+    </body>
+    </html>
