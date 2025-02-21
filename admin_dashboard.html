@@ -88,11 +88,11 @@
 // }
 
 async function loadAdminName() {
-  const adminID = sessionStorage.getItem('adminID'); // 假设你将 admin 的 ID 存在 sessionStorage 中
-  console.log("Admin ID from session:", adminID); // Debug 输出
+  const adminID = sessionStorage.getItem('adminID');
+  console.log("Admin ID from session:", adminID); 
   if (!adminID) {
     console.error("Admin ID not found in session.");
-    window.location.href = 'login.html'; // 未找到 adminID 则重定向登录页面
+    window.location.href = 'login.html';
     return;
   }
 
@@ -101,7 +101,7 @@ async function loadAdminName() {
 
   if (adminDoc.exists()) {
     const adminData = adminDoc.data();
-    console.log("Admin data retrieved:", adminData); // Debug 输出
+    console.log("Admin data retrieved:", adminData); 
      const displayText = `${adminData.name} (${adminData.ID})`;
     document.getElementById('username').textContent =displayText;
   } else {
@@ -126,7 +126,7 @@ window.onload = function() {
             });
         };
     
-        // Long Press Logic with Progress Bar
+//LOGOUT HERE
     const logoutButton = document.getElementById("logoutButton");
     const progressRect = document.querySelector(".progress-ring-rect");
     let pressTimer;
@@ -134,7 +134,7 @@ window.onload = function() {
 
     const startProgress = () => {
         let time = 0;
-        const totalTime = 3000; // 3 seconds
+        const totalTime = 3000; 
         const circumference = 284; // 矩形周长 (2 * (width + height) - 8 * rx)
 
         progressInterval = setInterval(() => {
@@ -144,22 +144,22 @@ window.onload = function() {
 
             if (time >= totalTime) {
                 clearInterval(progressInterval);
-                logout(); // Call logout after 3 seconds
+                logout(); 
             }
         }, 10);
     };
 
     const resetProgress = () => {
         clearInterval(progressInterval);
-        progressRect.style.strokeDashoffset = 284; // Reset progress
+        progressRect.style.strokeDashoffset = 284; 
     };
 
-    // Mouse Events
+
     logoutButton.addEventListener("mousedown", startProgress);
     logoutButton.addEventListener("mouseup", resetProgress);
     logoutButton.addEventListener("mouseleave", resetProgress);
 
-    // Touch Events
+
     logoutButton.addEventListener("touchstart", startProgress);
     logoutButton.addEventListener("touchend", resetProgress);
 
@@ -170,8 +170,9 @@ const searchInput = document.getElementById("searchInput");
 const filterButton = document.querySelector(".changeUser-role");
 const filterIcon = filterButton.querySelector("i");
 
-// 当前过滤状态
-let filterState = "all"; // 默认显示所有用户
+//FILTER USER ROLE 
+
+let filterState = "all"; 
 let longPressTimer = null;
 let longPressActive = false;
 
@@ -216,40 +217,40 @@ filterButton.addEventListener("mousedown", () => {
 filterButton.addEventListener("mouseup", () => clearTimeout(longPressTimer));
 filterButton.addEventListener("mouseleave", () => clearTimeout(longPressTimer));
 
-// 页面加载时获取用户数据
+
 document.addEventListener("DOMContentLoaded", () => {
     filterState = "all";
     updateIcon();
     fetchUsers();
 });
 
-// 获取用户数据
+
 async function fetchUsers() {
-    console.log("当前筛选状态:", filterState);
+    console.log("Current Filter Status:", filterState);
     userContainer.innerHTML = "<p>Loading...</p>";
 
     let users = [];
 
     try {
-        // 获取 "admin" 数据
+
         const adminSnapshot = await getDocs(collection(db, "admin"));
         adminSnapshot.forEach(doc => {
             users.push({ id: doc.data().ID, name: doc.data().name, email: doc.data().email, role: "admin" });
         });
 
-        // 获取 "lecturer" 数据
+
         const lecturerSnapshot = await getDocs(collection(db, "lecturer"));
         lecturerSnapshot.forEach(doc => {
             users.push({ id: doc.data().ID, name: doc.data().name, email: doc.data().email, role: "lecturer" });
         });
 
-        // 获取 "student" 数据
+
         const studentSnapshot = await getDocs(collection(db, "student"));
         studentSnapshot.forEach(doc => {
             users.push({ id: doc.data().ID, name: doc.data().name, email: doc.data().email, role: "student" });
         });
 
-        // 过滤数据
+
         let filteredUsers = users;
         if (filterState === "student") {
             filteredUsers = users.filter(user => user.role === "student");
@@ -265,22 +266,20 @@ async function fetchUsers() {
     }
 }
 
-// 显示用户数据（表格）
+
 function displayUsers(users) {
-    userContainer.innerHTML = ""; // 清空内容
+    userContainer.innerHTML = ""; 
 
     if (users.length === 0) {
         userContainer.innerHTML = "<p>No users found.</p>";
         return;
     }
 
-    // 创建表格
     const table = document.createElement("table");
     table.border = "1";
     table.style.width = "100%";
     table.style.borderCollapse = "collapse";
 
-    // 创建表头
     const thead = document.createElement("thead");
     thead.innerHTML = `
         <tr style="background-color: #f2f2f2; text-align: left;">
@@ -293,7 +292,6 @@ function displayUsers(users) {
     `;
     table.appendChild(thead);
 
-    // 创建表格主体
     const tbody = document.createElement("tbody");
 
     users.forEach((user, index) => {
@@ -315,7 +313,7 @@ function displayUsers(users) {
     
 }
 
-// 搜索功能
+// SEARCH AT HERE
 searchInput.addEventListener("input", (e) => {
     const query = e.target.value.toLowerCase();
     const users = document.querySelectorAll(".currentOpen table tbody tr");
@@ -329,13 +327,13 @@ searchInput.addEventListener("input", (e) => {
 
 
 
-// 初始加载所有用户
+
 fetchUsers();
 
 //ADDUSER
-    // DOM 加载完成后设置事件监听
-    document.addEventListener('DOMContentLoaded', () => {
-      // 绑定 AddUser 按钮点击事件，显示表单
+
+document.addEventListener('DOMContentLoaded', () => {
+
       const addUserBtn = document.querySelector('.AddUser');
       addUserBtn.addEventListener('click', () => {
         document.querySelector('.currentOpen').innerHTML = `
@@ -378,8 +376,8 @@ fetchUsers();
             </div>
           </form>
         `;
-// 先填充课程下拉框
-async function populateCourseOptions() {
+
+        async function populateCourseOptions() {
   const courseSelect = document.getElementById("course");
   try {
     const coursesSnapshot = await getDocs(collection(db, "course"));
@@ -397,24 +395,24 @@ async function populateCourseOptions() {
 populateCourseOptions();
 
 
-// 为 course 下拉框绑定 change 事件，用于生成新学生 ID 并显示
+
 document.getElementById("course").addEventListener("change", async (e) => {
   const selectedCourse = e.target.value;
-  // 假设只有 student 角色才使用自动生成 id
+
   const role = document.getElementById("role").value;
   if (role !== "student") {
     return;
   }
   
   try {
-    // 查询 student 集合中，course 字段等于所选 course 的所有记录
+
     const studentsQuery = query(
       collection(db, "student"),
       where("course", "==", selectedCourse)
     );
     const querySnapshot = await getDocs(studentsQuery);
     
-    // 遍历每个文档，取文档 id 转换为数字后找最大值
+
     let maxId = 0;
     querySnapshot.forEach((docSnap) => {
       const currentId = parseInt(docSnap.id, 10);
@@ -423,11 +421,11 @@ document.getElementById("course").addEventListener("change", async (e) => {
       }
     });
     
-    // 新的 student id = 最大值 + 1；如果没有记录，则默认从 1 开始
+
     const newID = (maxId + 1).toString();
     console.log("New Student ID:", newID);
     
-    // 更新页面上显示的 ID（确保页面中有 id 为 "idDisplay" 的元素）
+
     document.getElementById("idDisplay").textContent = newID;
     
   } catch (error) {
@@ -440,25 +438,24 @@ document.getElementById("course").addEventListener("change", async (e) => {
 // 绑定表单提交事件
 const form = document.getElementById("addUserForm");
 form.addEventListener("submit", async (e) => {
-  e.preventDefault(); // 阻止默认提交
+  e.preventDefault(); 
 
   // 获取表单输入的值
   const name = form.name.value;
   const email = form.email.value;
   const course = form.course.value;
-  const inputUID = form.uid.value;   // 输入的 UID (card_id)
-  // 此处不再需要 inputID，因为 ID 是自动生成且显示在 idDisplay 中
+  const inputUID = form.uid.value;  
   const newID = document.getElementById("idDisplay").textContent;
   const role = form.role.value;
 
-  // 此处可以继续执行创建用户、在 Firestore 中写入记录等操作
+
   try {
-            // 1. 使用 Firebase Authentication 创建新用户（默认密码："abcd1234"）
+
             const userCredential = await createUserWithEmailAndPassword(auth, email, "abcd1234");
             const authUid = userCredential.user.uid;  // Firebase 自动生成的 UID
             console.log("Firebase Authentication UID:", authUid);
             
-            // 2. 在 Firestore 的 "users" 集合中创建一个文档，文档 ID 为 authUid，存储 role 与 inputID
+
             if (role === "student" || role === "lecturer") {
               await setDoc(doc(db, "user", authUid), {
                 role: role,
@@ -466,13 +463,12 @@ form.addEventListener("submit", async (e) => {
               }, { merge: true });
             }
             
-            // 3. 如果角色为 student，则在 "students" 集合中创建一个文档，文档 ID 为输入的 ID
             if (role === "student") {
               await setDoc(doc(db, "student", newID), {
                 name: name,
                 email: email,
                 ID: newID,
-                UID: inputUID,  // 此处是输入的 card_id，与 Firebase Authentication 生成的 authUid 不同
+                UID: inputUID,  
                 course: course
               });
             } else if (role === "lecturer") {
@@ -480,16 +476,16 @@ form.addEventListener("submit", async (e) => {
                 name: name,
                 email: email,
                 ID: newID,
-                UID: inputUID,  // 此处是输入的 card_id，与 Firebase Authentication 生成的 authUid 不同
+                UID: inputUID,  
                 course: course
               });
             }
             
             alert("用户创建成功！");
-                // 重置表单
-                const form = document.getElementById("addUserForm");
+
+            const form = document.getElementById("addUserForm");
                 form.reset();
-                // 清空显示生成的 ID
+
                 document.getElementById("idDisplay").textContent = "";
 
           } catch (error) {
@@ -504,18 +500,15 @@ form.addEventListener("submit", async (e) => {
 
 
       //DELETE IS HERE
+      document.querySelector('.DeleteUser').addEventListener('click', () => {
+        fetchUsersForDelete();
+      });
 
-      
- // 点击 DeleteUser 按钮时启用删除模式
-document.querySelector('.DeleteUser').addEventListener('click', () => {
-  fetchUsersForDelete();
-});
 
-// 获取用户数据用于删除模式
 async function fetchUsersForDelete() {
   let users = [];
   try {
-    // 获取 "admin" 用户（确保 Firestore 中 admin 文档中有字段 ID 和 authUid）
+
     const adminSnapshot = await getDocs(collection(db, "admin"));
     adminSnapshot.forEach(docSnap => {
       const data = docSnap.data();
@@ -527,7 +520,7 @@ async function fetchUsersForDelete() {
         authUid: data.authUid 
       });
     });
-    // 获取 "teacher" 用户（假设教师存储在 "lecturer" 集合中）
+
     const lecturerSnapshot = await getDocs(collection(db, "lecturer"));
     lecturerSnapshot.forEach(docSnap => {
       const data = docSnap.data();
@@ -539,7 +532,7 @@ async function fetchUsersForDelete() {
         authUid: data.authUid 
       });
     });
-    // 获取 "student" 用户
+
     const studentSnapshot = await getDocs(collection(db, "student"));
     studentSnapshot.forEach(docSnap => {
       const data = docSnap.data();
@@ -552,7 +545,7 @@ async function fetchUsersForDelete() {
       });
     });
     
-    // 直接显示所有用户
+
     displayUsersForDelete(users);
   } catch (error) {
     console.error("Error fetching users for deletion:", error);
@@ -560,10 +553,10 @@ async function fetchUsersForDelete() {
   }
 }
 
-// 显示用户数据（删除模式：带复选框与删除提交按钮）
+
 function displayUsersForDelete(users) {
   const container = document.querySelector('.currentOpen');
-  container.innerHTML = ""; // 清空内容
+  container.innerHTML = ""; 
 
   if (users.length === 0) {
     container.innerHTML = "<p>No users found.</p>";
@@ -572,13 +565,13 @@ function displayUsersForDelete(users) {
 
 
 
-  // 创建带复选框的表格
+
   const table = document.createElement("table");
   table.border = "1";
   table.style.width = "100%";
   table.style.borderCollapse = "collapse";
 
-  // 表头（增加第一列“Select”）
+
   const thead = document.createElement("thead");
   thead.innerHTML = `
     <tr style="background-color: #f2f2f2;">
@@ -613,18 +606,17 @@ function displayUsersForDelete(users) {
   });
   table.appendChild(tbody);
   container.appendChild(table);
-    // 在表格上方添加“Delete Selected”按钮
-    const deleteBtn = document.createElement("button");
+
+  const deleteBtn = document.createElement("button");
   deleteBtn.id = "deleteSelectedBtn";
   deleteBtn.textContent = "Delete Selected";
   deleteBtn.style.marginBottom = "10px";
   container.appendChild(deleteBtn);
 
-  // 绑定“Delete Selected”按钮的点击事件
   deleteBtn.addEventListener("click", async () => {
     const checkboxes = document.querySelectorAll(".deleteCheckbox:checked");
     const usersToDelete = [];
-    const authUIDsToDelete = []; // 用于存放需要删除的认证账户 UID
+    const authUIDsToDelete = [];
 
     checkboxes.forEach(cb => {
       const userId = cb.getAttribute("data-user-id");
@@ -644,13 +636,13 @@ function displayUsersForDelete(users) {
       return;
     }
 
-    // 1. 删除 Firestore 中的数据
+
     for (const userObj of usersToDelete) {
       let collectionName;
       if (userObj.role === "admin") {
         collectionName = "admin";
       } else if (userObj.role === "teacher") {
-        collectionName = "lecturer"; // 假设教师存储在 lecturer 集合中
+        collectionName = "lecturer"; 
       } else if (userObj.role === "student") {
         collectionName = "student";
       }
@@ -662,14 +654,12 @@ function displayUsersForDelete(users) {
       }
     }
 
-    // 假设 Firebase App 已经初始化，且 functions 已初始化
 const functions = getFunctions();
 const deleteUsersFunction = httpsCallable(functions, 'deleteUsers');
 
-    // 2. 调用 Cloud Function 删除 Firebase Authentication 中的账户
     async function deleteSelectedUsers(authUIDsToDelete) {
   try {
-    const result = await deleteUsersFunction({ uids: authUIDsToDelete });
+    const result = await deleteUsersFunction({ uid: authUIDsToDelete });
     console.log("Delete users from Auth result:", result.data);
   } catch (error) {
     console.error("Error deleting Authentication accounts:", error);
@@ -677,7 +667,7 @@ const deleteUsersFunction = httpsCallable(functions, 'deleteUsers');
 }
     await deleteSelectedUsers(authUIDsToDelete);
     alert("Selected users deleted.");
-    // 删除完成后，调用普通的 fetchUsers() 恢复正常显示（删除模式结束）
+    
     fetchUsers();
   });
 }
@@ -733,7 +723,7 @@ const deleteUsersFunction = httpsCallable(functions, 'deleteUsers');
             /* border-radius: 0px 0px 15px 15px;  */
        }
        .nav1{
-        justify-content: space-between; /* 左右对齐 */
+        justify-content: space-between; 
 
        }
 
@@ -786,7 +776,7 @@ const deleteUsersFunction = httpsCallable(functions, 'deleteUsers');
 
     .welcome {
         font-size: 16px;
-        color: #ff4b5c; /* 让欢迎信息更突出 */
+        color: #ff4b5c; 
     }
 
 
@@ -796,25 +786,25 @@ const deleteUsersFunction = httpsCallable(functions, 'deleteUsers');
     position: absolute;
     /* top: vb; */
     right: 20px;
-    width: 100px; /* 与按钮宽度一致 */
-    height: 50px; /* 与按钮高度一致 */
+    width: 100px; 
+    height: 50px; 
     display: flex;
     justify-content: center;
     align-items: center;
 }
 
-/* 按钮样式 */
+
 .logout {
     padding: 10px 15px;
     background-color: #ff4b5c;
     color: white;
     border: none;
-    border-radius: 10px; /* 圆角矩形 */
+    border-radius: 10px; 
     cursor: pointer;
     font-size: 1em;
     transition: background 0.3s;
     position: relative;
-    z-index: 1; /* 确保按钮在进度条上方 */
+    z-index: 1; 
 }
 
     .logout:hover {
@@ -845,9 +835,9 @@ const deleteUsersFunction = httpsCallable(functions, 'deleteUsers');
             /* background: linear-gradient(-229deg, #cf91ff, #5782f5); */
             /* background-color: rgba(255, 255, 255, 0.5); */
             background: linear-gradient(-229deg, rgba(207, 145, 255, 0.7), rgba(87, 130, 245, 0.7));
-            backdrop-filter: blur(10px); /* 模糊效果 */
+            backdrop-filter: blur(10px); 
             border-radius: 15px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* 阴影 */
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); 
         }
 
         .AllSpace > p {
@@ -914,7 +904,6 @@ const deleteUsersFunction = httpsCallable(functions, 'deleteUsers');
              
         }
 
-        /* 当按钮被点击后保持颜色 */
         .function-Btn.clicked i {
            background: linear-gradient(-229deg, #cf91ff, #5782f5);
             background-clip: text;
@@ -937,45 +926,44 @@ const deleteUsersFunction = httpsCallable(functions, 'deleteUsers');
             }
 
             .function-Btn {
-                width: 20%; /* 让按钮稍微变大 */
+                width: 20%; 
             }
         
             .search-bar {
-                min-width: 50%; /* 让搜索框更长 */
-                font-size: 0.9em; /* 适当缩小字体 */
+                min-width: 50%; 
+                font-size: 0.9em; 
             }
         }
 
-        /* Mobile Responsive */
         @media screen and (max-width: 768px) {
             body{
                 margin-top: 20%;
             }
-            
+
             .AllSpace {
                 width: 95%;
             }
             .functionSpace {
-        flex-wrap: wrap; /* 允许元素换行 */
-        justify-content: center; /* 居中排列 */
-    }
+             flex-wrap: wrap; 
+             justify-content: center;
+             }
             /* .function-Btn {
                 width: 16%;
                 height: 60px;
             } */
             .function-Btn {
-        width: 25%; /* 按钮缩小 */
-        height: 50px;
-        font-size: 0.8em; /* 字体变小 */
-    }
+                width: 25%; 
+                height: 50px;
+                font-size: 0.8em;
+            }
             .function-Btn i {
                 font-size: 1.4em;
             }
             .search-bar {
-        width: 80%; /* 搜索框占满一行 */
-        font-size: 0.8em;
-        height: 50px;
-    }
+                width: 80%; 
+                font-size: 0.8em;
+                height: 50px;
+            }
         }
     
 
@@ -996,21 +984,20 @@ const deleteUsersFunction = httpsCallable(functions, 'deleteUsers');
                 height: 40px;
             } */
             .function-Btn {
-        width: 30%; /* 让按钮更小 */
-        height: 45px;
-    }
+                 width: 30%;
+                height: 45px;
+            }
             
             .function-Btn i {
                 font-size: 1.3em;
             }
             .search-bar {
-        width: 100%; /* 搜索框单独一行 */
-        height: 45px;
-    }
+                 width: 100%; 
+                 height: 45px;
+            }
         }
         
         
-               /* 表格样式 */
          .currentOpen table {
             width: 100%;
             border-collapse: collapse;
@@ -1018,24 +1005,20 @@ const deleteUsersFunction = httpsCallable(functions, 'deleteUsers');
             
         }
 
-        /* 表头样式 */
          .currentOpen thead {
             background-color: #f2f2f2;
         } 
 
-        /* 表头和单元格 */
          .currentOpen th, .currentOpen td {
             padding: 10px;
             border: 1px solid #ddd;
             text-align: left;
         }  
 
-        /* 鼠标悬停效果 */
         .currentOpen tbody tr:hover {
             background-color: #ffffff83;
         }
 
-        /* 表单整体样式 */
         #addUserForm {
           max-width: 75%;
           margin: 20px auto;
@@ -1054,7 +1037,6 @@ const deleteUsersFunction = httpsCallable(functions, 'deleteUsers');
 
         }
         
-        /* 每个表单项 */
         #addUserForm div {
           margin-bottom: 15px;
           display: flex;
@@ -1062,14 +1044,12 @@ const deleteUsersFunction = httpsCallable(functions, 'deleteUsers');
           justify-content: center;
         }
         
-        /* label 样式 */
         #addUserForm label {
           flex: 0 0 120px;
           margin-right: 10px;
           font-weight: bold;
         }
         
-        /* 输入框和下拉框样式 */
         #addUserForm input[type="text"],
         #addUserForm input[type="email"],
         #addUserForm select {
@@ -1080,7 +1060,6 @@ const deleteUsersFunction = httpsCallable(functions, 'deleteUsers');
           border-radius: 4px;
         }
         
-        /* 只读显示的 ID 样式 */
         #addUserForm span#idDisplay {
           flex: 1;
           padding: 8px;
@@ -1092,8 +1071,7 @@ const deleteUsersFunction = httpsCallable(functions, 'deleteUsers');
 
         }
         
-        /* 提交按钮样式 */
-        #addUserForm button {
+        #addUserForm button, #deleteSelectedBtn {
            
             padding: 10px 20px;
           background-color: #007BFF;
@@ -1120,14 +1098,15 @@ const deleteUsersFunction = httpsCallable(functions, 'deleteUsers');
         }
         
         /* 提交按钮悬停效果 */
-        #addUserForm button:hover {
+        #addUserForm button:hover , #deleteSelectedBtn:hover{
             animation: buttonHover 5s ease infinite;
         }
-        #addUserForm button:active {
+        #addUserForm button:active , #deleteSelectedBtn:active{
             background-color: #777;
 
         }
 
+       
         /* 
 
 
