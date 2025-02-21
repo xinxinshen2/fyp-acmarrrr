@@ -128,19 +128,22 @@
               .then((videoInputDevices) => {
                     const selectedDeviceId = videoInputDevices.find(device => device.label.toLowerCase().includes('back')) || videoInputDevices;
 
-                    codeReader.decodeFromInputVideoDevice(selectedDeviceId.deviceId, 'video')
-                  .then((result) => {
-                        scanActive = false;
-                        if (result) {
-                            displayScanResult(result.text);
-                        }
-                    })
-                  .catch((err) => {
-                        scanActive = false;
-                        console.error("条码扫描错误:", err);
-                        alert("无法扫描条形码，请确保摄像头权限已授予且条形码清晰可见。");
-                        stopScanning();
-                    });
+                    function decode() { // 定义一个递归函数来进行持续解码
+                        codeReader.decodeFromInputVideoDevice(selectedDeviceId.deviceId, 'video')
+                            .then((result) => {
+                                scanActive = false;
+                                if (result) {
+                                    displayScanResult(result.text);
+                                }
+                                setTimeout(decode, 0); // 立即进行下一次扫描
+                            })
+                            .catch((err) => {
+                                scanActive = false;
+                                console.error("条码扫描错误:", err);
+                                // alert("无法扫描条形码，请确保摄像头权限已授予且条形码清晰可见。"); // 避免重复弹窗
+                                setTimeout(decode, 0); // 发生错误后，也尝试继续扫描
+                            });
+                    }
 
                     navigator.mediaDevices.getUserMedia({
                         video: {
@@ -149,6 +152,7 @@
                         }
                     }).then(stream => {
                         video.srcObject = stream;
+                        decode(); // 开始持续扫描
                     }).catch(err => {
                         scanActive = false;
                         console.error("getUserMedia 错误:", err);
@@ -173,7 +177,7 @@
 
             setTimeout(function() {
                 scanResultDiv.style.display = 'none';
-                resultElement.innerText = '';a
+                resultElement.innerText = '';
             }, 3000);
         }
 
