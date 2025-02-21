@@ -8,7 +8,9 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-app.js";
         import { getAuth, signOut, onAuthStateChanged, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-auth.js";
-        import { getFirestore, collection, query, where, getDocs, getDoc, doc, setDoc } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-firestore.js";
+        import { getFirestore, collection, query, where, getDocs, getDoc, deleteDoc, doc, setDoc } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-firestore.js";
+        import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-functions.js";
+
     
         // Firebase Configuration
         const firebaseConfig = {
@@ -26,76 +28,91 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
+        const functions = getFunctions(app);
     
         // Auth State Listener
-        onAuthStateChanged(auth, async (user) => {
-          if (user) {
-            console.log("User is signed in:", user.email);
-            try {
-              const userDocRef = doc(db, "user", user.uid);
-              const userDocSnap = await getDoc(userDocRef);
-              if (userDocSnap.exists()) {
-                const userData = userDocSnap.data();
-                const role = userData.role;
-                const userID = userData.ID; 
-                let displayText = "";
-            
-                if (role === "student") {
-                  const studentDocRef = doc(db, "student", userID);
-                  const studentDocSnap = await getDoc(studentDocRef);
+// onAuthStateChanged(auth, async (user) => {
+//   if (!user) {
+//     console.log("No user is signed in. Redirecting...");
+//     redirectToLogin();
+//     return;
+//   }
 
-                  if (studentDocSnap.exists()) {
-                    const studentData = studentDocSnap.data();
-                    displayText = `${studentData.name} (${studentData.ID})`;
-                  } else {
-                    console.log("Student document not found");
-                    displayText = "Student document not found";
-                  }
+//   console.log("User is signed in:", user.email);
 
-                } else if (role === "teacher") {
-                  const teacherDocRef = doc(db, "teacher", userID);
-                  const teacherDocSnap = await getDoc(teacherDocRef);
+//   try {
+//     const userDocRef = doc(db, "user", user.uid);
+//     const userDocSnap = await getDoc(userDocRef);
 
-                  if (teacherDocSnap.exists()) {
-                    const teacherData = teacherDocSnap.data();
-                    displayText = `${teacherData.name} (${teacherData.ID})`;
-                  } else {
-                    console.log("Teacher document not found");
-                    displayText = "Teacher document not found";
-                  }
-                  
-                } else if (role === "admin") {
-                  const adminRef = collection(db, "admin");
-                  const q = query(adminRef, where("email", "==", user.email));
-                  const querySnapshot = await getDocs(q);
+//     if (!userDocSnap.exists()) {
+//       console.log("User document not found.");
+//       redirectToLogin();
+//       return;
+//     }
 
-                  if (!querySnapshot.empty) {
-                    const adminData = querySnapshot.docs[0].data();
-                    displayText = `${adminData.name} (${adminData.ID})`;
-                    console.log("Admin found:", adminData.ID);
-                  } else {
-                    console.log("Admin not found in Firestore.");
-                    displayText = "Unknown User";
-                    window.location.href = "login.html";
-                  }
+//     const userData = userDocSnap.data();
+//     const role = userData.role;
 
-                }
-            
-                // 5. 更新页面上显示的用户名信息
-                document.getElementById("username").textContent = displayText;
-              } else {
-                console.log("User document not found.");
-                document.getElementById("username").textContent = "Unknown User";
-                window.location.href = "login.html";
-              }
-            } catch (error) {
-              console.error("Error fetching user data:", error);
-            }
-          } else {
-            console.log("No user is signed in. Redirecting...");
-            window.location.href = "login.html";
-          }
-        });
+//     if (role === "student" || role === "lecturer") {
+//       console.log("Role detected is not admin, redirecting...");
+//       redirectToLogin();
+//       return;
+//     }
+
+//     if (role === "admin") {
+//       const adminRef = collection(db, "admin");
+//       const q = query(adminRef, where("email", "==", user.email));
+//       const querySnapshot = await getDocs(q);
+
+//       if (querySnapshot.empty) {
+//         console.log("Admin not found in Firestore.");
+//         redirectToLogin();
+//         return;
+//       }
+
+//       const adminData = querySnapshot.docs[0].data();
+//       const displayText = `${adminData.name} (${adminData.ID})`;
+
+//       console.log("Admin found:", adminData.ID);
+//       document.getElementById("username").textContent = displayText;
+//     }
+//   } catch (error) {
+//     console.error("Error fetching user data:", error);
+//     redirectToLogin();
+//   }
+// });
+
+// // 统一的重定向方法
+// function redirectToLogin() {
+//   window.location.href = "login.html";
+// }
+
+async function loadAdminName() {
+  const adminID = sessionStorage.getItem('adminID'); // 假设你将 admin 的 ID 存在 sessionStorage 中
+  console.log("Admin ID from session:", adminID); // Debug 输出
+  if (!adminID) {
+    console.error("Admin ID not found in session.");
+    window.location.href = 'login.html'; // 未找到 adminID 则重定向登录页面
+    return;
+  }
+
+  const adminRef = doc(db, "admin", adminID);
+  const adminDoc = await getDoc(adminRef);
+
+  if (adminDoc.exists()) {
+    const adminData = adminDoc.data();
+    console.log("Admin data retrieved:", adminData); // Debug 输出
+     const displayText = `${adminData.name} (${adminData.ID})`;
+    document.getElementById('username').textContent =displayText;
+  } else {
+    console.error("No such document!");
+  }
+}
+
+window.onload = function() {
+  loadAdminName();
+};
+
 
 
     
@@ -379,6 +396,7 @@ async function populateCourseOptions() {
 }
 populateCourseOptions();
 
+
 // 为 course 下拉框绑定 change 事件，用于生成新学生 ID 并显示
 document.getElementById("course").addEventListener("change", async (e) => {
   const selectedCourse = e.target.value;
@@ -441,10 +459,12 @@ form.addEventListener("submit", async (e) => {
             console.log("Firebase Authentication UID:", authUid);
             
             // 2. 在 Firestore 的 "users" 集合中创建一个文档，文档 ID 为 authUid，存储 role 与 inputID
-            await setDoc(doc(db, "user", authUid), {
-              role: role,
-              ID: newID
-            });
+            if (role === "student" || role === "lecturer") {
+              await setDoc(doc(db, "user", authUid), {
+                role: role,
+                ID: newID
+              }, { merge: true });
+            }
             
             // 3. 如果角色为 student，则在 "students" 集合中创建一个文档，文档 ID 为输入的 ID
             if (role === "student") {
@@ -477,10 +497,192 @@ form.addEventListener("submit", async (e) => {
             alert("创建用户时出错，请检查控制台了解详细信息。");
           }
         });        
+     
         });
       });
 
 
+
+      //DELETE IS HERE
+
+      
+ // 点击 DeleteUser 按钮时启用删除模式
+document.querySelector('.DeleteUser').addEventListener('click', () => {
+  fetchUsersForDelete();
+});
+
+// 获取用户数据用于删除模式
+async function fetchUsersForDelete() {
+  let users = [];
+  try {
+    // 获取 "admin" 用户（确保 Firestore 中 admin 文档中有字段 ID 和 authUid）
+    const adminSnapshot = await getDocs(collection(db, "admin"));
+    adminSnapshot.forEach(docSnap => {
+      const data = docSnap.data();
+      users.push({ 
+        id: data.ID, 
+        name: data.name, 
+        email: data.email, 
+        role: "admin",
+        authUid: data.authUid 
+      });
+    });
+    // 获取 "teacher" 用户（假设教师存储在 "lecturer" 集合中）
+    const lecturerSnapshot = await getDocs(collection(db, "lecturer"));
+    lecturerSnapshot.forEach(docSnap => {
+      const data = docSnap.data();
+      users.push({ 
+        id: data.ID, 
+        name: data.name, 
+        email: data.email, 
+        role: "teacher",
+        authUid: data.authUid 
+      });
+    });
+    // 获取 "student" 用户
+    const studentSnapshot = await getDocs(collection(db, "student"));
+    studentSnapshot.forEach(docSnap => {
+      const data = docSnap.data();
+      users.push({ 
+        id: data.ID, 
+        name: data.name, 
+        email: data.email, 
+        role: "student",
+        authUid: data.authUid 
+      });
+    });
+    
+    // 直接显示所有用户
+    displayUsersForDelete(users);
+  } catch (error) {
+    console.error("Error fetching users for deletion:", error);
+    document.querySelector('.currentOpen').innerHTML = "<p>Data load failed. Please check your database connection.</p>";
+  }
+}
+
+// 显示用户数据（删除模式：带复选框与删除提交按钮）
+function displayUsersForDelete(users) {
+  const container = document.querySelector('.currentOpen');
+  container.innerHTML = ""; // 清空内容
+
+  if (users.length === 0) {
+    container.innerHTML = "<p>No users found.</p>";
+    return;
+  }
+
+  // 在表格上方添加“Delete Selected”按钮
+  const deleteBtn = document.createElement("button");
+  deleteBtn.id = "deleteSelectedBtn";
+  deleteBtn.textContent = "Delete Selected";
+  deleteBtn.style.marginBottom = "10px";
+  container.appendChild(deleteBtn);
+
+  // 创建带复选框的表格
+  const table = document.createElement("table");
+  table.border = "1";
+  table.style.width = "100%";
+  table.style.borderCollapse = "collapse";
+
+  // 表头（增加第一列“Select”）
+  const thead = document.createElement("thead");
+  thead.innerHTML = `
+    <tr style="background-color: #f2f2f2;">
+      <th style="padding: 10px;">Select</th>
+      <th style="padding: 10px;">No.</th>
+      <th style="padding: 10px;">ID</th>
+      <th style="padding: 10px;">Name</th>
+      <th style="padding: 10px;">Email</th>
+      <th style="padding: 10px;">Role</th>
+    </tr>
+  `;
+  table.appendChild(thead);
+
+  // 表体
+  const tbody = document.createElement("tbody");
+  users.forEach((user, index) => {
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td style="padding: 10px; text-align: center;">
+        <input type="checkbox" class="deleteCheckbox" 
+               data-user-id="${user.id}" 
+               data-user-role="${user.role}"
+               data-auth-uid="${user.authUid}">
+      </td>
+      <td style="padding: 10px; text-align: center;">${index + 1}</td>
+      <td style="padding: 10px;">${user.id}</td>
+      <td style="padding: 10px;">${user.name}</td>
+      <td style="padding: 10px;">${user.email}</td>
+      <td style="padding: 10px;">${user.role}</td>
+    `;
+    tbody.appendChild(row);
+  });
+  table.appendChild(tbody);
+  container.appendChild(table);
+
+  // 绑定“Delete Selected”按钮的点击事件
+  deleteBtn.addEventListener("click", async () => {
+    const checkboxes = document.querySelectorAll(".deleteCheckbox:checked");
+    const usersToDelete = [];
+    const authUIDsToDelete = []; // 用于存放需要删除的认证账户 UID
+
+    checkboxes.forEach(cb => {
+      const userId = cb.getAttribute("data-user-id");
+      const userRole = cb.getAttribute("data-user-role");
+      const authUid = cb.getAttribute("data-auth-uid");
+      usersToDelete.push({ id: userId, role: userRole });
+      if (authUid) {
+        authUIDsToDelete.push(authUid);
+      }
+    });
+
+    if (usersToDelete.length === 0) {
+      alert("No users selected for deletion.");
+      return;
+    }
+    if (!confirm("Are you sure you want to delete the selected users?")) {
+      return;
+    }
+
+    // 1. 删除 Firestore 中的数据
+    for (const userObj of usersToDelete) {
+      let collectionName;
+      if (userObj.role === "admin") {
+        collectionName = "admin";
+      } else if (userObj.role === "teacher") {
+        collectionName = "lecturer"; // 假设教师存储在 lecturer 集合中
+      } else if (userObj.role === "student") {
+        collectionName = "student";
+      }
+      try {
+        await deleteDoc(doc(db, collectionName, userObj.id));
+        console.log(`Deleted user ${userObj.id} from ${collectionName}`);
+      } catch (error) {
+        console.error("Error deleting Firestore document:", error);
+      }
+    }
+
+    // 假设 Firebase App 已经初始化，且 functions 已初始化
+const functions = getFunctions();
+const deleteUsersFunction = httpsCallable(functions, 'deleteUsers');
+
+    // 2. 调用 Cloud Function 删除 Firebase Authentication 中的账户
+    async function deleteSelectedUsers(authUIDsToDelete) {
+  try {
+    const result = await deleteUsersFunction({ uids: authUIDsToDelete });
+    console.log("Delete users from Auth result:", result.data);
+  } catch (error) {
+    console.error("Error deleting Authentication accounts:", error);
+  }
+}
+
+    
+
+
+    alert("Selected users deleted.");
+    // 删除完成后，调用普通的 fetchUsers() 恢复正常显示（删除模式结束）
+    fetchUsers();
+  });
+}
 
           
 
