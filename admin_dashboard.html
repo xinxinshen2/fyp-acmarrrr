@@ -570,12 +570,7 @@ function displayUsersForDelete(users) {
     return;
   }
 
-  // 在表格上方添加“Delete Selected”按钮
-  const deleteBtn = document.createElement("button");
-  deleteBtn.id = "deleteSelectedBtn";
-  deleteBtn.textContent = "Delete Selected";
-  deleteBtn.style.marginBottom = "10px";
-  container.appendChild(deleteBtn);
+
 
   // 创建带复选框的表格
   const table = document.createElement("table");
@@ -618,6 +613,12 @@ function displayUsersForDelete(users) {
   });
   table.appendChild(tbody);
   container.appendChild(table);
+    // 在表格上方添加“Delete Selected”按钮
+    const deleteBtn = document.createElement("button");
+  deleteBtn.id = "deleteSelectedBtn";
+  deleteBtn.textContent = "Delete Selected";
+  deleteBtn.style.marginBottom = "10px";
+  container.appendChild(deleteBtn);
 
   // 绑定“Delete Selected”按钮的点击事件
   deleteBtn.addEventListener("click", async () => {
@@ -674,10 +675,7 @@ const deleteUsersFunction = httpsCallable(functions, 'deleteUsers');
     console.error("Error deleting Authentication accounts:", error);
   }
 }
-
-    
-
-
+    await deleteSelectedUsers(authUIDsToDelete);
     alert("Selected users deleted.");
     // 删除完成后，调用普通的 fetchUsers() 恢复正常显示（删除模式结束）
     fetchUsers();
