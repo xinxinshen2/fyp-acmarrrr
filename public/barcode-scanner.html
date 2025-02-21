@@ -118,6 +118,23 @@
         let codeReader;
         let scanActive = false;
 
+        // 添加Firebase配置（与attendance.html相同）
+        const firebaseConfig = {
+            apiKey: "REMOVED",
+            authDomain: "advanceas-d8db4.firebaseapp.com",
+            projectId: "advanceas-d8db4",
+            storageBucket: "advanceas-d8db4.appspot.com",
+            messagingSenderId: "878892786344",
+            appId: "1:878892786344:web:33bb5a97d99daf049d189d"
+        };
+
+        // 初始化Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // 从URL参数获取session信息
+        let sessionId, courseId, subjectId, lectureId;
+
         function startScanning() {
             if (scanActive) return;
             scanActive = true;
@@ -174,15 +191,91 @@
         }
 
 
-        function displayScanResult(text) {
-            resultElement.innerText = text;
-            scanResultDiv.style.display = 'block';
-
-            setTimeout(function() {
-                scanResultDiv.style.display = 'none';
-                resultElement.innerText = '';
-            }, 3000);
+        // 修改扫描结果处理
+        async function displayScanResult(text) {
+            try {
+                const studentId = text;
+                const result = await markAttendance(studentId);
+                
+                resultElement.innerHTML = result.success ? 
+                    `<span style="color:#4CAF50">✓ ${studentId}<br>${result.message}</span>` :
+                    `<span style="color:#f44336">✕ ${studentId}<br>${result.message}</span>`;
+                    
+                scanResultDiv.style.display = 'block';
+                setTimeout(() => scanResultDiv.style.display = 'none', 3000);
+                
+            } catch (error) {
+                console.error("考勤处理错误:", error);
+                resultElement.innerHTML = `<span style="color:#f44336">错误: ${error.message}</span>`;
+                scanResultDiv.style.display = 'block';
+                setTimeout(() => scanResultDiv.style.display = 'none', 3000);
+            }
         }
+
+        // 从attendance.html迁移的签到逻辑
+        async function markAttendance(studentId) {
+            const attendanceRef = db.collection("attendance")
+                .doc(courseId)
+                .collection(subjectId)
+                .doc(sessionId)
+                .collection("students")
+                .doc(studentId);
+
+            // 检查是否已签到
+            const doc = await attendanceRef.get();
+            if (doc.exists) {
+                return { success: false, message: "已签到过" };
+            }
+
+            // 写入考勤记录
+            await attendanceRef.set({
+                status: "present",
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                lectureId: lectureId
+            });
+
+            // 更新统计
+            await updateAttendanceCounts();
+            return { success: true, message: "签到成功" };
+        }
+
+        async function updateAttendanceCounts() {
+            const studentsRef = db.collection("student");
+            const studentsSnapshot = await studentsRef.get();
+            
+            const attendanceRef = db.collection("attendance")
+                .doc(courseId)
+                .collection(subjectId)
+                .doc(sessionId);
+
+            // 获取总学生数
+            const total = (await studentsRef.where("course", "==", courseId).get()).size;
+            
+            // 获取已签到数
+            const present = (await attendanceRef.collection("students").get()).size;
+            
+            // 更新统计
+            await attendanceRef.update({
+                totalStudents: total,
+                presentStudents: present,
+                absentStudents: total - present,
+                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        }
+
+        // 初始化时获取参数
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            sessionId = urlParams.get('sessionId');
+            courseId = urlParams.get('courseId');
+            subjectId = urlParams.get('subjectId');
+            lectureId = urlParams.get('lectureId');
+
+            if (!sessionId || !courseId || !subjectId) {
+                alert("无效的课程参数");
+                window.location.href = 'mobile_attendance.html';
+            }
+        });
 
         function stopScanning() {
             if (codeReader) {
