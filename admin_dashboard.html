@@ -277,17 +277,16 @@ function displayUsers(users) {
 
     const table = document.createElement("table");
     table.border = "1";
-    table.style.width = "100%";
     table.style.borderCollapse = "collapse";
 
     const thead = document.createElement("thead");
     thead.innerHTML = `
         <tr style="background-color: #f2f2f2; text-align: left;">
-            <th style="padding: 10px;">No.</th>
-            <th style="padding: 10px;">ID</th>
-            <th style="padding: 10px;">Name</th>
-            <th style="padding: 10px;">Email</th>
-            <th style="padding: 10px;">Role</th>
+            <th ">No.</th>
+            <th ">ID</th>
+            <th ">Name</th>
+            <th ">Email</th>
+            <th ">Role</th>
         </tr>
     `;
     table.appendChild(thead);
@@ -568,19 +567,19 @@ function displayUsersForDelete(users) {
 
   const table = document.createElement("table");
   table.border = "1";
-  table.style.width = "100%";
+  // table.style.width = "100%";
   table.style.borderCollapse = "collapse";
-
+  table.id = "deleteTable";
 
   const thead = document.createElement("thead");
   thead.innerHTML = `
-    <tr style="background-color: #f2f2f2;">
-      <th style="padding: 10px;">Select</th>
-      <th style="padding: 10px;">No.</th>
-      <th style="padding: 10px;">ID</th>
-      <th style="padding: 10px;">Name</th>
-      <th style="padding: 10px;">Email</th>
-      <th style="padding: 10px;">Role</th>
+    <tr>
+      <th >No.</th>
+      <th >ID</th>
+      <th >Name</th>
+      <th >Email</th>
+      <th >Role</th>
+      <th >Select</th>
     </tr>
   `;
   table.appendChild(thead);
@@ -590,17 +589,18 @@ function displayUsersForDelete(users) {
   users.forEach((user, index) => {
     const row = document.createElement("tr");
     row.innerHTML = `
+      
+      <td style="padding: 10px; text-align: center;">${index + 1}</td>
+      <td style="padding: 10px;">${user.id}</td>
+      <td style="padding: 10px;">${user.name}</td>
+      <td style="padding: 10px;">${user.email}</td>
+      <td style="padding: 10px;">${user.role}</td>
       <td style="padding: 10px; text-align: center;">
         <input type="checkbox" class="deleteCheckbox" 
                data-user-id="${user.id}" 
                data-user-role="${user.role}"
                data-auth-uid="${user.authUid}">
       </td>
-      <td style="padding: 10px; text-align: center;">${index + 1}</td>
-      <td style="padding: 10px;">${user.id}</td>
-      <td style="padding: 10px;">${user.name}</td>
-      <td style="padding: 10px;">${user.email}</td>
-      <td style="padding: 10px;">${user.role}</td>
     `;
     tbody.appendChild(row);
   });
@@ -675,11 +675,9 @@ const deleteUsersFunction = httpsCallable(functions, 'deleteUsers');
           
 
     
-    </script>
-
-    
-
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">    <style>
+</script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"> 
+<style>
         * {
             margin: 0;
             padding: 0;
@@ -852,8 +850,9 @@ const deleteUsersFunction = httpsCallable(functions, 'deleteUsers');
 
         }
         .btnSpace{
-            /* display: flex; */
+            display: flex; 
             /* align-content: center; */
+            align-items: center;
             justify-content: center;
         }
 
@@ -878,8 +877,8 @@ const deleteUsersFunction = httpsCallable(functions, 'deleteUsers');
 
         .search-bar {
             text-align: left;
-            min-width: 35%;
-            max-width: 40%;
+            min-width: 40%;
+            max-width: 45%;
             padding-left: 25px;
             font-size: 1em;
         }
@@ -891,7 +890,7 @@ const deleteUsersFunction = httpsCallable(functions, 'deleteUsers');
                 }
 
         .search-bar:hover , .function-Btn:hover {
-            background-color: rgb(255, 255, 255,0.7);
+            background-color: rgba(255, 255, 255,0.7);
             border-radius: 15px;
         }
 
@@ -996,12 +995,26 @@ const deleteUsersFunction = httpsCallable(functions, 'deleteUsers');
                  height: 45px;
             }
         }
-        
+        .currentOpen{
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          justify-content: center;
+        }
         
          .currentOpen table {
-            width: 100%;
-            border-collapse: collapse;
+            width: 90%;
+            /* border-collapse: collapse; */
             border: 1px solid #ddd;
+            border-collapse: separate;
+            border-spacing: 0;            
+            border-radius: 10px;          
+            overflow: hidden;
+            background-color: rgba(255, 255, 255, 0.315);
+            backdrop-filter: blur(10px);
+            border-radius: 15px; 
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             
         }
 
@@ -1019,17 +1032,17 @@ const deleteUsersFunction = httpsCallable(functions, 'deleteUsers');
             background-color: #ffffff83;
         }
 
-        #addUserForm {
-          max-width: 75%;
-          margin: 20px auto;
-          padding: 20px;
-          font-family: Arial, sans-serif;
-          background-color: rgba(255, 255, 255, 0.5);
+        #addUserForm{
+            max-width: 75%;
+            min-width: 70%;
+            margin: 20px auto;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background-color: rgba(255, 255, 255, 0.5);
             backdrop-filter: blur(10px);
             border-radius: 15px; 
             border: 1px solid rgba(255, 255, 255, 0.3);
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-           
         }
         #addUserForm>h2{
 
@@ -1071,7 +1084,7 @@ const deleteUsersFunction = httpsCallable(functions, 'deleteUsers');
 
         }
         
-        #addUserForm button, #deleteSelectedBtn {
+        #addUserForm button {
            
             padding: 10px 20px;
           background-color: #007BFF;
@@ -1098,13 +1111,64 @@ const deleteUsersFunction = httpsCallable(functions, 'deleteUsers');
         }
         
         /* 提交按钮悬停效果 */
-        #addUserForm button:hover , #deleteSelectedBtn:hover{
+        #addUserForm button:hover {
             animation: buttonHover 5s ease infinite;
         }
         #addUserForm button:active , #deleteSelectedBtn:active{
             background-color: #777;
+        }
+
+       
+
+        #deleteSelectedBtn{
+          display: block;
+          margin: 10px auto;
+          text-align: center;
+          padding: 10px 20px;
+          background-color: #ff4b5c;
+          color: #fff;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+          font-size: 16px;
 
         }
+        #deleteSelectedBtn:hover{
+          background-color: #e43f51;          
+        }
+
+        /* Remove default styling and create custom appearance */
+        .deleteCheckbox {
+          -webkit-appearance: none; /* for Safari/Chrome */
+          -moz-appearance: none;    /* for Firefox */
+          appearance: none;
+          width:20px;
+          height: 20px;
+          border: 2px solid rgba(255, 255, 255, 0.5);
+          border-radius: 3px;
+          cursor: pointer;
+          position: relative;
+        }
+
+        /* Style when checkbox is checked */
+        .deleteCheckbox:checked {
+          background-color: #ff4b5c;
+          border: 2px solid rgba(255, 255, 255, 0.5);;
+        }
+
+        /* Optionally, add a checkmark using a pseudo-element */
+        .deleteCheckbox:checked::after {
+          content: "";
+          position: absolute;
+          left: 5px;
+          top: 0px;
+          width: 5px;
+          height: 10px;
+          border: solid white;
+          border-width: 0 2px 2px 0;
+          transform: rotate(45deg);
+        }
+
 
        
         /* 
