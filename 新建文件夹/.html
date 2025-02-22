@@ -1,0 +1,90 @@
+<script>
+    const video = document.getElementById('video');
+    const videoContainer = document.getElementById('video-container');
+    const resultElement = document.getElementById('result-text');
+    const scanResultDiv = document.getElementById('scan-result');
+    let codeReader;
+    let scanActive = false;
+
+    function startScanning() {
+        if (scanActive) return;
+        scanActive = true;
+
+        codeReader = new ZXing.BrowserBarcodeReader();
+
+        codeReader.getVideoInputDevices()
+          .then((videoInputDevices) => {
+                const selectedDeviceId = videoInputDevices.find(device => device.label.toLowerCase().includes('back')) || videoInputDevices;
+
+                function decode() { // 定义一个递归函数来进行持续解码
+                    codeReader.decodeFromInputVideoDevice(selectedDeviceId.deviceId, 'video')
+                        .then((result) => {
+                            scanActive = false;
+                            if (result) {
+                                displayScanResult(result.text);
+                            }
+                            setTimeout(decode, 0); // 立即进行下一次扫描
+                        })
+                        .catch((err) => {
+                            scanActive = false;
+                            console.error("条码扫描错误:", err);
+                            // alert("无法扫描条形码，请确保摄像头权限已授予且条形码清晰可见。"); // 避免重复弹窗
+                            setTimeout(decode, 0); // 发生错误后，也尝试继续扫描
+                        });
+                }
+
+                navigator.mediaDevices.getUserMedia({
+                    video: {
+                        deviceId: { exact: selectedDeviceId.deviceId },
+                        facingMode: 'environment'
+                    }
+                }).then(stream => {
+                    video.srcObject = stream;
+                    decode(); // 开始持续扫描
+                }).catch(err => {
+                    scanActive = false;
+                    console.error("getUserMedia 错误:", err);
+                    alert("无法访问摄像头，请检查权限设置。");
+                    stopScanning();
+                });
+
+
+            })
+          .catch((err) => {
+                scanActive = false;
+                console.error("获取视频输入设备错误:", err);
+                alert("无法访问摄像头列表，请检查设备和权限。");
+                stopScanning();
+            });
+    }
+
+
+    function displayScanResult(text) {
+        resultElement.innerText = text;
+        scanResultDiv.style.display = 'block';
+
+        setTimeout(function() {
+            scanResultDiv.style.display = 'none';
+            resultElement.innerText = '';
+        }, 3000);
+    }
+
+    function stopScanning() {
+        if (codeReader) {
+            codeReader.reset();
+            codeReader = null;
+        }
+        if (video.srcObject) {
+            video.srcObject.getVideoTracks().forEach(track => track.stop());
+            video.srcObject = null;
+        }
+        scanActive = false;
+    }
+
+
+    window.addEventListener('load', startScanning);
+    window.addEventListener('beforeunload', stopScanning);
+    window.addEventListener('pagehide', stopScanning);
+
+
+</script>
