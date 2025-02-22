@@ -185,7 +185,6 @@
 
         async function loadSubjects() {
             const lectureID = sessionStorage.getItem('lectureID');
-            console.log("Lecture ID from session:", lectureID);
             const today = new Date();
             const todayString = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
 
@@ -251,20 +250,12 @@
                 );
 
                 if (todaySession) {
-                    // 恢复从sessionStorage获取lectureID
+                    // 添加lectureID到参数
                     const lectureID = sessionStorage.getItem('lectureID');
                     const sessionId = `${sessionDate}_${todaySession.startTime}_${todaySession.type}`;
                     
-                    // 使用sessionStorage存储参数
-                    const sessionData = {
-                        sessionId: sessionId,
-                        courseId: courseId,
-                        subjectId: subjectId,
-                        lectureId: lectureID
-                    };
-                    sessionStorage.setItem('attendanceSession', JSON.stringify(sessionData));
                     
-                    window.location.href = 'barcode-scanner.html';
+                    window.location.href = `barcode-scanner.html?sessionId=${encodeURIComponent(sessionId)}&courseId=${courseId}&subjectId=${subjectId}&lectureId=${lectureID}`;
                 } else {
                     alert("No session scheduled for today");
                 }
