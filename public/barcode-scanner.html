@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>全屏条形码扫描器</title>
+    <title>Full Screen Barcode Scanner</title>
     <style>
         /*  全屏摄像头样式 */
         html, body {
@@ -96,9 +96,11 @@
         }
     </style>
     <script src="https://unpkg.com/@zxing/library@latest"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-firestore-compat.js"></script>
 </head>
 <body>
-    <h1>全屏条形码扫描器</h1>
+    <h1>Full Screen Barcode Scanner</h1>
     <div id="video-container">
         <video id="video" autoplay playsinline></video>
         <div class="overlay" id="overlay-top"></div>
@@ -107,7 +109,7 @@
     </div>
     <div id="scan-result">
         <div id="result-text"></div>
-        <div id="result-message">扫描成功！信息将在3秒后消失。</div>
+        <div id="result-message">Scan successful! Information will disappear in 3 seconds.</div>
     </div>
 
     <script>
@@ -224,7 +226,7 @@
             // 检查是否已签到
             const doc = await attendanceRef.get();
             if (doc.exists) {
-                return { success: false, message: "已签到过" };
+                return { success: false, message: "Already checked in" };
             }
 
             // 写入考勤记录
@@ -236,7 +238,7 @@
 
             // 更新统计
             await updateAttendanceCounts();
-            return { success: true, message: "签到成功" };
+            return { success: true, message: "Check-in successful" };
         }
 
         async function updateAttendanceCounts() {
@@ -272,7 +274,7 @@
             lectureId = urlParams.get('lectureId');
 
             if (!sessionId || !courseId || !subjectId) {
-                alert("无效的课程参数");
+                alert("Invalid course parameters");
                 window.location.href = 'mobile_attendance.html';
             }
         });
