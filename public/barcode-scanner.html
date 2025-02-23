@@ -177,8 +177,8 @@
                         decode(); // 开始持续扫描
                     }).catch(err => {
                         scanActive = false;
-                        console.error("getUserMedia 错误:", err);
-                        alert("无法访问摄像头，请检查权限设置。");
+                        console.error("getUserMedia error:", err);
+                        alert("can't access camera, please check permission");
                         stopScanning();
                     });
 
@@ -187,7 +187,7 @@
               .catch((err) => {
                     scanActive = false;
                     console.error("获取视频输入设备错误:", err);
-                    alert("无法访问摄像头列表，请检查设备和权限。");
+                    alert("can't access camera, please check permission")
                     stopScanning();
                 });
         }
@@ -208,7 +208,7 @@
                 
             } catch (error) {
                 console.error("考勤处理错误:", error);
-                resultElement.innerHTML = `<span style="color:#f44336">错误: ${error.message}</span>`;
+                resultElement.innerHTML = `<span style="color:#f44336">Error: ${error.message}</span>`;
                 scanResultDiv.style.display = 'block';
                 setTimeout(() => scanResultDiv.style.display = 'none', 3000);
             }
@@ -222,6 +222,32 @@
                 .doc(sessionId)
                 .collection("students")
                 .doc(studentId);
+
+            // 新增学生课程验证
+            const studentRef = db.collection("student").doc(studentId);
+            const studentDoc = await studentRef.get();
+            
+            if (!studentDoc.exists) {
+                return { success: false, message: "Student not found" };
+            }
+
+            const studentData = studentDoc.data();
+            
+            // 验证学生是否属于当前课程
+            if (studentData.course !== courseId) {
+                return { success: false, message: "Student not in this course" };
+            }
+
+            // 新增排除学生检查
+            const subjectRef = db.collection("course").doc(courseId).collection("subject").doc(subjectId);
+            const subjectDoc = await subjectRef.get();
+            
+            if (subjectDoc.exists) {
+                const excludedStudents = subjectDoc.data().excludedStudents || [];
+                if (excludedStudents.includes(studentId)) {
+                    return { success: false, message: "Student excluded from this subject" };
+                }
+            }
 
             // 检查是否已签到
             const doc = await attendanceRef.get();
