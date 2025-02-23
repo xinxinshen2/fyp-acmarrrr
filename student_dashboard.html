@@ -7,9 +7,111 @@
     <link rel="stylesheet" href="studentdashboard-style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-app.js";
+    import { getAuth, signOut, onAuthStateChanged, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-auth.js";
+    import { getFirestore, collection, query, where, getDocs, getDoc, deleteDoc, doc, setDoc } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-firestore.js";
+    import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-functions.js";
+
+
+    // Firebase Configuration
+    const firebaseConfig = {
+        apiKey: "REMOVED",
+        authDomain: "advanceas-d8db4.firebaseapp.com",
+        databaseURL: "https://advanceas-d8db4-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "advanceas-d8db4",
+        storageBucket: "advanceas-d8db4.firebasestorage.app",
+        messagingSenderId: "878892786344",
+        appId: "1:878892786344:web:33bb5a97d99daf049d189d",
+        measurementId: "G-PLRRKT6RWW"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const functions = getFunctions(app);
+
+    async function loadAdminName() {
+  const studentID = sessionStorage.getItem('studentID'); // 假设你将 admin 的 ID 存在 sessionStorage 中
+  console.log("Student ID from session:", studentID); // Debug 输出
+  if (!studentID) {
+    console.error("Student ID not found in session.");
+    window.location.href = 'login.html'; // 未找到 studentID 则重定向登录页面
+    return;
+  }
+
+  const studentRef = doc(db, "student", studentID);
+  const studentDoc = await getDoc(studentRef);
+
+  if (studentDoc.exists()) {
+    const studentData = studentDoc.data();
+    console.log("Student data retrieved:", studentData); // Debug 输出
+     const displayText = `${studentData.name} (${studentData.ID})`;
+    document.getElementById('username').textContent =displayText;
+  } else {
+    console.error("No such document!");
+  }
+}
+
+window.onload = function() {
+  loadAdminName();
+};
+
+          
+        // Logout function is here 
+     window.logout = function () {
+            signOut(auth).then(() => {
+                console.log("User signed out successfully.");
+                window.location.href = "login.html";
+            }).catch(error => {
+                console.error("Error logging out:", error);
+            });
+    };
+    
+    const logoutButton = document.getElementById("logoutButton");
+    const progressRect = document.querySelector(".progress-ring-rect");
+    let pressTimer;
+    let progressInterval;
+
+    const startProgress = () => {
+        let time = 0;
+        const totalTime = 3000;
+        const circumference = 284; 
+
+        progressInterval = setInterval(() => {
+            time += 10; 
+            const progress = (time / totalTime) * circumference;
+            progressRect.style.strokeDashoffset = circumference - progress;
+
+            if (time >= totalTime) {
+                clearInterval(progressInterval);
+                logout(); 
+            }
+        }, 10);
+    };
+
+    const resetProgress = () => {
+        clearInterval(progressInterval);
+        progressRect.style.strokeDashoffset = 284; 
+    };
+
+       // Mouse Events
+       logoutButton.addEventListener("mousedown", startProgress);
+    logoutButton.addEventListener("mouseup", resetProgress);
+    logoutButton.addEventListener("mouseleave", resetProgress);
+
+    // Touch Events
+    logoutButton.addEventListener("touchstart", startProgress);
+    logoutButton.addEventListener("touchend", resetProgress);
+
+
+
+
+</script>
 <body>
 
-    <aside class="aside">
+    <!-- <aside class="aside">
         <h2>Student Dashboard</h2>
         <ul>
             <li><a href="#">📌 Dashboard</a></li>
@@ -23,9 +125,35 @@
             <li><a href="#">💬 Chat Support</a></li>
             <li><a href="#">⚙️ Settings</a></li>
         </ul>
-    </aside>
+    </aside> -->
+
+
+    <nav>
+        <div class="header nav1">
+            <div class="title">
+                <h2>Advanced Attendance System</h2>
+                <h2 class="welcome">Welcome, <span id="username"></span></h2>
+            </div>
+
+            <div class="logout-container">
+                <button class="logout" id="logoutButton">Logout</button>
+                <svg class="progress-ring" width="100" height="50">
+                <rect class="progress-ring-rect" x="7" y="2.7" width="86" height="45.5" rx="13" ry="13" stroke="#ff4b5c" stroke-width="3" fill="transparent" />
+                </svg>
+            </div>
+        </div>
+        <div class="header nav2">
+            
+            <div class="nav-btn"> <p> Home  </p> </div>
+            <div class="nav-btn"> <p> View User  </p> </div>
+            <div class="nav-btn"> <p> Data Analysis </p></div>
+            <div class="nav-btn"> <p> Timetable  </p> </div>
+            <div class="nav-btn"> <p> Setting  </p> </div>
+
+        </div>
+    </nav>
     
-    <button id="logoutBtn">Logout</button>
+    <!-- <button id="logoutBtn">Logout</button> -->
 
     <main class="main-content">
         <header>
@@ -43,9 +171,49 @@
     </main>
 
     <script>
+        // 用这里的功能就会在同样的page进行切换不同功能。
+        // 但是可能会导致code很长，因为每一页的code都在一个。
+        //（optional） 
         document.getElementById("profileBtn").addEventListener("click", function() {
             document.getElementById("profileSection").style.display = "block";
         });
+
+
+        document.addEventListener("DOMContentLoaded", function () {
+    const homeBtn = document.querySelector(".nav-btn:nth-child(1)");
+    const viewUserBtn = document.querySelector(".nav-btn:nth-child(2)"); // View User 按钮
+    const dataAnalysisBtn = document.querySelector(".nav-btn:nth-child(3)"); // Data Analysis 按钮
+    const dataSpace = document.querySelector(".dataSpace"); // 数据分析区域
+    const functionSpace = document.querySelector(".functionSpace"); // 用户管理功能区域
+    const homeSpace = document.querySelector(".homeSpace");
+
+    // 初始状态：显示 Data Analysis，隐藏 functionSpace
+    homeSpace.style.display = "block";
+    dataSpace.style.display = "block";
+    functionSpace.style.display = "block";
+
+
+    // 点击 "View User" 按钮时
+    viewUserBtn.addEventListener("click", function () {
+        dataSpace.style.display = "none";  // 隐藏数据分析
+        homeSpace.style.display = "none";
+        functionSpace.style.display = "block"; // 显示用户管理功能
+    });
+
+    // 点击 "Data Analysis" 按钮时
+    dataAnalysisBtn.addEventListener("click", function () {
+        homeSpace.style.display="none";
+        dataSpace.style.display = "block";  // 显示数据分析
+        functionSpace.style.display = "none"; // 隐藏用户管理功能
+    });
+
+    homeBtn.addEventListener("click",function(){
+        homeSpace.style.display="block";
+        functionSpace.style.display = "block"; 
+        dataSpace.style.display = "block";
+
+    });
+});
     </script>
     
 </body>
