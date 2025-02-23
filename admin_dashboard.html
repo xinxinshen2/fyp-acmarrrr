@@ -772,7 +772,8 @@ function displayUsersForDelete(users) {
             if (sessionsByDay[session.day]) {
               sessionsByDay[session.day].push({
                 subjectName: subjectData.name,
-                lecturerID: subjectData.lecturerID,
+                class: subjectData.class,
+                lecturerID: subjectData.lecturerName,
                 startTime: session.startTime,
                 endTime: session.endTime,
                 type: session.type
@@ -809,10 +810,19 @@ function displayUsersForDelete(users) {
       if (sessionsByDay[day].length > 0) {
         sessionsByDay[day].forEach(session => {
           html += `<td style="padding: 8px; border: 1px solid #ccc; text-align: center;">
-                    <strong>${session.subjectName}</strong><br>
-                    ${session.startTime} - ${session.endTime}<br>
-                    ${session.type}
+                   <strong>${session.subjectName}</strong> (${session.type}) <br><br>
+                  <strong> Venue: </strong>${session.class}<br>
+                   <strong> Time: </strong>${session.startTime} - ${session.endTime}<br>
+                   <strong> Lecturer: </strong> ${session.lecturerID}<br>
+                    
                    </td>`;
+
+                //    subjectName: subjectData.name,
+                // class: subjectData.class,
+                // lecturerID: subjectData.lecturerName,
+                // startTime: session.startTime,
+                // endTime: session.endTime,
+                // type: session.type
         });
       } else {
         // 如果没有 session，则填充空 cell
@@ -862,6 +872,12 @@ function displayUsersForDelete(users) {
     container.innerHTML = `
       <form id="addTimetableForm">
         <h2>Add Timetable Entry</h2>
+        <div>
+          <label for="classSelect">Class:</label>
+          <select id="classSelect" required>
+            <option value="">Select Class</option>
+          </select>
+        </div>
         <div>
           <label for="courseSelectAdd">Course:</label>
           <select id="courseSelectAdd" required>
@@ -913,7 +929,7 @@ function displayUsersForDelete(users) {
           <label for="sessionType">Session Type:</label>
           <select id="sessionType" required>
             <option value="">Select Session Type</option>
-            <option value="lecturer">Lecturer</option>
+            <option value="lecture">Lecture</option>
             <option value="tutorial">Tutorial</option>
           </select>
         </div>
@@ -926,6 +942,9 @@ function displayUsersForDelete(users) {
   loadCoursesForAdd();
   // Load available lecturers into the lecturer dropdown
   loadLecturersForAdd();
+
+  loadClasses();
+
 
    // Add change event listener to the course dropdown to show/hide new course input
    const courseSelect = document.getElementById("courseSelectAdd");
@@ -977,7 +996,12 @@ function displayUsersForDelete(users) {
         }
       }
 
+ 
+
+
+
       // Get remaining form values
+      let classID = document.getElementById("classSelect").value.trim();
       let subjectID = document.getElementById("subjectID").value.trim();
       let subjectName = document.getElementById("subjectName").value;
       let lecturerID = document.getElementById("lecturerSelect").value;
@@ -985,6 +1009,12 @@ function displayUsersForDelete(users) {
       let sessionStartTime = document.getElementById("sessionStartTime").value;
       let sessionEndTime = document.getElementById("sessionEndTime").value;
       let sessionType = document.getElementById("sessionType").value;
+      const lecturerName = document.getElementById("lecturerSelect").options[document.getElementById("lecturerSelect").selectedIndex].text;
+      
+      // sessionStartTime = formatTimeTo24Hour(sessionStartTime);
+      // sessionEndTime = formatTimeTo24Hour(sessionEndTime);
+      sessionStartTime = formatTime(sessionStartTime);
+      sessionEndTime = formatTime(sessionEndTime);
 
 
       if (!subjectID) {
@@ -1003,7 +1033,9 @@ function displayUsersForDelete(users) {
       // Construct the subject document data
       const subjectData = {
         lectureID: lecturerID,
+        lecturerName: lecturerName, 
         name: subjectName,
+        class:classID,
         sessions: [
           {
             day: sessionDay,
@@ -1030,6 +1062,8 @@ function displayUsersForDelete(users) {
     });
   }
 
+
+
  // Helper function to load courses into the add timetable form
  async function loadCoursesForAdd() {
     const select = document.getElementById("courseSelectAdd");
@@ -1052,6 +1086,41 @@ function displayUsersForDelete(users) {
     }
   }
 
+//   function formatTimeTo24Hour(timeStr) {
+//   // Split the time string by colon
+//   const parts = timeStr.split(':');
+//   if(parts.length >= 2) {
+//     // Return only hours and minutes
+//     return parts[0].padStart(2, '0') + ':' + parts[1].padStart(2, '0');
+//   }
+//   return timeStr;
+// }
+
+function formatTime(timeStr) {
+  let [hours, minutes] = timeStr.split(':');
+  hours = parseInt(hours, 10);
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12;
+  if (hours === 0) hours = 12;
+  return `${hours}:${minutes} ${ampm}`;
+}
+
+  async function loadClasses() {
+  const select = document.getElementById("classSelect");
+  try {
+    const classSnapshot = await getDocs(collection(db, "class"));
+    classSnapshot.forEach(docSnap => {
+      const option = document.createElement("option");
+      option.value = docSnap.id;
+      option.textContent = docSnap.id; // You can customize to display additional info if needed
+      select.appendChild(option);
+    });
+  } catch (error) {
+    console.error("Error loading classes:", error);
+  }
+}
+
+
   // Helper function to load lecturers into the add timetable form
   async function loadLecturersForAdd() {
     const select = document.getElementById("lecturerSelect");
@@ -1061,7 +1130,7 @@ function displayUsersForDelete(users) {
         const lecturerData = docSnap.data();
         const option = document.createElement("option");
         option.value = docSnap.id;  // Use document id as lecturerID
-        option.textContent = lecturerData.name;
+        option.textContent = lecturerData.name + " (" + docSnap.id + ")";
         select.appendChild(option);
       });
     } catch (error) {
