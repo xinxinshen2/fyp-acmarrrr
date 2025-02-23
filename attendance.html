@@ -349,7 +349,10 @@
             studentList.innerHTML = '';
 
             const studentsRef = db.collection("student");
-            const studentsSnapshot = await studentsRef.get(); // Get all students
+            const studentsSnapshot = await studentsRef.get();
+            
+            // 添加计数器
+            let studentNumber = 1;
 
             console.log("Total students snapshot size:", studentsSnapshot.size);
 
@@ -422,10 +425,15 @@
                         absentVisible = status !== 'absent';
                     }
 
+                    // 添加序号和学号显示
                     const studentDiv = document.createElement('div');
                     studentDiv.className = 'student';
                     studentDiv.innerHTML = `
-                        <span>${studentData.name}</span>
+                        <div style="display: flex; align-items: center; gap: 15px">
+                            <span style="min-width: 30px">${studentNumber++}.</span>
+                            <span style="font-family: monospace">${studentDoc.id}</span>
+                            <span>${studentData.name}</span>
+                        </div>
                         <div class="attendance-buttons">
                             <button class="present" 
                                 onclick="markAttendance('${studentDoc.id}', 'present', this)" 
