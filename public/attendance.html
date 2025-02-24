@@ -471,10 +471,12 @@
                 if (shouldDisplay) {
                     console.log(`Displaying ${isInExtra ? 'EXTRA ' : ''}student ${studentDoc.id}`);
 
+                    // 修改考勤记录查询路径，使用sessionId
+                    const sessionId = `${sessionDate}_${sessionStartTime}_${lectureID}_${sessionType}`;
                     const attendanceRef = db.collection("attendance")
                         .doc(courseId)
                         .collection(subjectId)
-                        .doc(sessionType)
+                        .doc(sessionId)
                         .collection("students")
                         .doc(studentDoc.id);
 
@@ -485,6 +487,7 @@
                     
                     if (attendanceDoc.exists) {
                         const status = attendanceDoc.data().status;
+                        // 根据现有状态隐藏对应按钮
                         presentVisible = status !== 'present';
                         absentVisible = status !== 'absent';
                     }
