@@ -239,6 +239,7 @@
 
             await attendanceRef.update({
                 status: "present",
+                method: "barcode",
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
 

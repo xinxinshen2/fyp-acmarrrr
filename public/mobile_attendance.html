@@ -273,6 +273,7 @@
                             
                             batch.set(attendanceRef, {
                                 status: "absent",
+                                method: "unmarked",
                                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
                             }, { merge: true });
                         }
