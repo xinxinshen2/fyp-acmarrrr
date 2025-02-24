@@ -162,7 +162,7 @@
             <div id="scheduleDisplay"></div>
             <label for="sessionTime">Select Session Time:</label>
             <select id="sessionTime">
-                <option value="custom">Custom Time</option>
+                <!-- 移除custom选项 -->
             </select>
             <div id="customTimeInputs" style="display:none;">
                 <label for="customStartTime">Custom Start Time:</label>
@@ -235,7 +235,9 @@
                             const subjectId = subjectDoc.id;
                             const option = document.createElement('option');
                             
-                            const matchingSession = subjectData.sessions.find(s => s.lectureID === lectureID);
+                            const matchingSession = subjectData.sessions.find(s => 
+                                s.lectureID === lectureID
+                            );
                             const group = matchingSession?.group || '';
                             const groupSuffix = group && group !== 'all' ? ` {${group}}` : '';
 
@@ -258,7 +260,6 @@
         async function displaySchedule() {
             const selectedValue = document.getElementById('subject').value;
             const sessionTimeSelect = document.getElementById('sessionTime');
-            const customTimeInputs = document.getElementById('customTimeInputs');
 
             if (selectedValue) {
                 const [courseId, subjectId] = selectedValue.split('+');
@@ -268,11 +269,15 @@
                 const doc = await subjectRef.get();
                 if (doc.exists) {
                     const subjectData = doc.data();
+                    const filteredSessions = subjectData.sessions?.filter(s => 
+                        s.lectureID === sessionStorage.getItem('lectureID')
+                    ) || [];
+
                     const scheduleDisplay = document.getElementById('scheduleDisplay');
                     scheduleDisplay.innerHTML = '';
-                    sessionTimeSelect.innerHTML = '<option value="custom">Custom Time</option>';
+                    sessionTimeSelect.innerHTML = '';
 
-                    if (subjectData.sessions && subjectData.sessions.length > 0) {
+                    if (filteredSessions.length > 0) {
                         let scheduleHTML = '<strong>Schedule:</strong><br>';
                         let firstSessionValue = null;
 
@@ -295,7 +300,7 @@
                             return `${year}-${month}-${dayOfMonth}`;
                         }
 
-                        subjectData.sessions.forEach((session, index) => {
+                        filteredSessions.forEach((session, index) => {
                             const sessionDate = getDateOfThisWeek(session.day);
                             scheduleHTML += `${session.type}: ${session.day} ${session.startTime}-${session.endTime} (${sessionDate})<br>`;
                             
@@ -315,28 +320,16 @@
 
                         scheduleDisplay.innerHTML = scheduleHTML;
                         sessionTimeSelect.value = firstSessionValue;
-                        customTimeInputs.style.display = 'none';
                     } else {
                         scheduleDisplay.innerHTML = '<p>No schedule available</p>';
-                        customTimeInputs.style.display = 'none';
                     }
                 } else {
                     console.log("No such document!");
-                    customTimeInputs.style.display = 'none';
                 }
             } else {
                 document.getElementById('scheduleDisplay').innerHTML = '';
-                sessionTimeSelect.innerHTML = '<option value="custom">Custom Time</option>';
-                customTimeInputs.style.display = 'none';
+                sessionTimeSelect.innerHTML = '';
             }
-
-            sessionTimeSelect.addEventListener('change', function() {
-                if (sessionTimeSelect.value === 'custom') {
-                    customTimeInputs.style.display = 'block';
-                } else {
-                    customTimeInputs.style.display = 'none';
-                }
-            });
         }
 
         async function confirmSelection() {
@@ -360,7 +353,6 @@
             const originalText = btn.textContent;
             
             btn.disabled = true;
-            btn.querySelector('.button-text').textContent = '加载中';
             btn.querySelector('.loading-dots').style.display = 'inline';
 
             try {
