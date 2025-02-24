@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Attendance</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        html, body {
+            height: 100%;
+        }
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: #e0e7ff;
+            color: #333;
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+        }
+        .container {
+            width: 90%;
+            max-width: 800px;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0px 4px 30px rgba(0, 0, 0, 0.08);
+            transition: transform 0.3s ease;
+        }
+        .container:hover {
+            transform: translateY(-10px);
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #4f46e5;
+        }
+        .course-select, .student-list {
+            margin-bottom: 20px;
+        }
+        .student {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 20px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            background: #fff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
+            transition: background-color 0.3s;
+        }
+        .student:hover {
+            background-color: #f8f9fa;
+        }
+        .student:last-child {
+            border-bottom: none;
+        }
+        .attendance-buttons button {
+            margin-left: 10px;
+            padding: 5px 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            min-width: 80px;
+            position: relative;
+        }
+        .attendance-buttons button::after {
+            content: "";
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            border-radius: 5px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .attendance-buttons button.present:hover::after {
+            border: 2px solid #4CAF50;
+            opacity: 0.2;
+        }
+        .attendance-buttons button.absent:hover::after {
+            border: 2px solid #f44336;
+            opacity: 0.2;
+        }
+        .confirm-button {
+            display: block;
+            margin: 0 auto;
+            padding: 10px 20px;
+            background-color: #4f46e5;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .confirm-button:hover {
+            transform: translateY(-1px);
+        }
+        .confirm-button:active {
+            transform: translateY(1px);
+        }
+        .particle {
+            position: absolute;
+            background-color: #fff;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+        label {
+            font-size: 0.95rem;
+            margin-bottom: 8px;
+            color: #4a5568;
+            display: block;
+        }
+        select, input[type="time"] {
+            padding: 8px 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            transition: border-color 0.2s;
+            font-size: 0.95rem;
+        }
+        select:focus, input[type="time"]:focus {
+            border-color: #4f46e5;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
+        }
+        .loading-dots {
+            display: inline-block;
+            padding: 0 5px;
+        }
+        .loading-dots::after {
+            content: '...';
+            animation: dots 1s steps(5, end) infinite;
+        }
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+        @keyframes fadeOut {
+            0% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-10px); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Mark Attendance</h1>
+        <div class="course-select">
+            <label for="subject">Select Subject:</label>
+            <select id="subject">
+                <!-- Options will be populated dynamically -->
+            </select>
+            <div id="scheduleDisplay"></div>
+            <label for="sessionTime">Select Session Time:</label>
+            <select id="sessionTime">
+                <option value="custom">Custom Time</option>
+            </select>
+            <div id="customTimeInputs" style="display:none;">
+                <label for="customStartTime">Custom Start Time:</label>
+                <input type="time" id="customStartTime">
+                <label for="customEndTime">Custom End Time:</label>
+                <input type="time" id="customEndTime">
+            </div>
+            <button class="confirm-button" onclick="confirmSelection()">
+                <span class="button-text">confirm</span>
+                <span class="loading-dots" style="display: none"></span>
+            </button>
+        </div>
+        <div class="student-list" id="studentList">
+            <!-- Student list will be populated dynamically -->
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "REMOVED",
+            authDomain: "advanceas-d8db4.firebaseapp.com",
+            projectId: "advanceas-d8db4",
+            storageBucket: "advanceas-d8db4.firebasestorage.app",
+            messagingSenderId: "878892786344",
+            appId: "1:878892786344:web:33bb5a97d99daf049d189d",
+            measurementId: "G-PLRRKT6RWW"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        async function loadSubjects() {
+            const lectureID = sessionStorage.getItem('lectureID');
+            console.log("Lecture ID from session:", lectureID); // Debugging line
+            if (!lectureID) {
+                alert("Lecture ID not found in session.");
+                return;
+            }
+
+            const coursesRef = db.collection("course");
+            const coursesSnapshot = await coursesRef.get();
+            const subjectSelect = document.getElementById('subject');
+            subjectSelect.innerHTML = ''; // Clear previous options
+
+            coursesSnapshot.forEach(courseDoc => {
+                const courseId = courseDoc.id;
+                const subjectsRef = coursesRef.doc(courseId).collection("subject");
+
+                subjectsRef.where("lectureID", "==", lectureID).get().then(subjectsSnapshot => {
+                    subjectsSnapshot.forEach(subjectDoc => {
+                        const subjectId = subjectDoc.id;
+                        const subjectData = subjectDoc.data();
+                        const option = document.createElement('option');
+
+                        option.value = `${courseId}+${subjectId}`;
+                        option.textContent = `${courseId}+${subjectData.name}`;
+                        subjectSelect.appendChild(option);
+                    });
+                    // After loading all subjects, trigger displaySchedule if there's a selected subject
+                    if (subjectSelect.value) {
+                        displaySchedule();
+                    }
+                }).catch(error => {
+                    console.error("Error getting subjects:", error);
+                });
+            });
+
+            subjectSelect.addEventListener('change', displaySchedule);
+        }
+
+        async function displaySchedule() {
+            const selectedValue = document.getElementById('subject').value;
+            const sessionTimeSelect = document.getElementById('sessionTime');
+            const customTimeInputs = document.getElementById('customTimeInputs');
+
+            if (selectedValue) {
+                const [courseId, subjectId] = selectedValue.split('+');
+                const db = firebase.firestore();
+                const subjectRef = db.collection("course").doc(courseId).collection("subject").doc(subjectId);
+
+                const doc = await subjectRef.get();
+                if (doc.exists) {
+                    const subjectData = doc.data();
+                    const scheduleDisplay = document.getElementById('scheduleDisplay');
+                    scheduleDisplay.innerHTML = '';
+                    sessionTimeSelect.innerHTML = '<option value="custom">Custom Time</option>';
+
+                    if (subjectData.sessions && subjectData.sessions.length > 0) {
+                        let scheduleHTML = '<strong>Schedule:</strong><br>';
+                        let firstSessionValue = null;
+
+                        // Function to get the date of the given day of the week
+                        function getDateOfThisWeek(dayOfWeek) {
+                            const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                            const today = new Date();
+                            const day = today.getDay(); // Day of the week (0-6)
+                            const diff = days.indexOf(dayOfWeek) - day; // Difference between the desired day and today
+
+                            let newDate = new Date(today);
+                            newDate.setDate(today.getDate() + diff); // Add the difference to get the desired date
+
+                            // If the date is in the past, move to next week
+                            if (newDate < today) {
+                                newDate.setDate(newDate.getDate() + 7);
+                            }
+
+                            const year = newDate.getFullYear();
+                            const month = String(newDate.getMonth() + 1).padStart(2, '0');
+                            const dayOfMonth = String(newDate.getDate()).padStart(2, '0');
+                            return `${year}-${month}-${dayOfMonth}`;
+                        }
+
+                        subjectData.sessions.forEach((session, index) => {
+                            const sessionDate = getDateOfThisWeek(session.day); // Get the date for the session
+                            scheduleHTML += `${session.type}: ${session.day} ${session.startTime}-${session.endTime} (${sessionDate})<br>`;
+                            const sessionValue = `${session.day} ${session.startTime} - ${session.endTime} (${session.type})`;
+                            const option = document.createElement('option');
+                            option.value = `${sessionDate} ${session.day} ${session.startTime} - ${session.endTime} (${session.type})`; // Include the date in the value
+                            option.textContent = `${session.day} ${session.startTime} - ${session.endTime} (${sessionDate}) (${session.type})`; // Include the date in the display text
+                            sessionTimeSelect.appendChild(option);
+
+                            if (index === 0) {
+                                firstSessionValue = `${sessionDate} ${session.day} ${session.startTime} - ${session.endTime} (${session.type})`; // Update firstSessionValue to include the date
+                            }
+                        });
+
+                        scheduleDisplay.innerHTML = scheduleHTML;
+                        sessionTimeSelect.value = firstSessionValue;
+                        customTimeInputs.style.display = 'none';
+                    } else {
+                        scheduleDisplay.innerHTML = '<p>No schedule available</p>';
+                        customTimeInputs.style.display = 'none';
+                    }
+                } else {
+                    console.log("No such document!");
+                    customTimeInputs.style.display = 'none';
+                }
+            } else {
+                document.getElementById('scheduleDisplay').innerHTML = '';
+                sessionTimeSelect.innerHTML = '<option value="custom">Custom Time</option>';
+                customTimeInputs.style.display = 'none';
+            }
+
+            sessionTimeSelect.addEventListener('change', function() {
+                if (sessionTimeSelect.value === 'custom') {
+                    customTimeInputs.style.display = 'block';
+                } else {
+                    customTimeInputs.style.display = 'none';
+                }
+            });
+        }
+
+        async function confirmSelection() {
+            const btn = document.querySelector('.confirm-button');
+            const originalText = btn.textContent;
+            
+            btn.disabled = true;
+            btn.querySelector('.button-text').textContent = '加载中';
+            btn.querySelector('.loading-dots').style.display = 'inline';
+
+            try {
+                const selectedValue = document.getElementById('subject').value;
+                console.log("Selected value:", selectedValue); // Debugging line
+                if (selectedValue) {
+                    const [courseId, subjectId] = selectedValue.split('+');
+                    console.log("Course ID:", courseId); // Debugging line
+                    await loadStudents(courseId);
+                } else {
+                    alert("Please select a subject.");
+                }
+            } finally {
+                btn.disabled = false;
+                btn.querySelector('.button-text').textContent = originalText;
+                btn.querySelector('.loading-dots').style.display = 'none';
+            }
+        }
+
+        async function loadStudents(courseId) {
+            console.log("Loading students for courseId:", courseId);
+            const studentList = document.getElementById('studentList');
+            studentList.innerHTML = '';
+
+            const studentsRef = db.collection("student");
+            const studentsSnapshot = await studentsRef.get();
+            
+            // 添加计数器
+            let studentNumber = 1;
+
+            console.log("Total students snapshot size:", studentsSnapshot.size);
+
+            let found = false; // Flag to check if student is found
+
+            const selectedValue = document.getElementById('subject').value;
+            const [_, subjectId] = selectedValue.split('+');
+
+            const sessionTimeSelect = document.getElementById('sessionTime');
+            const selectedSessionTime = sessionTimeSelect.value.trim();
+
+            let customStartTime = document.getElementById('customStartTime').value;
+            let customEndTime = document.getElementById('customEndTime').value;
+
+            let sessionDate, sessionStartTime, sessionType;
+            if (selectedSessionTime !== 'custom') {
+                const sessionParts = selectedSessionTime.split(' ');
+                sessionDate = sessionParts[0];
+                const day = sessionParts[1];
+                sessionStartTime = sessionParts[2];
+                const endTime = sessionParts[4];
+                sessionType = sessionParts[5].slice(1, -1);
+            } else {
+                const now = new Date();
+                sessionDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+                sessionStartTime = customStartTime;
+                sessionType = 'custom';
+            }
+            const sessionId = `${sessionDate}_${sessionStartTime}_${sessionType}`;
+
+            // Get the subject document
+            const subjectRef = db.collection("course").doc(courseId).collection("subject").doc(subjectId);
+            const subjectDoc = await subjectRef.get();
+
+            let excludedStudents = [];
+            if (subjectDoc.exists && subjectDoc.data().excludedStudents) {
+                excludedStudents = subjectDoc.data().excludedStudents;
+            }
+
+            studentsSnapshot.forEach(async studentDoc => {
+                const studentData = studentDoc.data();
+                console.log("Student course:", studentData.course);
+                if (studentData.course === courseId) { // Filter in the code
+                    // Check if student is excluded
+                    console.log("excludedStudents:", excludedStudents);
+                    console.log("studentDoc.id:", studentDoc.id);
+                    if (excludedStudents.includes(studentDoc.id)) {
+                        console.log(`Student ${studentDoc.id} is excluded from this subject.`);
+                        return; // Skip to the next student
+                    }
+
+                    found = true;
+
+                    // Check if attendance data exists
+                    const attendanceRef = db.collection("attendance")
+                        .doc(courseId)
+                        .collection(subjectId)
+                        .doc(sessionId)
+                        .collection("students")
+                        .doc(studentDoc.id);
+
+                    const attendanceDoc = await attendanceRef.get();
+                    
+                    let presentVisible = true;
+                    let absentVisible = true;
+                    
+                    if (attendanceDoc.exists) {
+                        const status = attendanceDoc.data().status;
+                        presentVisible = status !== 'present';
+                        absentVisible = status !== 'absent';
+                    }
+
+                    // 添加序号和学号显示
+                    const studentDiv = document.createElement('div');
+                    studentDiv.className = 'student';
+                    studentDiv.innerHTML = `
+                        <div style="display: flex; align-items: center; gap: 15px">
+                            <span style="min-width: 30px">${studentNumber++}.</span>
+                            <span style="font-family: monospace">${studentDoc.id}</span>
+                            <span>${studentData.name}</span>
+                        </div>
+                        <div class="attendance-buttons">
+                            <button class="present" 
+                                onclick="markAttendance('${studentDoc.id}', 'present', this)" 
+                                ${presentVisible ? '' : 'style="display:none"'}>Present</button>
+                            <button class="absent" 
+                                onclick="markAttendance('${studentDoc.id}', 'absent', this)" 
+                                ${absentVisible ? '' : 'style="display:none"'}>Absent</button>
+                        </div>
+                    `;
+                    studentList.appendChild(studentDiv);
+                }
+            });
+
+            if (!found) {
+                console.log("No students found for this course.");
+                studentList.innerHTML = '<p>No students found for this course.</p>';
+            }
+        }
+
+        async function markAttendance(studentId, status, button) {
+            const originalText = button.textContent;
+            button.innerHTML = `<span class="processing">处理中...</span>`;
+            button.style.opacity = '0.7';
+            button.disabled = true;
+
+            try {
+                console.log(`Marking attendance for studentId: ${studentId}, status: ${status}`);
+                const selectedValue = document.getElementById('subject').value;
+                const [courseId, subjectId] = selectedValue.split('+');
+
+                const sessionTimeSelect = document.getElementById('sessionTime');
+                const selectedSessionTime = sessionTimeSelect.value.trim(); // Trim whitespace
+
+                // Debugging
+                console.log("Selected Session Time:", selectedSessionTime);
+
+                let customStartTime = null;
+                let customEndTime = null;
+
+                if (selectedSessionTime === 'custom') {
+                    customStartTime = document.getElementById('customStartTime').value;
+                    customEndTime = document.getElementById('customEndTime').value;
+                     // Ensure that the custom time input fields are not empty
+                    if (!customStartTime || !customEndTime) {
+                        alert("Please enter both custom start and end times.");
+                        return;
+                    }
+                }
+
+                let sessionType = null;
+                let sessionDate = null;
+                let sessionStartTime = null;
+
+                if (selectedSessionTime !== 'custom') {
+                    const sessionParts = selectedSessionTime.split(' ');
+                    sessionDate = sessionParts[0];
+                    const day = sessionParts[1];
+                    sessionStartTime = sessionParts[2];
+                    const endTime = sessionParts[4];
+                    sessionType = sessionParts[5].slice(1, -1);
+                } else {
+                    const now = new Date();
+                    sessionDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+                    sessionStartTime = customStartTime;
+                    sessionType = 'custom';
+                }
+
+                const sessionId = `${sessionDate}_${sessionStartTime}_${sessionType}`;
+
+                const attendanceRef = db.collection("attendance")
+                    .doc(courseId)
+                    .collection(subjectId)
+                    .doc(sessionId)
+                    .collection("students")
+                    .doc(studentId);
+
+                // Ensure the course, subject, and session documents exist
+                const courseDocRef = db.collection("attendance").doc(courseId);
+                const subjectCollectionRef = courseDocRef.collection(subjectId);
+                const sessionDocRef = subjectCollectionRef.doc(sessionId);
+
+                // Create the course document if it doesn't exist
+                const courseDoc = await courseDocRef.get();
+                if (!courseDoc.exists) {
+                    await courseDocRef.set({}); // Create an empty document
+                    console.log(`Course document created: ${courseId}`);
+                }
+
+                // No need to create the subject collection, Firestore creates it automatically when a document is added
+
+                // Create the session document if it doesn't exist
+                const sessionDoc = await sessionDocRef.get();
+                if (!sessionDoc.exists) {
+                    await sessionDocRef.set({}); // Create an empty document
+                    console.log(`Session document created: ${sessionId}`);
+                }
+
+                const attendanceData = {
+                    status: status,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                };
+
+                await attendanceRef.set(attendanceData);
+
+                // Update attendance counts in the session document
+                await updateAttendanceCounts(courseId, subjectId, sessionId);
+
+                // Make the button disappear with a particle effect
+                createParticles(button);
+                button.style.display = 'none';
+
+                // Show the other button
+                const attendanceButtons = button.parentNode;
+                let otherButton;
+                if (button.classList.contains('present')) {
+                    otherButton = attendanceButtons.querySelector('.absent');
+                } else {
+                    otherButton = attendanceButtons.querySelector('.present');
+                }
+
+                if (otherButton) {
+                    otherButton.style.display = 'inline-block';
+                }
+
+                // 添加临时状态反馈
+                const feedback = document.createElement('span');
+                feedback.textContent = status === 'present' ? '✓' : '✕';
+                feedback.style.color = status === 'present' ? '#4CAF50' : '#f44336';
+                feedback.style.marginLeft = '8px';
+                feedback.style.animation = 'fadeOut 1.5s forwards';
+                
+                attendanceButtons.appendChild(feedback);
+                setTimeout(() => feedback.remove(), 1500);
+            } finally {
+                button.disabled = false;
+                button.style.opacity = '1';
+                button.innerHTML = originalText;
+            }
+        }
+
+        async function updateAttendanceCounts(courseId, subjectId, sessionId) {
+            const subjectRef = db.collection("course").doc(courseId).collection("subject").doc(subjectId);
+            const subjectDoc = await subjectRef.get();
+
+            let excludedStudents = [];
+            if (subjectDoc.exists && subjectDoc.data().excludedStudents) {
+                excludedStudents = subjectDoc.data().excludedStudents;
+            }
+
+            const studentsRef = db.collection("student");
+            const studentsSnapshot = await studentsRef.get();
+
+            let totalStudents = 0;
+            let presentStudents = 0;
+            let absentStudents = 0;
+
+            studentsSnapshot.forEach(studentDoc => {
+                const studentData = studentDoc.data();
+                if (studentData.course === courseId && !excludedStudents.includes(studentDoc.id)) {
+                    totalStudents++;
+                }
+            });
+
+            const attendanceCollectionRef = db.collection("attendance")
+                .doc(courseId)
+                .collection(subjectId)
+                .doc(sessionId)
+                .collection("students");
+
+            const presentSnapshot = await attendanceCollectionRef.where("status", "==", "present").get();
+            presentStudents = presentSnapshot.size;
+
+            absentStudents = totalStudents - presentStudents;
+
+            const sessionDocRef = db.collection("attendance")
+                .doc(courseId)
+                .collection(subjectId)
+                .doc(sessionId);
+
+            await sessionDocRef.update({
+                totalStudents: totalStudents,
+                presentStudents: presentStudents,
+                absentStudents: absentStudents
+            });
+        }
+
+        function createParticles(button) {
+            const numberOfParticles = 30;
+            const buttonRect = button.getBoundingClientRect();
+
+            for (let i = 0; i < numberOfParticles; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                document.body.appendChild(particle);
+
+                const size = Math.floor(Math.random() * 15 + 5);
+                particle.style.width = `${size}px`;
+                particle.style.height = `${size}px`;
+                particle.style.left = `${buttonRect.left + buttonRect.width / 2 - size / 2}px`;
+                particle.style.top = `${buttonRect.top + buttonRect.height / 2 - size / 2}px`;
+
+                const animationDuration = Math.random() * 1 + 0.5;
+                const angle = Math.random() * 360;
+                const distance = Math.random() * 50 + 30;
+
+                particle.style.transition = `transform ${animationDuration}s ease-out, opacity ${animationDuration}s ease-out`;
+
+                const x = distance * Math.cos(angle * Math.PI / 180);
+                const y = distance * Math.sin(angle * Math.PI / 180);
+
+                // Delay the start of the animation slightly
+                setTimeout(() => {
+                    particle.style.transform = `translate(${x}px, ${y}px)`;
+                    particle.style.opacity = 0;
+                }, 10);
+
+                // Remove the particle after the animation completes
+                setTimeout(() => {
+                    document.body.removeChild(particle);
+                }, animationDuration * 1000);
+            }
+        }
+
+        window.onload = loadSubjects;
+    </script>
+</body>
+</html>

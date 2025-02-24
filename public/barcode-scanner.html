@@ -214,75 +214,68 @@
             }
         }
 
-        // 从attendance.html迁移的签到逻辑
+        // 修改签到逻辑
         async function markAttendance(studentId) {
             const sessionData = JSON.parse(sessionStorage.getItem('attendanceSession'));
-            const { courseId, subjectId, sessionId } = sessionData;
-
-            // 检查是否在排除名单
-            const subjectRef = db.collection("course").doc(courseId).collection("subject").doc(subjectId);
-            const subjectDoc = await subjectRef.get();
-            const excludedStudents = subjectDoc.data()?.excludedStudents || [];
-            
-            if (excludedStudents.includes(studentId)) {
-                return { success: false, message: "该学生不在课程名单中" };
-            }
+            const { sessionId, courseId, subjectId } = sessionData;
 
             const attendanceRef = db.collection("attendance")
                 .doc(courseId)
                 .collection(subjectId)
                 .doc(sessionId)
-                .collection("student")
+                .collection("students")
                 .doc(studentId);
 
-            // 更新状态为present
+            const doc = await attendanceRef.get();
+            
+            if (!doc.exists) {
+                return { success: false, message: "Student not in this session" };
+            }
+
+            if (doc.data().status === "present") {
+                return { success: false, message: "Already checked in" };
+            }
+
             await attendanceRef.update({
                 status: "present",
-                presentTime: firebase.firestore.FieldValue.serverTimestamp()
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
 
-            // 更新统计
-            await updateAttendanceCounts();
-            return { success: true, message: "签到成功" };
+            await updateAttendanceCounts(courseId, subjectId, sessionId);
+            return { success: true, message: "Check-in successful" };
         }
 
-        async function updateAttendanceCounts() {
-            const sessionData = JSON.parse(sessionStorage.getItem('attendanceSession'));
-            const { courseId, subjectId, sessionId } = sessionData;
-
-            const attendanceRef = db.collection("attendance")
+        // 更新统计方法
+        async function updateAttendanceCounts(courseId, subjectId, sessionId) {
+            const sessionRef = db.collection("attendance")
                 .doc(courseId)
                 .collection(subjectId)
                 .doc(sessionId);
 
-            const studentsSnapshot = await db.collection("student")
-                .where("course", "==", courseId)
-                .get();
+            const studentsSnapshot = await sessionRef.collection("students").get();
+            const present = studentsSnapshot.docs.filter(doc => doc.data().status === "present").length;
 
-            const presentSnapshot = await attendanceRef.collection("students")
-                .where("status", "==", "present")
-                .get();
-
-            await attendanceRef.update({
-                totalStudents: studentsSnapshot.size,
-                presentStudents: presentSnapshot.size,
-                absentStudents: studentsSnapshot.size - presentSnapshot.size,
+            await sessionRef.update({
+                presentStudents: present,
                 lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
             });
         }
 
-        // 初始化时获取参数
+        // 修改初始化参数获取方式
         document.addEventListener('DOMContentLoaded', () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            sessionId = urlParams.get('sessionId');
-            courseId = urlParams.get('courseId');
-            subjectId = urlParams.get('subjectId');
-            lectureId = urlParams.get('lectureId');
-
-            if (!sessionId || !courseId || !subjectId) {
+            const sessionData = JSON.parse(sessionStorage.getItem('attendanceSession'));
+            
+            if (!sessionData || !sessionData.sessionId || !sessionData.courseId || !sessionData.subjectId) {
                 alert("Invalid course parameters");
                 window.location.href = 'mobile_attendance.html';
+                return;
             }
+            
+            // 将参数赋值给全局变量
+            sessionId = sessionData.sessionId;
+            courseId = sessionData.courseId;
+            subjectId = sessionData.subjectId;
+            lectureId = sessionData.lectureId;
         });
 
         function stopScanning() {
@@ -304,5 +297,5 @@
 
 
     </script>
-</body>p
+</body>
 </html>
