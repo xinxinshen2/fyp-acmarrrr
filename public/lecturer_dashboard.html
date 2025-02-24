@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" href="dumbbell.png" type="image/icon type">
     <link rel="stylesheet" href="navigation.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <title>Lecturer Dashboard</title>
 
     <style>
@@ -85,6 +86,195 @@
             padding: 15px;
             border-radius: 8px;
             text-align: center;
+        }
+
+        /* 修改时间表样式为admin风格 */
+        .timeTableSpace {
+            width: 90%;
+            margin: 20px auto;
+            padding: 30px;
+            background: linear-gradient(-229deg, rgba(207, 145, 255, 0.7), rgba(87, 130, 245, 0.7));
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .timetable-container {
+            display: grid;
+            grid-template-columns: 1fr 3fr;
+            gap: 20px;
+        }
+
+        .day-column {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 20px;
+            border-radius: 10px;
+            backdrop-filter: blur(5px);
+        }
+
+        .day-header {
+            color: white;
+            font-size: 1.5em;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .session-card {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .session-title {
+            color: #2d2d2d;
+            font-size: 1.2em;
+            margin-bottom: 8px;
+        }
+
+        .session-detail {
+            display: flex;
+            justify-content: space-between;
+            color: #555;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+
+        .session-type {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            background: #5782f5;
+            color: white;
+        }
+
+        .selectCourse {
+            margin-bottom: 20px;
+        }
+
+        .tableDisplay table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            border-radius: 10px;
+            overflow: hidden;
+            background-color: rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(5px);
+        }
+
+        .tableDisplay th {
+            background-color: rgba(242, 242, 242, 0.9);
+            padding: 15px;
+            border-bottom: 2px solid #ddd;
+        }
+
+        .tableDisplay td {
+            padding: 12px;
+            background-color: rgba(255, 255, 255, 0.6);
+            border-bottom: 1px solid rgba(221, 221, 221, 0.5);
+        }
+
+        .tableDisplay tr:hover td {
+            background-color: rgba(255, 255, 255, 0.8);
+        }
+
+        /* 调整标题样式 */
+        .timeTableSpace h2 {
+            color: #fff;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
+            margin-bottom: 25px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        /* 新增按钮样式（如果需要有添加按钮） */
+        .function-Btn {
+            padding: 10px 20px;
+            background-color: rgba(255, 255, 255, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin: 10px 0;
+        }
+
+        .function-Btn:hover {
+            background-color: rgba(255, 255, 255, 0.7);
+            transform: translateY(-2px);
+        }
+
+        .time-s, .time-e {
+            margin: 0 10px;
+        }
+
+        /* 新版横向表格样式 */
+        .timeTableSpace {
+            width: 90%;
+            margin: 20px auto;
+            padding: 30px;
+            background: linear-gradient(-229deg, rgba(207, 145, 255, 0.7), rgba(87, 130, 245, 0.7));
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .timetable-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .timetable-table th,
+        .timetable-table td {
+            padding: 15px;
+            border: 1px solid rgba(221, 221, 221, 0.3);
+            vertical-align: top;
+        }
+
+        .timetable-table th {
+            background-color: rgba(242, 242, 242, 0.9);
+            width: 12%;
+            text-align: center;
+        }
+
+        .day-header {
+            color: #2d2d2d;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .session-card {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .session-title {
+            color: #5782f5;
+            font-size: 0.95em;
+            margin-bottom: 5px;
+        }
+
+        .session-detail {
+            font-size: 0.85em;
+            color: #666;
+            margin: 3px 0;
+        }
+
+        .session-type {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.75em;
+            background: #cf91ff;
+            color: white;
+            margin-left: 5px;
         }
     </style>
 
@@ -184,6 +374,139 @@
     // Touch Events
     logoutButton.addEventListener("touchstart", startProgress);
     logoutButton.addEventListener("touchend", resetProgress);
+
+    // 新增时间表功能
+    async function loadTimetable() {
+        const lecturerID = sessionStorage.getItem('lectureID');
+        console.log("Current lecturerID:", lecturerID);  // 添加调试信息
+        if (!lecturerID) {
+            console.error("No lecturer ID found");
+            return;
+        }
+
+        const sessionsByDay = {
+            Monday: [], Tuesday: [], Wednesday: [],
+            Thursday: [], Friday: [], Saturday: [], Sunday: []
+        };
+
+        try {
+            const coursesSnapshot = await getDocs(collection(db, "course"));
+            let hasData = false;
+
+            for (const courseDoc of coursesSnapshot.docs) {
+                const subjectsSnapshot = await getDocs(collection(db, "course", courseDoc.id, "subject"));
+                
+                for (const subjectDoc of subjectsSnapshot.docs) {
+                    const subjectData = subjectDoc.data();
+                    
+                    if (subjectData.lectureID === lecturerID && subjectData.sessions) {
+                        hasData = true;
+                        subjectData.sessions.forEach(session => {
+                            if (sessionsByDay[session.day]) {
+                                sessionsByDay[session.day].push({
+                                    course: courseDoc.id,
+                                    ...session,
+                                    subjectName: subjectData.name,
+                                    class: subjectData.class,
+                                    type: session.type || 'lecture' // 确保有默认值
+                                });
+                            }
+                        });
+                    }
+                }
+            }
+
+            if (!hasData) {
+                document.querySelector(".tableDisplay").innerHTML = 
+                    "<p>No timetable entries found for your account.</p>";
+                return;
+            }
+
+            // 添加时间排序
+            for (const day in sessionsByDay) {
+                sessionsByDay[day].sort((a, b) => 
+                    a.startTime.localeCompare(b.startTime)
+                );
+            }
+            renderTimetable(sessionsByDay);
+
+        } catch (error) {
+            console.error("Error loading timetable:", error);
+            document.querySelector(".tableDisplay").innerHTML = 
+                "<p>Error loading timetable. Please try again later.</p>";
+        }
+    }
+
+    function renderTimetable(sessionsByDay) {
+        const container = document.querySelector('.tableDisplay');
+        const daysOrder = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+        
+        let html = `<table class="timetable-table">`;
+        
+        // 表头
+        html += `<tr>`;
+        daysOrder.forEach(day => {
+            html += `<th>${day}</th>`;
+        });
+        html += `</tr>`;
+        
+        // 内容行
+        html += `<tr>`;
+        daysOrder.forEach(day => {
+            const sessions = sessionsByDay[day] || [];
+            html += `<td>`;
+            if (sessions.length === 0) {
+                html += `<div class="session-card" style="opacity:0.5;">-</div>`;
+            } else {
+                sessions.forEach(session => {
+                    html += `
+                    <div class="session-card">
+                        <div class="session-title">
+                            ${session.subjectName}
+                            <span class="session-type">${session.type}</span>
+                        </div>
+                        <div class="session-detail">Course: ${session.course}</div>
+                        <div class="session-detail">Venue: ${session.class}</div>
+                        <div class="session-detail">Time: ${session.startTime} - ${session.endTime}</div>
+                    </div>`;
+                });
+            }
+            html += `</td>`;
+        });
+        html += `</tr></table>`;
+        
+        container.innerHTML = html;
+    }
+
+    // 初始化时间表
+    window.addEventListener("DOMContentLoaded", () => {
+        loadTimetable();
+    });
+
+    // 修改导航按钮事件
+    document.addEventListener("DOMContentLoaded", function () {
+        const homeBtn = document.querySelector(".nav-btn:nth-child(1)");
+        const timetableBtn = document.querySelector(".nav-btn:nth-child(4)");
+        
+        const contentSections = {
+            cards: document.querySelector(".dashboard-cards"),
+            timetable: document.querySelector(".timeTableSpace")
+        };
+
+        // 初始显示卡片内容
+        contentSections.timetable.style.display = "none";
+
+        timetableBtn.addEventListener("click", function() {
+            contentSections.cards.style.display = "none";
+            contentSections.timetable.style.display = "block";
+            loadTimetable(); // 确保每次切换都刷新数据
+        });
+
+        homeBtn.addEventListener("click", function() {
+            contentSections.cards.style.display = "block";
+            contentSections.timetable.style.display = "none";
+        });
+    });
     </script>
 </head>
 <body>
@@ -228,71 +551,41 @@
     </nav>
 
     <div class="content">
-        <div class="card">
-            <h2>My Statistics</h2>
-            <div class="statistics">
-                <div>
-                    <h3>Attendance Rate</h3>
-                    <p>85%</p>
+        <!-- 将原有卡片包裹在新的容器中 -->
+        <div class="dashboard-cards">
+            <div class="card">
+                <h2>My Statistics</h2>
+                <div class="statistics">
+                    <div>
+                        <h3>Attendance Rate</h3>
+                        <p>85%</p>
+                    </div>
+                    <div>
+                        <h3>Leave Requests</h3>
+                        <p>5 Pending</p>
+                    </div>
                 </div>
-                <div>
-                    <h3>Leave Requests</h3>
-                    <p>5 Pending</p>
+            </div>
+
+            <div class="card">
+                <h2>Leave Information</h2>
+                <div class="leave-info">
+                    <div>
+                        <h3>Approved Leaves</h3>
+                        <p>10</p>
+                    </div>
+                    <div>
+                        <h3>Rejected Leaves</h3>
+                        <p>2</p>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="card">
-            <h2>Leave Information</h2>
-            <div class="leave-info">
-                <div>
-                    <h3>Approved Leaves</h3>
-                    <p>10</p>
-                </div>
-                <div>
-                    <h3>Rejected Leaves</h3>
-                    <p>2</p>
-                </div>
-            </div>
+        <div class="timeTableSpace" style="display: none;">
+            <h2>My Timetable</h2>
+            <div class="tableDisplay"></div>
         </div>
     </div>
 </body>
-<script>
-    document.addEventListener("DOMContentLoaded", function () {
-    const homeBtn = document.querySelector(".nav-btn:nth-child(1)");
-    const viewUserBtn = document.querySelector(".nav-btn:nth-child(2)"); // View User 按钮
-    const dataAnalysisBtn = document.querySelector(".nav-btn:nth-child(3)"); // Data Analysis 按钮
-    const dataSpace = document.querySelector(".dataSpace"); // 数据分析区域
-    const functionSpace = document.querySelector(".functionSpace"); // 用户管理功能区域
-    const homeSpace = document.querySelector(".homeSpace");
-
-    // 初始状态：显示 Data Analysis，隐藏 functionSpace
-    homeSpace.style.display = "block";
-    dataSpace.style.display = "block";
-    functionSpace.style.display = "block";
-
-
-    // 点击 "View User" 按钮时
-    viewUserBtn.addEventListener("click", function () {
-        dataSpace.style.display = "none";  // 隐藏数据分析
-        homeSpace.style.display = "none";
-        functionSpace.style.display = "block"; // 显示用户管理功能
-    });
-
-    // 点击 "Data Analysis" 按钮时
-    dataAnalysisBtn.addEventListener("click", function () {
-        homeSpace.style.display="none";
-        dataSpace.style.display = "block";  // 显示数据分析
-        functionSpace.style.display = "none"; // 隐藏用户管理功能
-    });
-
-    homeBtn.addEventListener("click",function(){
-        homeSpace.style.display="block";
-        functionSpace.style.display = "block"; 
-        dataSpace.style.display = "block";
-
-    });
-});
-
-</script>
 </html>
