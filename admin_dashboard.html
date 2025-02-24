@@ -247,7 +247,9 @@ async function fetchUsers() {
 
         const studentSnapshot = await getDocs(collection(db, "student"));
         studentSnapshot.forEach(doc => {
-            users.push({ id: doc.data().ID, name: doc.data().name, email: doc.data().email, role: "student" });
+            // users.push({ id: doc.data().ID, name: doc.data().name, email: doc.data().email, role: "student" });
+            users.push({ id: doc.data().ID, name: doc.data().name, email: doc.data().email, course: doc.data().course, group: doc.data().group, role: "student" });
+
         });
 
 
@@ -268,49 +270,77 @@ async function fetchUsers() {
 
 
 function displayUsers(users) {
-    userContainer.innerHTML = ""; 
+  userContainer.innerHTML = ""; 
 
-    if (users.length === 0) {
-        userContainer.innerHTML = "<p>No users found.</p>";
-        return;
-    }
+  if (users.length === 0) {
+    userContainer.innerHTML = "<p>No users found.</p>";
+    return;
+  }
 
-    const table = document.createElement("table");
-    table.border = "1";
-    table.style.borderCollapse = "collapse";
+  const table = document.createElement("table");
+  table.border = "1";
+  table.style.borderCollapse = "collapse";
 
-    const thead = document.createElement("thead");
+  const thead = document.createElement("thead");
+
+  if (filterState === "student") {
     thead.innerHTML = `
-        <tr style="background-color: #f2f2f2; text-align: left;">
-            <th ">No.</th>
-            <th ">ID</th>
-            <th ">Name</th>
-            <th ">Email</th>
-            <th ">Role</th>
-        </tr>
+      <tr style="background-color: #f2f2f2; text-align: left;">
+        <th style="padding: 10px;">No.</th>
+        <th style="padding: 10px;">ID</th>
+        <th style="padding: 10px;">Name</th>
+        <th style="padding: 10px;">Email</th>
+        <th style="padding: 10px;">Course</th>
+        <th style="padding: 10px;">Group</th>
+        <th style="padding: 10px;">Role</th>
+      </tr>
     `;
-    table.appendChild(thead);
+  } else {
+    thead.innerHTML = `
+      <tr style="background-color: #f2f2f2; text-align: left;">
+        <th style="padding: 10px;">No.</th>
+        <th style="padding: 10px;">ID</th>
+        <th style="padding: 10px;">Name</th>
+        <th style="padding: 10px;">Email</th>
+        <th style="padding: 10px;">Role</th>
+      </tr>
+    `;
+  }
+  
+  table.appendChild(thead);
 
-    const tbody = document.createElement("tbody");
+  const tbody = document.createElement("tbody");
 
-    users.forEach((user, index) => {
-        const row = document.createElement("tr");
+  users.forEach((user, index) => {
+    const row = document.createElement("tr");
 
-        row.innerHTML = `
-            <td style="padding: 10px; text-align: center;">${index + 1}</td>
-            <td style="padding: 10px;">${user.id}</td>
-            <td style="padding: 10px;">${user.name}</td>
-            <td style="padding: 10px;">${user.email}</td>
-            <td style="padding: 10px;">${user.role}</td>
-        `;
-
-        tbody.appendChild(row);
-    });
-
-    table.appendChild(tbody);
-    userContainer.appendChild(table);
+    if (filterState === "student") {
+      row.innerHTML = `
+        <td style="padding: 10px; text-align: center;">${index + 1}</td>
+        <td style="padding: 10px;">${user.id}</td>
+        <td style="padding: 10px;">${user.name}</td>
+        <td style="padding: 10px;">${user.email}</td>
+        <td style="padding: 10px;">${user.course}</td>
+        <td style="padding: 10px;">${user.group}</td>
+        <td style="padding: 10px;">${user.role}</td>
+      `;
+    } else {
+      row.innerHTML = `
+        <td style="padding: 10px; text-align: center;">${index + 1}</td>
+        <td style="padding: 10px;">${user.id}</td>
+        <td style="padding: 10px;">${user.name}</td>
+        <td style="padding: 10px;">${user.email}</td>
+        <td style="padding: 10px;">${user.role}</td>
+      `;
+    }
     
+    tbody.appendChild(row);
+  });
+
+  table.appendChild(tbody);
+  userContainer.appendChild(table);
 }
+
 
 // SEARCH AT HERE
 searchInput.addEventListener("input", (e) => {
@@ -327,10 +357,7 @@ searchInput.addEventListener("input", (e) => {
 
 
 
-fetchUsers();
-
 //ADDUSER
-
 document.addEventListener('DOMContentLoaded', () => {
 
       const addUserBtn = document.querySelector('.AddUser');
@@ -393,6 +420,38 @@ document.addEventListener('DOMContentLoaded', () => {
 }
 populateCourseOptions();
 
+document.getElementById("role").addEventListener("change", function() {
+  // For example, if your course and uid elements are structured as given:
+  // <div>
+  //   <label for="course">Course:</label>
+  //   <select id="course" name="course" required>...</select>
+  // </div>
+  // <div>
+  //   <label for="uid">UID (card_id):</label>
+  //   <input type="text" id="uid" name="uid" required>
+  // </div>
+  
+  // We'll assume these are contained in their own divs. Adjust the selectors as needed.
+  const courseDiv = document.querySelector("label[for='course']").parentElement;
+  const uidDiv = document.querySelector("label[for='uid']").parentElement;
+  const courseInput = document.getElementById("course");
+  const uidInput = document.getElementById("uid");
+
+  if (this.value === "lecturer") {
+    // Hide course and UID fields for lecturer
+    courseDiv.style.display = "none";
+    uidDiv.style.display = "none";
+    courseInput.required = false;
+    uidInput.required = false;
+    
+  } else {
+    // Show them for other roles
+    courseDiv.style.display = "block";
+    uidDiv.style.display = "block";
+    courseInput.required = true;
+    uidInput.required = true;
+  }
+});
 
 
 document.getElementById("course").addEventListener("change", async (e) => {
@@ -403,34 +462,43 @@ document.getElementById("course").addEventListener("change", async (e) => {
     return;
   }
   
-  try {
-
-    const studentsQuery = query(
-      collection(db, "student"),
-      where("course", "==", selectedCourse)
-    );
-    const querySnapshot = await getDocs(studentsQuery);
-    
-
-    let maxId = 0;
-    querySnapshot.forEach((docSnap) => {
-      const currentId = parseInt(docSnap.id, 10);
-      if (!isNaN(currentId) && currentId > maxId) {
-        maxId = currentId;
-      }
-    });
-    
-
-    const newID = (maxId + 1).toString();
-    console.log("New Student ID:", newID);
-    
-
-    document.getElementById("idDisplay").textContent = newID;
-    
-  } catch (error) {
-    console.error("查询学生记录出错：", error);
-    alert("查询学生记录出错，请检查控制台了解详细信息。");
+try {
+  const studentsQuery = query(
+    collection(db, "student"),
+    where("course", "==", selectedCourse)
+  );
+  const querySnapshot = await getDocs(studentsQuery);
+  
+  let maxId = 0;
+  querySnapshot.forEach((docSnap) => {
+    const currentId = parseInt(docSnap.id, 10);
+    if (!isNaN(currentId) && currentId > maxId) {
+      maxId = currentId;
+    }
+  });
+  
+  let newID = "";
+  if (maxId === 0) {
+    // If no student IDs are found, extract the digits from the course ID and append "0001"
+    const courseDigitsMatch = selectedCourse.match(/\d+$/);
+    if (courseDigitsMatch) {
+      const courseDigits = courseDigitsMatch[0];
+      newID = courseDigits + "0001";
+    } else {
+      newID = "0001"; // fallback if no digits found in course ID
+    }
+  } else {
+    newID = (maxId + 1).toString();
   }
+  
+  console.log("New Student ID:", newID);
+  document.getElementById("idDisplay").textContent = newID;
+  
+} catch (error) {
+  console.error("查询学生记录出错：", error);
+  alert("查询学生记录出错，请检查控制台了解详细信息。");
+}
+
 });
 
 
@@ -454,6 +522,30 @@ form.addEventListener("submit", async (e) => {
             const authUid = userCredential.user.uid;  // Firebase 自动生成的 UID
             console.log("Firebase Authentication UID:", authUid);
             
+            let groupNumber = 1;  // 默认 G1
+            let groupName = `G${groupNumber}`;
+
+            if (role === "student") {
+              // 1️⃣ 查询该课程下的所有学生，按 group 分类
+              const studentsQuery = query(
+                collection(db, "student"),
+                where("course", "==", course)
+              );
+              const querySnapshot = await getDocs(studentsQuery);
+            
+              let groupCount = {}; // 统计每个 group 里有多少人
+              querySnapshot.forEach((docSnap) => {
+                const studentData = docSnap.data();
+                const studentGroup = studentData.group || "G1"; // 默认 G1
+                groupCount[studentGroup] = (groupCount[studentGroup] || 0) + 1;
+              });
+            
+              while (groupCount[groupName] && groupCount[groupName] >= 10) {
+                groupNumber++;
+                groupName = `G${groupNumber}`;
+              }
+            
+              console.log(`Assigning student to: ${groupName}`);
 
             if (role === "student" || role === "lecturer") {
               await setDoc(doc(db, "user", authUid), {
@@ -468,17 +560,46 @@ form.addEventListener("submit", async (e) => {
                 email: email,
                 ID: newID,
                 UID: inputUID,  
-                course: course
+                course: course,
+                group: groupName
               });
             } else if (role === "lecturer") {
-              await setDoc(doc(db, "lecturer", newID), {
-                name: name,
-                email: email,
-                ID: newID,
-                UID: inputUID,  
-                course: course
-              });
-            }
+  // Calculate the new lecturer ID in a separate try-catch block
+  let newLecturerID = "";
+  try {
+    const lecturersSnapshot = await getDocs(collection(db, "lecture"));
+    let maxId = 0;
+    lecturersSnapshot.forEach(docSnap => {
+      const currentId = parseInt(docSnap.id, 10);
+      if (!isNaN(currentId) && currentId > maxId) {
+        maxId = currentId;
+      }
+    });
+    newLecturerID = (maxId + 1).toString();
+    console.log("Calculated new lecturer ID:", newLecturerID);
+  } catch (error) {
+    console.error("Error calculating new lecturer ID:", error);
+    showAlert("Error calculating lecturer ID.");
+    return;
+  }
+  
+  // Use the calculated newLecturerID to create the lecturer document
+  try {
+    await setDoc(doc(db, "lecture", newLecturerID), {
+      name: name,
+      email: email,
+      ID: newLecturerID
+    });
+    // Optionally update UI or show alert here
+    showAlert("Lecturer added successfully!", "success");
+  } catch (error) {
+    console.error("Error adding lecturer:", error);
+    showAlert("Error adding lecturer.");
+  }
+}
+
+
+
             
             alert("用户创建成功！");
 
@@ -487,7 +608,8 @@ form.addEventListener("submit", async (e) => {
 
                 document.getElementById("idDisplay").textContent = "";
 
-          } catch (error) {
+          }
+        } catch (error) {
             console.error("创建用户出错：", error);
             alert("创建用户时出错，请检查控制台了解详细信息。");
           }
@@ -499,9 +621,9 @@ form.addEventListener("submit", async (e) => {
 
 
       //DELETE IS HERE
-      document.querySelector('.DeleteUser').addEventListener('click', () => {
+document.querySelector('.DeleteUser').addEventListener('click', () => {
         fetchUsersForDelete();
-      });
+});
 
 
 async function fetchUsersForDelete() {
@@ -799,30 +921,32 @@ function displayUsersForDelete(users) {
   // 3. 根据 sessionsByDay 对象渲染 timetable 表格
   function renderTimetable(sessionsByDay) {
     const tableDisplay = document.querySelector(".tableDisplay");
-    let html = "<table style='width:100%; border-collapse: separate; border-spacing: 0;'>";
+    let html = "<table style='width: 100%; border-collapse: collapse; table-layout: fixed;'>"; //border-spacing: 0;
     // 每一行显示一个星期的 session
     const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
     days.forEach(day => {
       html += `<tr style="border: 1px solid #ccc;">`;
       // 第一列显示星期名称
-      html += `<td style="padding: 8px; border: 1px solid #ccc; font-weight: bold; background: #f2f2f2;">${day}</td>`;
+      html += `<td style="padding: 8px; border: 1px solid #ccc; font-weight: bold; background: #f2f2f2; width: 15%; text-align: center; vertical-align: middle;">${day}</td>`;
       // 后续列显示当天所有的 sessions（如果有多个 session，则各自占用一个 cell）
       if (sessionsByDay[day].length > 0) {
         sessionsByDay[day].forEach(session => {
-          html += `<td style="padding: 8px; border: 1px solid #ccc; text-align: center;">
+          html += `
+          <td style="
+                padding: 10px; 
+                border: 1px solid #ccc; 
+                text-align: center; 
+                vertical-align: top;
+                width: 25%; /* 课程占据剩余空间 */
+                min-height: 80px; /* 设定最小高度，确保单元格大小一致 */
+                word-wrap: break-word; /* 让长文本自动换行 */
+                overflow-wrap: break-word;">
                    <strong>${session.subjectName}</strong> (${session.type}) <br><br>
                   <strong> Venue: </strong>${session.class}<br>
                    <strong> Time: </strong>${session.startTime} - ${session.endTime}<br>
                    <strong> Lecturer: </strong> ${session.lecturerID}<br>
                     
-                   </td>`;
-
-                //    subjectName: subjectData.name,
-                // class: subjectData.class,
-                // lecturerID: subjectData.lecturerName,
-                // startTime: session.startTime,
-                // endTime: session.endTime,
-                // type: session.type
+              </td>`;
         });
       } else {
         // 如果没有 session，则填充空 cell
@@ -864,8 +988,6 @@ function displayUsersForDelete(users) {
   }, 3000);
 }
 
-
-
   // Show the Add Timetable Form when "Add timetable" is clicked
   async function showAddTimetableForm() {
     const container = document.querySelector(".tableDisplay");
@@ -883,19 +1005,36 @@ function displayUsersForDelete(users) {
           <select id="courseSelectAdd" required>
             <option value="">Select Course</option>
           </select>
+          <div>
+          <label for="groupSelect">Student Group:</label>
+          <select id="groupSelect" required>
+            <option value="">Select Student Group</option>
+          </select>
+        </div>
         </div>
         <div id="newCourseInput" style="display:none;">
           <label for="newCourseName">New Course:</label>
           <input type="text" id="newCourseName">
         </div>
         <div>
-          <label for="subjectID">Subject ID:</label>
-          <input type="text" id="subjectID" required>
-        </div>
-        <div>
-          <label for="subjectName">Subject Name:</label>
-          <input type="text" id="subjectName" required>
-        </div>
+  <label for="subjectSelect">Subject:</label>
+  <select id="subjectSelect" required>
+    <option value="">Select Subject</option>
+    <!-- Dynamically loaded subject options will go here -->
+    <option value="addNew">Add New Subject</option>
+  </select>
+</div>
+<div id="newSubjectInput" style="display:none;">
+  <div>
+    <label for="newSubjectID">Subject ID:</label>
+    <input type="text" id="newSubjectID" required>
+  </div>
+  <div>
+    <label for="newSubjectName">Subject Name:</label>
+    <input type="text" id="newSubjectName" required>
+  </div>
+</div>
+
         <div>
           <label for="lecturerSelect">Lecturer:</label>
           <select id="lecturerSelect" required>
@@ -934,16 +1073,25 @@ function displayUsersForDelete(users) {
           </select>
         </div>
         <div>
+          <label for="excludedStudentsSelect">Excluded Students:</label>
+          <select id="excludedStudentsSelect" multiple>
+          </select>
+        </div>
+        <div>
+          <label for="extraStudentsSelect">Extra Students:</label>
+          <select id="extraStudentsSelect" multiple>
+          </select>
+        </div>
+        <div>
           <button type="submit">Add</button>
         </div>
       </form>
     `;
-  // Load available courses into the course dropdown
   loadCoursesForAdd();
-  // Load available lecturers into the lecturer dropdown
   loadLecturersForAdd();
-
   loadClasses();
+
+  
 
 
    // Add change event listener to the course dropdown to show/hide new course input
@@ -957,18 +1105,51 @@ function displayUsersForDelete(users) {
         newCourseDiv.style.alignItems= "center";
         newCourseDiv.style.justifyContent= "center";
 
-        // 
-        //   
-        //   
-        //   
+
       } else {
         newCourseDiv.style.display = "none";
       }
     });
 
+    document.getElementById("courseSelectAdd").addEventListener("change", function() {
+      const courseId = this.value;
+      if (courseId) {
+        loadSubjectsForCourse(courseId);
+        loadStudentGroups(courseId);
+        loadExcludedStudents(courseId);
+        loadExtraStudents(courseId);
+
+
+      } else {
+        // Optionally, clear the subject select if no course is selected
+        document.getElementById("subjectSelect").innerHTML = '<option value="">Select Subject</option>';
+      }
+    });
+
+document.getElementById("subjectSelect").addEventListener("change", function() {
+  const newSubjectInput = document.getElementById("newSubjectInput");
+  
+  if (this.value === "addNew") {
+    // Show inputs for new subject ID and name.
+    newSubjectInput.style.display = "block";
+    document.getElementById("newSubjectID").disabled = false;
+    document.getElementById("newSubjectName").disabled = false;
+  } else {
+    newSubjectInput.style.display = "none";
+    // Optionally, if you want to auto-fill the subject name from the option's data attribute:
+    document.getElementById("newSubjectID").disabled = true;
+    document.getElementById("newSubjectName").disabled = true;
+    const selectedOption = this.options[this.selectedIndex];
+    const subjectName = selectedOption.getAttribute("data-subjectname") || "";
+    // If you have a separate field to show the auto-filled name, you can set it here.
+    // For example, if you want to set it in an input that remains read-only:
+    //document.getElementById("subjectNameDisplay").value = subjectName;
+  }
+});
+
+
+
     
-
-
    // Form submission handling
    document.getElementById("addTimetableForm").addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -995,32 +1176,54 @@ function displayUsersForDelete(users) {
           return;
         }
       }
-
- 
+        
 
 
 
       // Get remaining form values
+      let studentGroup = document.getElementById("groupSelect").value;
       let classID = document.getElementById("classSelect").value.trim();
-      let subjectID = document.getElementById("subjectID").value.trim();
-      let subjectName = document.getElementById("subjectName").value;
+      // let subjectID = document.getElementById("subjectID").value.trim();
+      // let subjectName = document.getElementById("subjectName").value;
       let lecturerID = document.getElementById("lecturerSelect").value;
       let sessionDay = document.getElementById("sessionDay").value;
       let sessionStartTime = document.getElementById("sessionStartTime").value;
       let sessionEndTime = document.getElementById("sessionEndTime").value;
       let sessionType = document.getElementById("sessionType").value;
       const lecturerName = document.getElementById("lecturerSelect").options[document.getElementById("lecturerSelect").selectedIndex].text;
-      
+      const excludedStudentsSelect = document.getElementById("excludedStudentsSelect");
+      const excludedStudents = Array.from(excludedStudentsSelect.selectedOptions).map(option => option.value);
+      const extraStudentsSelect = document.getElementById("extraStudentsSelect");
+      const extraStudents = Array.from(extraStudentsSelect.selectedOptions).map(option => option.value);
       // sessionStartTime = formatTimeTo24Hour(sessionStartTime);
       // sessionEndTime = formatTimeTo24Hour(sessionEndTime);
       sessionStartTime = formatTime(sessionStartTime);
       sessionEndTime = formatTime(sessionEndTime);
 
 
-      if (!subjectID) {
-            showAlert("Please enter a valid Subject ID.");
-            return;
-        }
+      // Get the value from the subject select element
+const subjectSelectValue = document.getElementById("subjectSelect").value.trim();
+let subjectID, subjectName;
+
+if (subjectSelectValue === "addNew") {
+  // When adding a new subject, get subjectID and subjectName from the new inputs
+  subjectID = document.getElementById("newSubjectID").value.trim();
+  subjectName = document.getElementById("newSubjectName").value;
+  if (!subjectID) {
+    showAlert("Please enter a valid Subject ID.");
+    return;
+  }
+  if (!subjectName) {
+    showAlert("Please enter a valid Subject Name.");
+    return;
+  }
+} else {
+  // Otherwise, use the selected subject's value and auto-fill the subject name (if available)
+  subjectID = subjectSelectValue;
+  const selectedOption = document.getElementById("subjectSelect").options[document.getElementById("subjectSelect").selectedIndex];
+  subjectName = selectedOption.getAttribute("data-subjectname") || "";
+}
+
 
 
       // Check that the new session does not conflict with existing sessions in this course
@@ -1030,37 +1233,172 @@ function displayUsersForDelete(users) {
         return;
       }
 
-      // Construct the subject document data
-      const subjectData = {
-        lectureID: lecturerID,
-        lecturerName: lecturerName, 
-        name: subjectName,
-        class:classID,
-        sessions: [
-          {
+
+
+          //ADD DATA TO FIREBASE
+      try {
+          const courseRef = doc(db, "course", courseId);
+          const subjectDocRef = doc(courseRef, "subject", subjectID);
+          const subjectDocSnap = await getDoc(subjectDocRef);
+
+          const newSession = {
+            lectureID: lecturerID,
+            class: classID,
             day: sessionDay,
             startTime: sessionStartTime,
             endTime: sessionEndTime,
-            type: sessionType
+            type: sessionType,
+            group: studentGroup,
+            extraStudents:extraStudents
+          };
+        
+          if (subjectDocSnap.exists()) {
+            // If the subject document exists, append the new session to the existing sessions array
+            const existingData = subjectDocSnap.data();
+            let sessions = existingData.sessions || [];
+            sessions.push(newSession);
+
+            // Update the document by merging new session array and excludedStudents (and any other updates)
+            await setDoc(subjectDocRef, { sessions: sessions, excludedStudents: excludedStudents }, { merge: true });
+          } else {
+            // If the subject document doesn't exist, create it with the new session
+            const subjectData = {
+              name: subjectName,
+              id: subjectID,
+              sessions: [ newSession ],
+              excludedStudents: excludedStudents
+            };
+            await setDoc(subjectDocRef, subjectData);
           }
-        ]
-      };
+        
+          showAlert("Timetable entry added successfully!", "success");
+          document.getElementById("addTimetableForm").reset();
+        } catch (error) {
+          console.error("Error adding timetable entry:", error);
+          showAlert("Error adding timetable entry.");
+        }
+    
+        });
+      }
+    
 
-      try {
-        // Add the new subject document to the course's "subject" subcollection
-        const courseRef = doc(db, "course", courseId);
-        const subjectDocRef = doc(courseRef, "subject", subjectID);  // Manually specify subject ID
-        await setDoc(subjectDocRef, subjectData);
-
-        showAlert("Timetable entry added successfully!","success");
-
-        document.getElementById("addTimetableForm").reset(); 
-      } catch (error) {
-        console.error("Error adding timetable entry:", error);
-        showAlert("Error adding timetable entry.");
+      async function loadStudentGroups(courseId) {
+  const groupSelect = document.getElementById("groupSelect");
+  // Clear any existing options, keep a default prompt
+  groupSelect.innerHTML = '<option value="">Select Student Group</option>';
+  try {
+    // Query students for the given course
+    const q = query(collection(db, "student"), where("course", "==", courseId));
+    const studentSnapshot = await getDocs(q);
+    const groupsSet = new Set();
+    studentSnapshot.forEach(docSnap => {
+      const data = docSnap.data();
+      if (data.group) {
+        groupsSet.add(data.group);
       }
     });
+    // Add options for each unique group
+    groupsSet.forEach(group => {
+      const option = document.createElement("option");
+      option.value = group;
+      option.textContent = group;
+      groupSelect.appendChild(option);
+    });
+    // Set default value to "G1" if available
+    if (groupsSet.has("G1")) {
+      groupSelect.value = "G1";
+    } else {
+      // Optionally, if G1 is not in the list and you want to force it as default, you could add it:
+      const defaultOption = document.createElement("option");
+      defaultOption.value = "G1";
+      defaultOption.textContent = "G1";
+      groupSelect.insertBefore(defaultOption, groupSelect.firstChild);
+      groupSelect.value = "G1";
+    }
+  } catch (error) {
+    console.error("Error loading student groups:", error);
   }
+}
+
+
+
+async function loadExcludedStudents(courseId) {
+  const select = document.getElementById("excludedStudentsSelect");
+  // Clear any existing options
+  select.innerHTML = "";
+  try {
+    // Query the "student" collection for students with course equal to courseId
+    const q = query(collection(db, "student"), where("course", "==", courseId));
+    const studentSnapshot = await getDocs(q);
+    studentSnapshot.forEach(docSnap => {
+      const studentData = docSnap.data();
+      const option = document.createElement("option");
+      // Use the document id or a field (e.g., studentData.ID) if needed
+      option.value = docSnap.id;
+      option.textContent = `${studentData.name} (${docSnap.id})`;
+      select.appendChild(option);
+    });
+  } catch (error) {
+    console.error("Error loading excluded students:", error);
+  }
+}
+
+async function loadExtraStudents(courseId) {
+  const select = document.getElementById("extraStudentsSelect");
+  // Clear any existing options
+  select.innerHTML = "";
+  try {
+    // Query the "student" collection for students with course equal to courseId
+    const q = query(collection(db, "student"), where("course", "==", courseId));
+    const studentSnapshot = await getDocs(q);
+    studentSnapshot.forEach(docSnap => {
+      const studentData = docSnap.data();
+      const option = document.createElement("option");
+      // Use the document id or a field (e.g., studentData.ID) if needed
+      option.value = docSnap.id;
+      option.textContent = `${studentData.name} (${docSnap.id})`;
+      select.appendChild(option);
+    });
+  } catch (error) {
+    console.error("Error loading extra students:", error);
+  }
+}
+
+
+async function loadSubjectsForCourse(courseId) {
+  const subjectSelect = document.getElementById("subjectSelect");
+  // Clear existing options
+  subjectSelect.innerHTML = '<option value="">Select Subject</option>';
+  
+
+  
+  try {
+    // Get the selected course document reference
+    const courseDocRef = doc(db, "course", courseId);
+    // Get the subject subcollection from the course document
+    const subjectCollectionRef = collection(courseDocRef, "subject");
+    const subjectSnapshot = await getDocs(subjectCollectionRef);
+    
+    subjectSnapshot.forEach(docSnap => {
+      const subjectData = docSnap.data();
+      const option = document.createElement("option");
+      option.value = docSnap.id;  // subject document id
+      // Save subject name as a data attribute for auto-fill later
+      option.setAttribute("data-subjectname", subjectData.name);
+      option.textContent = `${docSnap.id} (${subjectData.name})`;
+      subjectSelect.appendChild(option);
+    });
+    
+    // Append the "Add New Subject" option
+    const addNewOption = document.createElement("option");
+    addNewOption.value = "addNew";
+    addNewOption.textContent = "Add New Subject";
+    subjectSelect.appendChild(addNewOption);
+    
+  } catch (error) {
+    console.error("Error loading subjects for course:", error);
+  }
+}
 
 
 
@@ -1769,12 +2107,14 @@ function formatTime(timeStr) {
 
 <script>
     document.addEventListener("DOMContentLoaded", function () {
+
     const homeBtn = document.querySelector(".nav-btn:nth-child(1)");
     const viewUserBtn = document.querySelector(".nav-btn:nth-child(2)"); // View User 按钮
     const dataAnalysisBtn = document.querySelector(".nav-btn:nth-child(3)"); // Data Analysis 按钮
     const timeTableBtn = document.querySelector(".nav-btn:nth-child(4)")
-    const dataSpace = document.querySelector(".dataSpace"); // 数据分析区域
-    const functionSpace = document.querySelector(".functionSpace"); // 用户管理功能区域
+
+    const dataSpace = document.querySelector(".dataSpace"); 
+    const functionSpace = document.querySelector(".functionSpace");
     const homeSpace = document.querySelector(".homeSpace");
     const timeTableSpace = document.querySelector(".timeTableSpace");
 
@@ -1800,7 +2140,6 @@ function formatTime(timeStr) {
         dataSpace.style.display = "block";  // 显示数据分析
         functionSpace.style.display = "none"; // 隐藏用户管理功能
         timeTableSpace.style.display= "none";
-
     });
 
     homeBtn.addEventListener("click",function(){
