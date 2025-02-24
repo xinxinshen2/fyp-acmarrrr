@@ -216,6 +216,18 @@
 
         // 从attendance.html迁移的签到逻辑
         async function markAttendance(studentId) {
+            const sessionData = JSON.parse(sessionStorage.getItem('attendanceSession'));
+            const { courseId, subjectId, sessionId } = sessionData;
+
+            // 检查是否在排除名单
+            const subjectRef = db.collection("course").doc(courseId).collection("subject").doc(subjectId);
+            const subjectDoc = await subjectRef.get();
+            const excludedStudents = subjectDoc.data()?.excludedStudents || [];
+            
+            if (excludedStudents.includes(studentId)) {
+                return { success: false, message: "该学生不在课程名单中" };
+            }
+
             const attendanceRef = db.collection("attendance")
                 .doc(courseId)
                 .collection(subjectId)
@@ -223,70 +235,38 @@
                 .collection("students")
                 .doc(studentId);
 
-            // 新增学生课程验证
-            const studentRef = db.collection("student").doc(studentId);
-            const studentDoc = await studentRef.get();
-            
-            if (!studentDoc.exists) {
-                return { success: false, message: "Student not found" };
-            }
-
-            const studentData = studentDoc.data();
-            
-            // 验证学生是否属于当前课程
-            if (studentData.course !== courseId) {
-                return { success: false, message: "Student not in this course" };
-            }
-
-            // 新增排除学生检查
-            const subjectRef = db.collection("course").doc(courseId).collection("subject").doc(subjectId);
-            const subjectDoc = await subjectRef.get();
-            
-            if (subjectDoc.exists) {
-                const excludedStudents = subjectDoc.data().excludedStudents || [];
-                if (excludedStudents.includes(studentId)) {
-                    return { success: false, message: "Student excluded from this subject" };
-                }
-            }
-
-            // 检查是否已签到
-            const doc = await attendanceRef.get();
-            if (doc.exists) {
-                return { success: false, message: "Already checked in" };
-            }
-
-            // 写入考勤记录
-            await attendanceRef.set({
+            // 更新状态为present
+            await attendanceRef.update({
                 status: "present",
-                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                lectureId: lectureId
+                presentTime: firebase.firestore.FieldValue.serverTimestamp()
             });
 
             // 更新统计
             await updateAttendanceCounts();
-            return { success: true, message: "Check-in successful" };
+            return { success: true, message: "签到成功" };
         }
 
         async function updateAttendanceCounts() {
-            const studentsRef = db.collection("student");
-            const studentsSnapshot = await studentsRef.get();
-            
+            const sessionData = JSON.parse(sessionStorage.getItem('attendanceSession'));
+            const { courseId, subjectId, sessionId } = sessionData;
+
             const attendanceRef = db.collection("attendance")
                 .doc(courseId)
                 .collection(subjectId)
                 .doc(sessionId);
 
-            // 获取总学生数
-            const total = (await studentsRef.where("course", "==", courseId).get()).size;
-            
-            // 获取已签到数
-            const present = (await attendanceRef.collection("students").get()).size;
-            
-            // 更新统计
+            const studentsSnapshot = await db.collection("student")
+                .where("course", "==", courseId)
+                .get();
+
+            const presentSnapshot = await attendanceRef.collection("students")
+                .where("status", "==", "present")
+                .get();
+
             await attendanceRef.update({
-                totalStudents: total,
-                presentStudents: present,
-                absentStudents: total - present,
+                totalStudents: studentsSnapshot.size,
+                presentStudents: presentSnapshot.size,
+                absentStudents: studentsSnapshot.size - presentSnapshot.size,
                 lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
             });
         }
