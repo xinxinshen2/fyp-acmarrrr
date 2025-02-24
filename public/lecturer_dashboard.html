@@ -485,9 +485,29 @@
 
     // 修改导航按钮事件
     document.addEventListener("DOMContentLoaded", function () {
-        const homeBtn = document.querySelector(".nav-btn:nth-child(1)");
-        const timetableBtn = document.querySelector(".nav-btn:nth-child(4)");
+        const navButtons = document.querySelectorAll(".nav2 .nav-btn");
         
+        // 定义跳转映射
+        const pageMap = {
+            0: '', // 首页不需要跳转
+            1: 'attendance.html',
+            2: 'attendance.html',
+            3: '', // 时间表通过现有逻辑切换
+            4: 'mobile_attendance.html'
+        };
+
+        navButtons.forEach((button, index) => {
+            button.addEventListener('click', function() {
+                if(pageMap[index]) {
+                    window.location.href = pageMap[index];
+                }
+            });
+        });
+
+        // 保持原有时间表切换逻辑
+        const timetableBtn = navButtons[3];
+        const homeBtn = navButtons[0];
+
         const contentSections = {
             cards: document.querySelector(".dashboard-cards"),
             timetable: document.querySelector(".timeTableSpace")
@@ -527,26 +547,11 @@
             </div>
         </div>
         <div class="header nav2">
-            <!-- <div class="sidebar">
-        <div class="profile">
-            <img src="profile.png" alt="Profile Picture">
-            <p>Welcome, <span id="lecturerName"></span></p>
-        </div>
-        <ul class="menu">
-            <li><a href="#">Home</a></li>
-            <li><a href="#">Calendar</a></li>
-            <li><a href="#">Statistics</a></li>
-            <li><a href="attendance.html">Mark Attendance</a></li>
-            <li><a href="#">Account Settings</a></li>
-            <li><a href="#" onclick="logout()">Logout</a></li>
-        </ul>
-    </div> -->
-            <div class="nav-btn"> <p> Home  </p> </div>
-            <div class="nav-btn"> <a href="attendance.html"> Mark attendance  </a> </div>
-            <div class="nav-btn"> <a href="attendance.html"> Edit attendance </a></div>
-            <div class="nav-btn"> <p> Timetable  </p> </div>
-            <div class="nav-btn"> <a href="mobile_attendance.html"> mobile_attendance(之后删)  </a> </div>
-
+            <div class="nav-btn"><p>Home</p></div>
+            <div class="nav-btn"><p>Mark Attendance</p></div>
+            <div class="nav-btn"><p>Edit Attendance</p></div>
+            <div class="nav-btn"><p>Timetable</p></div>
+            <div class="nav-btn"><p>Mobile Attendance(测试)</p></div>
         </div>
     </nav>
 
