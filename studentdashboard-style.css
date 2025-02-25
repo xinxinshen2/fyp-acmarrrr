@@ -1,10 +1,11 @@
 body {
     font-family: Arial, sans-serif;
-    margin: 0;
-    padding: 0;
     display: flex;
-    margin-top: 10%;
-    background-color: #f4f4f4;
+    flex-direction: column; /* ✅ 让内容从上到下排列 */
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background-color: #f9f9f9;
 }
 
 /* Sidebar */
@@ -41,171 +42,6 @@ body {
     background-color: #34495E;
     transform: translateX(5px);
 }
-
-/* Main Content */
-.main-content {
-    margin-left: 260px;
-    padding: 20px;
-    flex-grow: 1;
-}
-
-header {
-    background: linear-gradient(90deg, #3498db, #2980b9);
-    color: white;
-    padding: 20px;
-    border-radius: 10px;
-    text-align: center;
-    font-size: 24px;
-    font-weight: bold;
-    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
-}
-
-/* Profile Page Styling */
-.profile-container {
-    max-width: 500px;
-    margin: 40px auto;
-    padding: 25px;
-    background: linear-gradient(to bottom, #ffffff, #f0f0f0);
-    border-radius: 12px;
-    box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.15);
-    text-align: center;
-}
-
-/* Profile Picture */
-.profile-pic {
-    width: 130px;
-    height: 130px;
-    border-radius: 50%;
-    border: 4px solid #3498db;
-    margin-bottom: 15px;
-    object-fit: cover;
-    cursor: pointer;
-    transition: transform 0.3s, opacity 0.3s;
-}
-
-.profile-pic:hover {
-    transform: scale(1.05);
-    opacity: 0.8;
-}
-
-#profilePicUpload {
-    display: none;
-}
-
-/* Form Fields */
-input[type="text"],
-input[type="email"],
-input[type="password"] {
-    width: 100%;
-    padding: 12px;
-    margin: 10px 0;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    font-size: 16px;
-    transition: all 0.3s;
-}
-
-input:focus {
-    border-color: #3498db;
-    box-shadow: 0 0 8px rgba(52, 152, 219, 0.5);
-}
-
-/* Buttons */
-/* button {
-    background: #3498db;
-    color: white;
-    border: none;
-    padding: 12px 18px;
-    font-size: 16px;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: 0.3s;
-    margin-top: 10px;
-    font-weight: bold;
-} */
-
-/* button:hover {
-    background: #2980b9;
-    transform: scale(1.05);
-} */
-
-/* Dark Mode */
-.dark-mode {
-    background-color: #2C3E50;
-    color: white;
-}
-
-.dark-mode .profile-container {
-    background: linear-gradient(to bottom, #34495E, #2C3E50);
-    color: white;
-}
-
-.dark-mode input {
-    background-color: #555;
-    color: white;
-    border: 1px solid #777;
-}
-
-.dark-mode button {
-    background: #1abc9c;
-}
-
-.dark-mode button:hover {
-    background: #16a085;
-}
-
-/* Toggle Switch */
-.toggle-switch {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    margin-top: 20px;
-    gap: 10px;
-}
-
-.toggle-switch input {
-    display: none;
-}
-
-.slider {
-    width: 50px;
-    height: 24px;
-    background: #ccc;
-    border-radius: 20px;
-    position: relative;
-    transition: 0.3s;
-    cursor: pointer;
-}
-
-.slider::before {
-    content: "";
-    position: absolute;
-    width: 20px;
-    height: 20px;
-    background: white;
-    border-radius: 50%;
-    top: 2px;
-    left: 3px;
-    transition: 0.3s;
-}
-
-.toggle-switch input:checked + .slider {
-    background: #3498db;
-}
-
-.toggle-switch input:checked + .slider::before {
-    transform: translateX(26px);
-}
-
-/* Footer */
-footer {
-    margin-top: 20px;
-    font-size: 14px;
-    color: #555;
-    text-align: center;
-}
-
 
 /*start navigation bar */
 * {
@@ -349,3 +185,84 @@ transition: stroke-dashoffset 0.1s linear;
 /* background-color: #ff1e38; */
 }
 /*end navigation bar */
+
+.absenceFormSpace {
+    background: #fff;
+    padding: 10px;
+    border-radius: 9px;
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 1500px;
+    margin-top: 130px;
+}
+
+h2 {
+    text-align: center;
+    color: #333;
+}
+
+p {
+    text-align: center;
+    color: #666;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+input, textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+.input-row {
+    display: flex;
+    gap: 10px;
+    justify-content: space-between; /* 让输入框均匀分布 */
+    flex-wrap: wrap; /* 适配小屏幕 */
+}
+
+.input-row div {
+    flex: 1;
+    min-width: 200px; /* 确保输入框不会太窄 */
+}
+
+.input-row input {
+    width: 100%;
+    padding: 10px;
+}
+
+.submit-btn {
+    width: 100%;
+    background: linear-gradient(to right, #7f5af0, #5ddcff);
+    color: white;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.submit-btn:hover {
+    background: linear-gradient(to right, #5ddcff, #7f5af0);
+    opacity: 0.9;
+}
+
+input[type="file"] {
+    display: block;
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background: #f8f9fa;
+}
