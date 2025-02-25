@@ -162,7 +162,7 @@
             <div id="scheduleDisplay"></div>
             <label for="sessionTime">Select Session Time:</label>
             <select id="sessionTime">
-                <option value="custom">Custom Time</option>
+                <!-- 移除custom选项 -->
             </select>
             <div id="customTimeInputs" style="display:none;">
                 <label for="customStartTime">Custom Start Time:</label>
@@ -199,32 +199,53 @@
 
         async function loadSubjects() {
             const lectureID = sessionStorage.getItem('lectureID');
-            console.log("Lecture ID from session:", lectureID); // Debugging line
             if (!lectureID) {
                 alert("Lecture ID not found in session.");
                 return;
             }
 
+            const now = new Date();
             const coursesRef = db.collection("course");
-            const coursesSnapshot = await coursesRef.get();
+            
+            const query = coursesRef.where("subjectExpiry", ">", now);
+            const coursesSnapshot = await query.get();
+            
             const subjectSelect = document.getElementById('subject');
-            subjectSelect.innerHTML = ''; // Clear previous options
+            subjectSelect.innerHTML = '';
 
             coursesSnapshot.forEach(courseDoc => {
                 const courseId = courseDoc.id;
+                const courseData = courseDoc.data();
+                
+                if (courseData.subjectExpiry && courseData.subjectExpiry.toDate() < now) {
+                    console.log(`跳过过期课程: ${courseId}`);
+                    return;
+                }
+
                 const subjectsRef = coursesRef.doc(courseId).collection("subject");
 
-                subjectsRef.where("lectureID", "==", lectureID).get().then(subjectsSnapshot => {
+                subjectsRef.get().then(subjectsSnapshot => {
                     subjectsSnapshot.forEach(subjectDoc => {
-                        const subjectId = subjectDoc.id;
                         const subjectData = subjectDoc.data();
-                        const option = document.createElement('option');
+                        const hasMatchingSession = subjectData.sessions?.some(session => 
+                            session.lectureID === lectureID
+                        );
 
-                        option.value = `${courseId}+${subjectId}`;
-                        option.textContent = `${courseId}+${subjectData.name}`;
-                        subjectSelect.appendChild(option);
+                        if (hasMatchingSession) {
+                            const subjectId = subjectDoc.id;
+                            const option = document.createElement('option');
+                            
+                            const matchingSession = subjectData.sessions.find(s => 
+                                s.lectureID === lectureID
+                            );
+                            const group = matchingSession?.group || '';
+                            const groupSuffix = group && group !== 'all' ? ` {${group}}` : '';
+
+                            option.value = `${courseId}+${subjectId}`;
+                            option.textContent = `${courseId}+${subjectData.name}${groupSuffix}`;
+                            subjectSelect.appendChild(option);
+                        }
                     });
-                    // After loading all subjects, trigger displaySchedule if there's a selected subject
                     if (subjectSelect.value) {
                         displaySchedule();
                     }
@@ -239,7 +260,6 @@
         async function displaySchedule() {
             const selectedValue = document.getElementById('subject').value;
             const sessionTimeSelect = document.getElementById('sessionTime');
-            const customTimeInputs = document.getElementById('customTimeInputs');
 
             if (selectedValue) {
                 const [courseId, subjectId] = selectedValue.split('+');
@@ -249,25 +269,27 @@
                 const doc = await subjectRef.get();
                 if (doc.exists) {
                     const subjectData = doc.data();
+                    const filteredSessions = subjectData.sessions?.filter(s => 
+                        s.lectureID === sessionStorage.getItem('lectureID')
+                    ) || [];
+
                     const scheduleDisplay = document.getElementById('scheduleDisplay');
                     scheduleDisplay.innerHTML = '';
-                    sessionTimeSelect.innerHTML = '<option value="custom">Custom Time</option>';
+                    sessionTimeSelect.innerHTML = '';
 
-                    if (subjectData.sessions && subjectData.sessions.length > 0) {
+                    if (filteredSessions.length > 0) {
                         let scheduleHTML = '<strong>Schedule:</strong><br>';
                         let firstSessionValue = null;
 
-                        // Function to get the date of the given day of the week
                         function getDateOfThisWeek(dayOfWeek) {
                             const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
                             const today = new Date();
-                            const day = today.getDay(); // Day of the week (0-6)
-                            const diff = days.indexOf(dayOfWeek) - day; // Difference between the desired day and today
+                            const day = today.getDay();
+                            const diff = days.indexOf(dayOfWeek) - day;
 
                             let newDate = new Date(today);
-                            newDate.setDate(today.getDate() + diff); // Add the difference to get the desired date
+                            newDate.setDate(today.getDate() + diff);
 
-                            // If the date is in the past, move to next week
                             if (newDate < today) {
                                 newDate.setDate(newDate.getDate() + 7);
                             }
@@ -278,64 +300,63 @@
                             return `${year}-${month}-${dayOfMonth}`;
                         }
 
-                        subjectData.sessions.forEach((session, index) => {
-                            const sessionDate = getDateOfThisWeek(session.day); // Get the date for the session
+                        filteredSessions.forEach((session, index) => {
+                            const sessionDate = getDateOfThisWeek(session.day);
                             scheduleHTML += `${session.type}: ${session.day} ${session.startTime}-${session.endTime} (${sessionDate})<br>`;
-                            const sessionValue = `${session.day} ${session.startTime} - ${session.endTime} (${session.type})`;
+                            
+                            // 修改option值格式为: sessionDate|day|startTime|type|group
+                            const optionValue = `${sessionDate}|${session.day}|${session.startTime}|${session.type}|${session.group || 'all'}`;
+                            const optionText = `${session.day} ${session.startTime} - ${session.endTime} (${sessionDate}) [${session.type}] ${session.group ? `{${session.group}}` : ''}`;
+                            
                             const option = document.createElement('option');
-                            option.value = `${sessionDate} ${session.day} ${session.startTime} - ${session.endTime} (${session.type})`; // Include the date in the value
-                            option.textContent = `${session.day} ${session.startTime} - ${session.endTime} (${sessionDate}) (${session.type})`; // Include the date in the display text
+                            option.value = optionValue;
+                            option.textContent = optionText;
                             sessionTimeSelect.appendChild(option);
 
                             if (index === 0) {
-                                firstSessionValue = `${sessionDate} ${session.day} ${session.startTime} - ${session.endTime} (${session.type})`; // Update firstSessionValue to include the date
+                                firstSessionValue = `${sessionDate} ${session.day} ${session.startTime} - ${session.endTime} (${session.type})`;
                             }
                         });
 
                         scheduleDisplay.innerHTML = scheduleHTML;
                         sessionTimeSelect.value = firstSessionValue;
-                        customTimeInputs.style.display = 'none';
                     } else {
                         scheduleDisplay.innerHTML = '<p>No schedule available</p>';
-                        customTimeInputs.style.display = 'none';
                     }
                 } else {
                     console.log("No such document!");
-                    customTimeInputs.style.display = 'none';
                 }
             } else {
                 document.getElementById('scheduleDisplay').innerHTML = '';
-                sessionTimeSelect.innerHTML = '<option value="custom">Custom Time</option>';
-                customTimeInputs.style.display = 'none';
+                sessionTimeSelect.innerHTML = '';
             }
-
-            sessionTimeSelect.addEventListener('change', function() {
-                if (sessionTimeSelect.value === 'custom') {
-                    customTimeInputs.style.display = 'block';
-                } else {
-                    customTimeInputs.style.display = 'none';
-                }
-            });
         }
 
         async function confirmSelection() {
+            const selectedValue = document.getElementById('subject').value;
+            if (!selectedValue) {
+                alert("请先选择科目");
+                return;
+            }
+
+            const [courseId, subjectId] = selectedValue.split('+');
+            const courseRef = db.collection("course").doc(courseId);
+            const courseDoc = await courseRef.get();
+            
+            const courseExpiry = courseDoc.data().subjectExpiry?.toDate();
+            if (courseExpiry && courseExpiry < new Date()) {
+                alert("该课程已过期，无法操作");
+                return;
+            }
+
             const btn = document.querySelector('.confirm-button');
             const originalText = btn.textContent;
             
             btn.disabled = true;
-            btn.querySelector('.button-text').textContent = '加载中';
             btn.querySelector('.loading-dots').style.display = 'inline';
 
             try {
-                const selectedValue = document.getElementById('subject').value;
-                console.log("Selected value:", selectedValue); // Debugging line
-                if (selectedValue) {
-                    const [courseId, subjectId] = selectedValue.split('+');
-                    console.log("Course ID:", courseId); // Debugging line
-                    await loadStudents(courseId);
-                } else {
-                    alert("Please select a subject.");
-                }
+                await loadStudents(courseId);
             } finally {
                 btn.disabled = false;
                 btn.querySelector('.button-text').textContent = originalText;
@@ -348,65 +369,110 @@
             const studentList = document.getElementById('studentList');
             studentList.innerHTML = '';
 
+            const lectureID = sessionStorage.getItem('lectureID');
+            if (!lectureID) {
+                alert("Lecture ID not found in session.");
+                return;
+            }
+
+            const selectedValue = document.getElementById('subject').value;
+            const [courseIdFromValue, subjectId] = selectedValue.split('+');
+            
+            if (courseIdFromValue !== courseId) {
+                console.error('Course ID mismatch:', courseIdFromValue, courseId);
+                return;
+            }
+
+            const subjectRef = db.collection("course").doc(courseId).collection("subject").doc(subjectId);
+            const subjectDoc = await subjectRef.get();
+            
+            const sessions = subjectDoc.data().sessions || [];
+            
+            console.log('All sessions:', sessions);
+            console.log('Looking for lectureID:', lectureID);
+
+            // 解析session信息（添加错误处理）
+            const sessionTimeSelect = document.getElementById('sessionTime');
+            const selectedSessionValue = sessionTimeSelect.value;
+            
+            // 确保不是custom选项
+            if (selectedSessionValue === 'custom') {
+                alert("请先选择具体课程时间段");
+                return;
+            }
+
+            // 安全解构参数
+            const selectedSessionParts = selectedSessionValue.split('|');
+            if (selectedSessionParts.length < 5) {
+                console.error('Invalid session format:', selectedSessionValue);
+                return;
+            }
+            
+            const [
+                sessionDate, 
+                sessionDay, 
+                sessionStartTime, 
+                sessionType, 
+                sessionGroup
+            ] = selectedSessionParts;
+
+            console.log('Parsed session parameters:', {
+                sessionDate,
+                sessionDay, 
+                sessionStartTime,
+                sessionType,
+                sessionGroup
+            });
+
+            // 现在可以安全使用这些变量
+            const currentSession = sessions.find(s => 
+                s.lectureID === lectureID &&
+                s.day === sessionDay &&
+                s.startTime === sessionStartTime &&
+                s.type === sessionType
+            );
+            
+            console.log('Found session based on selection:', currentSession !== undefined);
+
+            // 从当前session获取extraStudents
+            const excludedStudents = subjectDoc.data().excludedStudents || [];
+            const extraStudents = currentSession?.extraStudents || []; // 从session获取
+            console.log('Current session extraStudents:', extraStudents);
+
             const studentsRef = db.collection("student");
             const studentsSnapshot = await studentsRef.get();
             
-            // 添加计数器
             let studentNumber = 1;
-
-            console.log("Total students snapshot size:", studentsSnapshot.size);
-
-            let found = false; // Flag to check if student is found
-
-            const selectedValue = document.getElementById('subject').value;
-            const [_, subjectId] = selectedValue.split('+');
-
-            const sessionTimeSelect = document.getElementById('sessionTime');
-            const selectedSessionTime = sessionTimeSelect.value.trim();
-
-            let customStartTime = document.getElementById('customStartTime').value;
-            let customEndTime = document.getElementById('customEndTime').value;
-
-            let sessionDate, sessionStartTime, sessionType;
-            if (selectedSessionTime !== 'custom') {
-                const sessionParts = selectedSessionTime.split(' ');
-                sessionDate = sessionParts[0];
-                const day = sessionParts[1];
-                sessionStartTime = sessionParts[2];
-                const endTime = sessionParts[4];
-                sessionType = sessionParts[5].slice(1, -1);
-            } else {
-                const now = new Date();
-                sessionDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-                sessionStartTime = customStartTime;
-                sessionType = 'custom';
-            }
-            const sessionId = `${sessionDate}_${sessionStartTime}_${sessionType}`;
-
-            // Get the subject document
-            const subjectRef = db.collection("course").doc(courseId).collection("subject").doc(subjectId);
-            const subjectDoc = await subjectRef.get();
-
-            let excludedStudents = [];
-            if (subjectDoc.exists && subjectDoc.data().excludedStudents) {
-                excludedStudents = subjectDoc.data().excludedStudents;
-            }
 
             studentsSnapshot.forEach(async studentDoc => {
                 const studentData = studentDoc.data();
-                console.log("Student course:", studentData.course);
-                if (studentData.course === courseId) { // Filter in the code
-                    // Check if student is excluded
-                    console.log("excludedStudents:", excludedStudents);
-                    console.log("studentDoc.id:", studentDoc.id);
-                    if (excludedStudents.includes(studentDoc.id)) {
-                        console.log(`Student ${studentDoc.id} is excluded from this subject.`);
-                        return; // Skip to the next student
-                    }
+                const isInExtra = extraStudents.includes(studentDoc.id);
+                const isExcluded = excludedStudents.includes(studentDoc.id);
 
-                    found = true;
+                // 简化后的判断逻辑
+                const shouldDisplay = !isExcluded && (
+                    isInExtra ||  // 额外学生直接显示
+                    (
+                        studentData.course === courseId &&  // 本课程学生
+                        (sessionGroup === 'all' || studentData.group === sessionGroup)
+                    )
+                );
 
-                    // Check if attendance data exists
+                console.log(`Student ${studentDoc.id}:`, {
+                    isInExtra,
+                    isExcluded,
+                    course: studentData.course,
+                    requiredCourse: courseId,
+                    group: studentData.group,
+                    requiredGroup: sessionGroup,
+                    shouldDisplay
+                });
+
+                if (shouldDisplay) {
+                    console.log(`Displaying ${isInExtra ? 'EXTRA ' : ''}student ${studentDoc.id}`);
+
+                    // 修改考勤记录查询路径，使用sessionId
+                    const sessionId = `${sessionDate}_${sessionStartTime}_${lectureID}_${sessionType}`;
                     const attendanceRef = db.collection("attendance")
                         .doc(courseId)
                         .collection(subjectId)
@@ -421,11 +487,11 @@
                     
                     if (attendanceDoc.exists) {
                         const status = attendanceDoc.data().status;
+                        // 根据现有状态隐藏对应按钮
                         presentVisible = status !== 'present';
                         absentVisible = status !== 'absent';
                     }
 
-                    // 添加序号和学号显示
                     const studentDiv = document.createElement('div');
                     studentDiv.className = 'student';
                     studentDiv.innerHTML = `
@@ -447,13 +513,25 @@
                 }
             });
 
-            if (!found) {
+            if (!currentSession) {
                 console.log("No students found for this course.");
                 studentList.innerHTML = '<p>No students found for this course.</p>';
             }
         }
 
         async function markAttendance(studentId, status, button) {
+            const selectedValue = document.getElementById('subject').value;
+            const [courseId] = selectedValue.split('+');
+            
+            const courseRef = db.collection("course").doc(courseId);
+            const courseDoc = await courseRef.get();
+            const courseExpiry = courseDoc.data().subjectExpiry?.toDate();
+
+            if (courseExpiry && courseExpiry < new Date()) {
+                alert("该课程已过期，无法记录考勤");
+                return;
+            }
+
             const originalText = button.textContent;
             button.innerHTML = `<span class="processing">处理中...</span>`;
             button.style.opacity = '0.7';
@@ -461,47 +539,50 @@
 
             try {
                 console.log(`Marking attendance for studentId: ${studentId}, status: ${status}`);
-                const selectedValue = document.getElementById('subject').value;
-                const [courseId, subjectId] = selectedValue.split('+');
+                const [courseIdFromValue, subjectId] = selectedValue.split('+');
 
-                const sessionTimeSelect = document.getElementById('sessionTime');
-                const selectedSessionTime = sessionTimeSelect.value.trim(); // Trim whitespace
-
-                // Debugging
-                console.log("Selected Session Time:", selectedSessionTime);
-
-                let customStartTime = null;
-                let customEndTime = null;
-
-                if (selectedSessionTime === 'custom') {
-                    customStartTime = document.getElementById('customStartTime').value;
-                    customEndTime = document.getElementById('customEndTime').value;
-                     // Ensure that the custom time input fields are not empty
-                    if (!customStartTime || !customEndTime) {
-                        alert("Please enter both custom start and end times.");
-                        return;
-                    }
+                if (courseIdFromValue !== courseId) {
+                    console.error('Course ID mismatch:', courseIdFromValue, courseId);
+                    return;
                 }
 
-                let sessionType = null;
-                let sessionDate = null;
-                let sessionStartTime = null;
+                const sessionTimeSelect = document.getElementById('sessionTime');
+                const selectedSessionTime = sessionTimeSelect.value;
 
+                console.log("Selected Session Time:", selectedSessionTime);
+
+                let sessionDate, sessionStartTime, sessionType;
+                
                 if (selectedSessionTime !== 'custom') {
-                    const sessionParts = selectedSessionTime.split(' ');
+                    // 使用新的解析格式：sessionDate|day|startTime|type|group
+                    const sessionParts = selectedSessionTime.split('|');
+                    if (sessionParts.length < 5) {
+                        console.error('Invalid session format:', selectedSessionTime);
+                        return;
+                    }
+
                     sessionDate = sessionParts[0];
-                    const day = sessionParts[1];
+                    const sessionDay = sessionParts[1];
                     sessionStartTime = sessionParts[2];
-                    const endTime = sessionParts[4];
-                    sessionType = sessionParts[5].slice(1, -1);
+                    sessionType = sessionParts[3];  // 直接获取type，无需slice
+                    const sessionGroup = sessionParts[4];
+
+                    console.log('Parsed session:', {
+                        sessionDate,
+                        sessionDay,
+                        sessionStartTime,
+                        sessionType,
+                        sessionGroup
+                    });
                 } else {
                     const now = new Date();
                     sessionDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-                    sessionStartTime = customStartTime;
+                    sessionStartTime = document.getElementById('customStartTime').value;
                     sessionType = 'custom';
                 }
 
-                const sessionId = `${sessionDate}_${sessionStartTime}_${sessionType}`;
+                const lectureID = sessionStorage.getItem('lectureID');
+                const sessionId = `${sessionDate}_${sessionStartTime}_${lectureID}_${sessionType}`;
 
                 const attendanceRef = db.collection("attendance")
                     .doc(courseId)
@@ -510,24 +591,19 @@
                     .collection("students")
                     .doc(studentId);
 
-                // Ensure the course, subject, and session documents exist
                 const courseDocRef = db.collection("attendance").doc(courseId);
                 const subjectCollectionRef = courseDocRef.collection(subjectId);
                 const sessionDocRef = subjectCollectionRef.doc(sessionId);
 
-                // Create the course document if it doesn't exist
                 const courseDoc = await courseDocRef.get();
                 if (!courseDoc.exists) {
-                    await courseDocRef.set({}); // Create an empty document
+                    await courseDocRef.set({});
                     console.log(`Course document created: ${courseId}`);
                 }
 
-                // No need to create the subject collection, Firestore creates it automatically when a document is added
-
-                // Create the session document if it doesn't exist
                 const sessionDoc = await sessionDocRef.get();
                 if (!sessionDoc.exists) {
-                    await sessionDocRef.set({}); // Create an empty document
+                    await sessionDocRef.set({});
                     console.log(`Session document created: ${sessionId}`);
                 }
 
@@ -539,14 +615,11 @@
 
                 await attendanceRef.set(attendanceData);
 
-                // Update attendance counts in the session document
                 await updateAttendanceCounts(courseId, subjectId, sessionId);
 
-                // Make the button disappear with a particle effect
                 createParticles(button);
                 button.style.display = 'none';
 
-                // Show the other button
                 const attendanceButtons = button.parentNode;
                 let otherButton;
                 if (button.classList.contains('present')) {
@@ -559,7 +632,6 @@
                     otherButton.style.display = 'inline-block';
                 }
 
-                // 添加临时状态反馈
                 const feedback = document.createElement('span');
                 feedback.textContent = status === 'present' ? '✓' : '✕';
                 feedback.style.color = status === 'present' ? '#4CAF50' : '#f44336';
@@ -645,13 +717,11 @@
                 const x = distance * Math.cos(angle * Math.PI / 180);
                 const y = distance * Math.sin(angle * Math.PI / 180);
 
-                // Delay the start of the animation slightly
                 setTimeout(() => {
                     particle.style.transform = `translate(${x}px, ${y}px)`;
                     particle.style.opacity = 0;
                 }, 10);
 
-                // Remove the particle after the animation completes
                 setTimeout(() => {
                     document.body.removeChild(particle);
                 }, animationDuration * 1000);
