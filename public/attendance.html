@@ -650,11 +650,21 @@
         async function updateAttendanceCounts(courseId, subjectId, sessionId) {
             const subjectRef = db.collection("course").doc(courseId).collection("subject").doc(subjectId);
             const subjectDoc = await subjectRef.get();
-
-            let excludedStudents = [];
-            if (subjectDoc.exists && subjectDoc.data().excludedStudents) {
-                excludedStudents = subjectDoc.data().excludedStudents;
-            }
+            
+            // 获取session信息
+            const sessionTimeSelect = document.getElementById('sessionTime');
+            const selectedSessionValue = sessionTimeSelect.value;
+            const [sessionDate, sessionDay, sessionStartTime, sessionType, sessionGroup] = selectedSessionValue.split('|');
+            
+            // 获取排除学生和额外学生列表
+            const excludedStudents = subjectDoc.data().excludedStudents || [];
+            const sessions = subjectDoc.data().sessions || [];
+            const currentSession = sessions.find(s => 
+                s.day === sessionDay && 
+                s.startTime === sessionStartTime && 
+                s.type === sessionType
+            );
+            const extraStudents = currentSession?.extraStudents || [];
 
             const studentsRef = db.collection("student");
             const studentsSnapshot = await studentsRef.get();
@@ -665,7 +675,16 @@
 
             studentsSnapshot.forEach(studentDoc => {
                 const studentData = studentDoc.data();
-                if (studentData.course === courseId && !excludedStudents.includes(studentDoc.id)) {
+                const isInExtra = extraStudents.includes(studentDoc.id);
+                const isExcluded = excludedStudents.includes(studentDoc.id);
+
+                const shouldCount = !isExcluded && (
+                    isInExtra || 
+                    (studentData.course === courseId && 
+                    (sessionGroup === 'all' || studentData.group === sessionGroup))
+                );
+
+                if (shouldCount) {
                     totalStudents++;
                 }
             });
@@ -678,7 +697,6 @@
 
             const presentSnapshot = await attendanceCollectionRef.where("status", "==", "present").get();
             presentStudents = presentSnapshot.size;
-
             absentStudents = totalStudents - presentStudents;
 
             const sessionDocRef = db.collection("attendance")
@@ -689,7 +707,9 @@
             await sessionDocRef.update({
                 totalStudents: totalStudents,
                 presentStudents: presentStudents,
-                absentStudents: absentStudents
+                absentStudents: absentStudents,
+                group: sessionGroup,
+                extraStudents: extraStudents
             });
         }
 
