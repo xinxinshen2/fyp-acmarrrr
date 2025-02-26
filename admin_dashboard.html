@@ -112,10 +112,6 @@ async function loadAdminName() {
 window.onload = function() {
   loadAdminName();
 };
-
-
-
-    
         // Logout function
         window.logout = function () {
             signOut(auth).then(() => {
@@ -564,6 +560,22 @@ form.addEventListener("submit", async (e) => {
                 group: groupName
               });
             } else if (role === "lecturer") {
+
+              try {
+    await setDoc(doc(db, "lecturer", newLecturerID), {
+      name: name,
+      email: email,
+      ID: newLecturerID
+    });
+    // Optionally update UI or show alert here
+    showAlert("Lecturer added successfully!", "success");
+  } catch (error) {
+    console.error("Error adding lecturer:", error);
+    showAlert("Error adding lecturer.");
+  }
+
+            }
+
   // Calculate the new lecturer ID in a separate try-catch block
   let newLecturerID = "";
   try {
@@ -584,21 +596,7 @@ form.addEventListener("submit", async (e) => {
   }
   
   // Use the calculated newLecturerID to create the lecturer document
-  try {
-    await setDoc(doc(db, "lecture", newLecturerID), {
-      name: name,
-      email: email,
-      ID: newLecturerID
-    });
-    // Optionally update UI or show alert here
-    showAlert("Lecturer added successfully!", "success");
-  } catch (error) {
-    console.error("Error adding lecturer:", error);
-    showAlert("Error adding lecturer.");
-  }
-}
-
-
+  
 
             
             alert("用户创建成功！");
