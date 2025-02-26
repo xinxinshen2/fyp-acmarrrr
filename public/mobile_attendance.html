@@ -185,7 +185,7 @@
 
         async function loadSubjects() {
             const lectureID = sessionStorage.getItem('lectureID');
-            console.log("Lecture ID from session:", lectureID);
+            console.log("Current Lecture ID:", lectureID);
             const today = new Date();
             const todayString = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
 
@@ -198,22 +198,21 @@
                 const courseId = courseDoc.id;
                 const subjectsRef = coursesRef.doc(courseId).collection("subject");
 
-                const subjectsSnapshot = await subjectsRef
-                    .where("lectureID", "==", lectureID)
-                    .get();
+                const subjectsSnapshot = await subjectsRef.get();
 
                 subjectsSnapshot.forEach(subjectDoc => {
                     const subjectData = subjectDoc.data();
-                    // 只显示今天有课的科目
-                    if (subjectData.sessions?.some(session => {
+                    const sessions = subjectData.sessions || [];
+                    
+                    sessions.forEach(session => {
                         const sessionDate = getDateOfSession(session.day);
-                        return sessionDate === todayString;
-                    })) {
-                        const option = document.createElement('option');
-                        option.value = `${courseId}+${subjectDoc.id}`;
-                        option.textContent = `${subjectData.name} (${courseId})`;
-                        subjectSelect.appendChild(option);
-                    }
+                        if (session.lectureID === lectureID && sessionDate === todayString) {
+                            const option = document.createElement('option');
+                            option.value = `${courseId}+${subjectDoc.id}+${session.startTime}+${session.type}+${session.group}`;
+                            option.textContent = `${subjectDoc.id} - ${subjectData.name} | ${session.type} - ${session.startTime} [${session.group}] (${courseId})`;
+                            subjectSelect.appendChild(option);
+                        }
+                    });
                 });
             });
         }
@@ -221,12 +220,15 @@
         function getDateOfSession(dayOfWeek) {
             const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
             const today = new Date();
-            const currentDay = days[today.getDay()];
+            const targetDayIndex = days.indexOf(dayOfWeek);
             
-            // 如果选择的不是今天，返回空字符串
-            return dayOfWeek === currentDay ? 
-                `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}` : 
-                '';
+            if (targetDayIndex === -1) return '';
+            
+            const dayDifference = targetDayIndex - today.getDay();
+            const targetDate = new Date(today);
+            targetDate.setDate(today.getDate() + dayDifference);
+            
+            return `${targetDate.getFullYear()}-${String(targetDate.getMonth()+1).padStart(2,'0')}-${String(targetDate.getDate()).padStart(2,'0')}`;
         }
 
         async function confirmSelection() {
@@ -236,48 +238,117 @@
                 return;
             }
 
-            const [courseId, subjectId] = selectedValue.split('+');
+            const [courseId, subjectId, startTime, sessionType, group] = selectedValue.split('+');
             const today = new Date();
             const sessionDate = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
-            
-            // 获取科目信息
+            const lectureID = sessionStorage.getItem('lectureID');
+            const sessionId = `${sessionDate}_${startTime}_${lectureID}_${sessionType}_${group}`;
+
+            // 初始化所有学生为absent
             const subjectRef = db.collection("course").doc(courseId).collection("subject").doc(subjectId);
             const subjectDoc = await subjectRef.get();
             
             if (subjectDoc.exists) {
                 const sessions = subjectDoc.data().sessions || [];
-                const todaySession = sessions.find(session => 
-                    getDateOfSession(session.day) === sessionDate
-                );
+                const todaySession = sessions.find(session => {
+                    const sessionDate = getDateOfSession(session.day);
+                    return sessionDate === sessionDate;
+                });
 
                 if (todaySession) {
-                    const lectureID = sessionStorage.getItem('lectureID');
-                    const sessionId = `${sessionDate}_${todaySession.startTime}_${todaySession.type}`;
+                    const extraStudents = todaySession.extraStudents || [];
+                    const excludedStudents = subjectDoc.data().excludedStudents || [];
                     
-                    // 初始化所有学生为absent
+                    let totalStudents = 0;
+
+                    // 处理常规学生时统计人数
                     const studentsSnapshot = await db.collection("student")
                         .where("course", "==", courseId)
                         .get();
 
-                    const excludedStudents = subjectDoc.data().excludedStudents || [];
-                    
-                    const batch = db.batch();
                     studentsSnapshot.forEach(studentDoc => {
                         if (!excludedStudents.includes(studentDoc.id)) {
+                            const studentData = studentDoc.data();
+                            if (group === 'all' || 
+                                studentData.group === group || 
+                                extraStudents.includes(studentDoc.id)) {
+                                totalStudents++;
+                            }
+                        }
+                    });
+
+                    // 处理额外学生时统计人数
+                    extraStudents.forEach(studentId => {
+                        if (!excludedStudents.includes(studentId)) {
+                            totalStudents++;
+                        }
+                    });
+
+                    // 创建session文档时初始化统计
+                    const sessionRef = db.collection("attendance")
+                        .doc(courseId)
+                        .collection(subjectId)
+                        .doc(sessionId);
+
+                    await sessionRef.set({
+                        totalStudents: totalStudents,
+                        presentStudents: 0,
+                        absentStudents: totalStudents,
+                        sessionDate: sessionDate,
+                        startTime: startTime,
+                        sessionType: sessionType,
+                        group: group
+                    });
+
+                    const batch = db.batch();
+                    
+                    // 处理常规学生
+                    studentsSnapshot.forEach(studentDoc => {
+                        if (!excludedStudents.includes(studentDoc.id)) {
+                            const studentData = studentDoc.data();
+                            if (group === 'all' || 
+                                studentData.group === group || 
+                                extraStudents.includes(studentDoc.id)) {
+                                
+                                const attendanceRef = db.collection("attendance")
+                                    .doc(courseId)
+                                    .collection(subjectId)
+                                    .doc(sessionId)
+                                    .collection("students")
+                                    .doc(studentDoc.id);
+                                
+                                // 初始状态设为absent
+                                batch.set(attendanceRef, {
+                                    status: "absent",
+                                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                                    lectureID: lectureID,
+                                    group: studentData.group || 'default',
+                                    isExtra: extraStudents.includes(studentDoc.id)
+                                }, { merge: true });
+                            }
+                        }
+                    });
+
+                    // 处理额外学生
+                    extraStudents.forEach(studentId => {
+                        if (!excludedStudents.includes(studentId)) {
                             const attendanceRef = db.collection("attendance")
                                 .doc(courseId)
                                 .collection(subjectId)
                                 .doc(sessionId)
                                 .collection("students")
-                                .doc(studentDoc.id);
+                                .doc(studentId);
                             
                             batch.set(attendanceRef, {
                                 status: "absent",
-                                method: "unmarked",
-                                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                                lectureID: lectureID,
+                                group: 'extra',
+                                isExtra: true
                             }, { merge: true });
                         }
                     });
+
                     await batch.commit();
 
                     // 存储session数据
@@ -285,7 +356,8 @@
                         sessionId: sessionId,
                         courseId: courseId,
                         subjectId: subjectId,
-                        lectureId: lectureID
+                        lectureId: lectureID,
+                        group: group
                     };
                     sessionStorage.setItem('attendanceSession', JSON.stringify(sessionData));
                     

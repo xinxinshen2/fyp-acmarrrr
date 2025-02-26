@@ -256,9 +256,13 @@
 
             const studentsSnapshot = await sessionRef.collection("students").get();
             const present = studentsSnapshot.docs.filter(doc => doc.data().status === "present").length;
+            
+            const sessionDoc = await sessionRef.get();
+            const total = sessionDoc.data().totalStudents || 0;
 
             await sessionRef.update({
                 presentStudents: present,
+                absentStudents: total - present,
                 lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
             });
         }
