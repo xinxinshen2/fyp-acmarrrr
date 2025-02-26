@@ -30,62 +30,7 @@
         const db = getFirestore(app);
         const functions = getFunctions(app);
     
-        // Auth State Listener
-// onAuthStateChanged(auth, async (user) => {
-//   if (!user) {
-//     console.log("No user is signed in. Redirecting...");
-//     redirectToLogin();
-//     return;
-//   }
-
-//   console.log("User is signed in:", user.email);
-
-//   try {
-//     const userDocRef = doc(db, "user", user.uid);
-//     const userDocSnap = await getDoc(userDocRef);
-
-//     if (!userDocSnap.exists()) {
-//       console.log("User document not found.");
-//       redirectToLogin();
-//       return;
-//     }
-
-//     const userData = userDocSnap.data();
-//     const role = userData.role;
-
-//     if (role === "student" || role === "lecturer") {
-//       console.log("Role detected is not admin, redirecting...");
-//       redirectToLogin();
-//       return;
-//     }
-
-//     if (role === "admin") {
-//       const adminRef = collection(db, "admin");
-//       const q = query(adminRef, where("email", "==", user.email));
-//       const querySnapshot = await getDocs(q);
-
-//       if (querySnapshot.empty) {
-//         console.log("Admin not found in Firestore.");
-//         redirectToLogin();
-//         return;
-//       }
-
-//       const adminData = querySnapshot.docs[0].data();
-//       const displayText = `${adminData.name} (${adminData.ID})`;
-
-//       console.log("Admin found:", adminData.ID);
-//       document.getElementById("username").textContent = displayText;
-//     }
-//   } catch (error) {
-//     console.error("Error fetching user data:", error);
-//     redirectToLogin();
-//   }
-// });
-
-// // 统一的重定向方法
-// function redirectToLogin() {
-//   window.location.href = "login.html";
-// }
+       
 
 async function loadAdminName() {
   const adminID = sessionStorage.getItem('adminID');
@@ -340,14 +285,19 @@ function displayUsers(users) {
 
 // SEARCH AT HERE
 searchInput.addEventListener("input", (e) => {
-    const query = e.target.value.toLowerCase();
-    const users = document.querySelectorAll(".currentOpen table tbody tr");
+  // Trim input and split by whitespace into tokens
+  const query = e.target.value.trim().toLowerCase();
+  const tokens = query.split(/\s+/).filter(token => token.length > 0);
+  const rows = document.querySelectorAll(".currentOpen table tbody tr");
 
-    users.forEach(row => {
-        const text = row.textContent.toLowerCase();
-        row.style.display = text.includes(query) ? "table-row" : "none";
-    });
+  rows.forEach(row => {
+    const text = row.textContent.toLowerCase();
+    // Check if every token is found in the row text
+    const matchesAll = tokens.every(token => text.includes(token));
+    row.style.display = matchesAll ? "table-row" : "none";
+  });
 });
+
 
 
 
@@ -417,15 +367,7 @@ document.addEventListener('DOMContentLoaded', () => {
 populateCourseOptions();
 
 document.getElementById("role").addEventListener("change", function() {
-  // For example, if your course and uid elements are structured as given:
-  // <div>
-  //   <label for="course">Course:</label>
-  //   <select id="course" name="course" required>...</select>
-  // </div>
-  // <div>
-  //   <label for="uid">UID (card_id):</label>
-  //   <input type="text" id="uid" name="uid" required>
-  // </div>
+
   
   // We'll assume these are contained in their own divs. Adjust the selectors as needed.
   const courseDiv = document.querySelector("label[for='course']").parentElement;
@@ -440,14 +382,31 @@ document.getElementById("role").addEventListener("change", function() {
     courseInput.required = false;
     uidInput.required = false;
     
-  } else {
+  } else if (this.value === "student") {
     // Show them for other roles
     courseDiv.style.display = "block";
+    courseDiv.style.marginBottom = "15px";
+    courseDiv.style.display = "flex";
+    courseDiv.style.alignItems = "center";
+    courseDiv.style.justifyContent = "center";
+
     uidDiv.style.display = "block";
+    uidDiv.style.marginBottom = "15px";
+    uidDiv.style.display = "flex";
+    uidDiv.style.alignItems = "center";
+    uidDiv.style.justifyContent = "center";
+
     courseInput.required = true;
     uidInput.required = true;
   }
 });
+
+// margin-bottom: 15px;
+//     display: flex
+// ;
+//     align-items: center;
+//     justify-content: center;
+
 
 
 document.getElementById("course").addEventListener("change", async (e) => {
@@ -459,6 +418,7 @@ document.getElementById("course").addEventListener("change", async (e) => {
   }
   
 try {
+  if(role == "student"){
   const studentsQuery = query(
     collection(db, "student"),
     where("course", "==", selectedCourse)
@@ -489,21 +449,49 @@ try {
   
   console.log("New Student ID:", newID);
   document.getElementById("idDisplay").textContent = newID;
-  
-} catch (error) {
-  console.error("查询学生记录出错：", error);
-  alert("查询学生记录出错，请检查控制台了解详细信息。");
 }
 
+} catch (error) {
+  console.error("查询记录出错：", error);
+  alert("查询记录出错，请检查控制台了解详细信息。");
+}
+
+});
+
+document.getElementById("role").addEventListener("change", async (e) => {
+  const role = e.target.value;
+  if (role === "lecturer") {
+    // Since lecturers don't need a course, immediately calculate lecturer ID
+    try {
+      let newLecturerID = "";
+      const lecturersSnapshot = await getDocs(collection(db, "lecturer"));
+      let maxId = 0;
+      lecturersSnapshot.forEach(docSnap => {
+        const currentId = parseInt(docSnap.id, 10);
+        if (!isNaN(currentId) && currentId > maxId) {
+          maxId = currentId;
+        }
+      });
+      newLecturerID = (maxId + 1).toString();
+      console.log("Calculated new lecturer ID:", newLecturerID);
+      document.getElementById("idDisplay").textContent = newLecturerID;
+    } catch (error) {
+      console.error("Error calculating new lecturer ID:", error);
+      alert("Error calculating lecturer ID. Check the console for details.");
+    }
+  } else if (role === "student") {
+    // Optionally clear the idDisplay or let the course event handle it
+    document.getElementById("idDisplay").textContent = "";
+  }
 });
 
 
 // 绑定表单提交事件
 const form = document.getElementById("addUserForm");
 form.addEventListener("submit", async (e) => {
-  e.preventDefault(); 
+  e.preventDefault();
 
-  // 获取表单输入的值
+  // Get form values
   const name = form.name.value;
   const email = form.email.value;
   const course = form.course.value;
@@ -511,75 +499,59 @@ form.addEventListener("submit", async (e) => {
   const newID = document.getElementById("idDisplay").textContent;
   const role = form.role.value;
 
-
   try {
+    // Create auth user
+    const userCredential = await createUserWithEmailAndPassword(auth, email, "abcd1234");
+    const authUid = userCredential.user.uid;
+    console.log("Firebase Authentication UID:", authUid);
 
-            const userCredential = await createUserWithEmailAndPassword(auth, email, "abcd1234");
-            const authUid = userCredential.user.uid;  // Firebase 自动生成的 UID
-            console.log("Firebase Authentication UID:", authUid);
-            
-            let groupNumber = 1;  // 默认 G1
-            let groupName = `G${groupNumber}`;
+    // Save common user data into Firestore "user" collection
+    await setDoc(doc(db, "user", authUid), {
+      role: role,
+      ID: newID
+    }, { merge: true });
 
-            if (role === "student") {
-              // 1️⃣ 查询该课程下的所有学生，按 group 分类
-              const studentsQuery = query(
-                collection(db, "student"),
-                where("course", "==", course)
-              );
-              const querySnapshot = await getDocs(studentsQuery);
-            
-              let groupCount = {}; // 统计每个 group 里有多少人
-              querySnapshot.forEach((docSnap) => {
-                const studentData = docSnap.data();
-                const studentGroup = studentData.group || "G1"; // 默认 G1
-                groupCount[studentGroup] = (groupCount[studentGroup] || 0) + 1;
-              });
-            
-              while (groupCount[groupName] && groupCount[groupName] >= 10) {
-                groupNumber++;
-                groupName = `G${groupNumber}`;
-              }
-            
-              console.log(`Assigning student to: ${groupName}`);
+    if (role === "student") {
+      // For students, assign a group:
+      let groupNumber = 1;
+      let groupName = `G${groupNumber}`;
 
-            if (role === "student" || role === "lecturer") {
-              await setDoc(doc(db, "user", authUid), {
-                role: role,
-                ID: newID
-              }, { merge: true });
-            }
-            
-            if (role === "student") {
-              await setDoc(doc(db, "student", newID), {
-                name: name,
-                email: email,
-                ID: newID,
-                UID: inputUID,  
-                course: course,
-                group: groupName
-              });
-            } else if (role === "lecturer") {
-
-              try {
-    await setDoc(doc(db, "lecturer", newLecturerID), {
-      name: name,
-      email: email,
-      ID: newLecturerID
-    });
-    // Optionally update UI or show alert here
-    showAlert("Lecturer added successfully!", "success");
-  } catch (error) {
-    console.error("Error adding lecturer:", error);
-    showAlert("Error adding lecturer.");
-  }
-
-            }
-
-  // Calculate the new lecturer ID in a separate try-catch block
+      // Query student collection for the selected course
+      const studentsQuery = query(
+        collection(db, "student"),
+        where("course", "==", course)
+      );
+      const querySnapshot = await getDocs(studentsQuery);
+      
+      let groupCount = {}; // Count each group's members
+      querySnapshot.forEach((docSnap) => {
+        const studentData = docSnap.data();
+        const studentGroup = studentData.group || "G1";
+        groupCount[studentGroup] = (groupCount[studentGroup] || 0) + 1;
+      });
+      
+      // If current group is full (>=10), move to the next group
+      while (groupCount[groupName] && groupCount[groupName] >= 10) {
+        groupNumber++;
+        groupName = `G${groupNumber}`;
+      }
+      console.log(`Assigning student to: ${groupName}`);
+      
+      // Save student document
+      await setDoc(doc(db, "student", newID), {
+        name: name,
+        email: email,
+        ID: newID,
+        UID: inputUID,
+        course: course,
+        group: groupName
+      });
+    } else if (role === "lecturer") {
+     
+  // Calculate new lecturer ID right here
   let newLecturerID = "";
   try {
-    const lecturersSnapshot = await getDocs(collection(db, "lecture"));
+    const lecturersSnapshot = await getDocs(collection(db, "lecturer"));
     let maxId = 0;
     lecturersSnapshot.forEach(docSnap => {
       const currentId = parseInt(docSnap.id, 10);
@@ -589,32 +561,52 @@ form.addEventListener("submit", async (e) => {
     });
     newLecturerID = (maxId + 1).toString();
     console.log("Calculated new lecturer ID:", newLecturerID);
+    // Optionally update the display:
+    document.getElementById("idDisplay").textContent = newLecturerID;
   } catch (error) {
     console.error("Error calculating new lecturer ID:", error);
     showAlert("Error calculating lecturer ID.");
     return;
   }
   
-  // Use the calculated newLecturerID to create the lecturer document
-  
+  // Save lecturer document
+  try {
+    await setDoc(doc(db, "lecturer", newLecturerID), {
+      name: name,
+      email: email,
+      ID: newLecturerID
+    });
+    showAlert("Lecturer added successfully!", "success");
+  } catch (error) {
+    console.error("Error adding lecturer:", error);
+    showAlert("Error adding lecturer.");
+  }
+}
 
-            
-            alert("用户创建成功！");
+      
+        alert("User created successfully!");
+        const currentRole = form.role.value;
+        form.reset();
+        form.role.value = currentRole;
 
-            const form = document.getElementById("addUserForm");
-                form.reset();
+        document.getElementById("idDisplay").textContent = "";
+            } catch (error) {
+        console.error("Error creating user:", error);
+        // If the user was created in Authentication, remove it to roll back.
+        if (auth.currentUser) {
+          await auth.currentUser.delete();
+        }
+        
+        if (error.code === "auth/email-already-in-use") {
+          alert("This email is already in use.");
+        } else {
+          alert("Error creating user, please check the console for details.");
+        }
+      }
 
-                document.getElementById("idDisplay").textContent = "";
-
-          }
-        } catch (error) {
-            console.error("创建用户出错：", error);
-            alert("创建用户时出错，请检查控制台了解详细信息。");
-          }
-        });        
-     
-        });
-      });
+    });
+  });
+});
 
 
 
@@ -798,32 +790,53 @@ function displayUsersForDelete(users) {
 } catch (error) {
     console.error("Error retrieving users from user collection:", error);
 }
-
-
-    // **删除 Firebase Authentication 账户**
-    // const functions = getFunctions();
-    // const deleteUsersFunction = httpsCallable(functions, 'deleteUsers');
-
-    // async function deleteSelectedUsers(authUIDsToDelete) {
-    //     try {
-    //         const result = await deleteUsersFunction({ uid: authUIDsToDelete });
-    //         console.log("Delete users from Auth result:", result.data);
-    //     } catch (error) {
-    //         console.error("Error deleting Authentication accounts:", error);
-    //     }
-    // }
-
-    // await deleteSelectedUsers(authUIDsToDelete);
     alert("Selected users deleted.");
 
     fetchUsers(); // 重新获取用户列表
 });
+}
 
+async function loadGroups(courseId) {
+  const filterGroupContainer = document.querySelector(".filterGroup");
+  try {
+    const studentsQuerySnapshot = await getDocs(
+      query(collection(db, "student"), where("course", "==", courseId))
+    );
+    const groupsSet = new Set();
+    studentsQuerySnapshot.forEach(docSnap => {
+      const data = docSnap.data();
+      if (data.group) {
+        groupsSet.add(data.group);
+      }
+    });
+    const groups = Array.from(groupsSet).sort();
+    let html = `<select id="groupSelect"><option value="">All Groups</option>`;
+    groups.forEach(group => {
+      html += `<option value="${group}">${group}</option>`;
+    });
+    html += `</select>`;
+    filterGroupContainer.innerHTML = html;
+
+    // Attach change event after the select is inserted
+    document.getElementById("groupSelect").addEventListener("change", (e) => {
+      selectedGroup = e.target.value;
+      const selectedCourse = document.getElementById("courseSelect").value;
+      if (selectedCourse) {
+        loadTimetable(selectedCourse, selectedGroup);
+      }
+    });
+  } catch (error) {
+    console.error("Error loading groups: ", error);
+    filterGroupContainer.innerHTML = "<p>Error loading groups.</p>";
+  }
 }
 
 
 
+
+
 //TIMETABLE
+let selectedGroup = "";
 
   // 1. 加载课程列表，并在 .selectCourse 中生成下拉框
   async function loadCourses() {
@@ -840,22 +853,22 @@ function displayUsersForDelete(users) {
       html += `</select>`;
       courseContainer.innerHTML = html;
 
-      // 绑定下拉框 change 事件
+     
       document.getElementById("courseSelect").addEventListener("change", (e) => {
         const selectedCourse = e.target.value;
         if (selectedCourse) {
-          loadTimetable(selectedCourse);
+          loadTimetable(selectedCourse, selectedGroup);
+          loadGroups(selectedCourse);
+
+
         } else {
           document.querySelector(".tableDisplay").innerHTML = "";
+          document.querySelector(".filterGroup").innerHTML = "";
+
         }
       });
 
-      // 如果需要，自动加载第一个课程的 timetable
-      // if (courseSnapshot.size > 0) {
-      //   const firstCourse = courseSnapshot.docs[0].id;
-      //   document.getElementById("courseSelect").value = firstCourse;
-      //   loadTimetable(firstCourse);
-      // }
+
 
     } catch (error) {
       console.error("Error loading courses: ", error);
@@ -865,9 +878,8 @@ function displayUsersForDelete(users) {
 
   
 
-  // 2. 根据所选课程加载 timetable
-  async function loadTimetable(courseId) {
-    // 创建一个对象保存星期对应的 session 数组
+  async function loadTimetable(courseId,groupFilter = "") {
+
     const sessionsByDay = {
       Monday: [],
       Tuesday: [],
@@ -879,29 +891,35 @@ function displayUsersForDelete(users) {
     };
 
     try {
-      // 获取指定课程的文档引用
       const courseDocRef = doc(db, "course", courseId);
-      // 获取该课程下的 "subject" 子集合所有文档
       const subjectSnapshot = await getDocs(collection(courseDocRef, "subject"));
+
       subjectSnapshot.forEach(subDoc => {
-        const subjectData = subDoc.data();
-        // subjectData 应包含 lecturerID, name, sessions（数组）
-        if (subjectData.sessions && Array.isArray(subjectData.sessions)) {
-          subjectData.sessions.forEach(session => {
-            // 假设 session.day 为完整的英文星期，如 "Monday"
-            if (sessionsByDay[session.day]) {
+      const subjectData = subDoc.data();
+      // Check that sessions is an array and process it
+      if (subjectData.sessions && Array.isArray(subjectData.sessions)) {
+        subjectData.sessions.forEach(session => {
+          // Assume session.day is a full day name like "Monday"
+          if (sessionsByDay[session.day]) {
+            // If a group filter is active, only add session if its group matches.
+            // (If session.group is not provided, you might choose to always add it.)
+            if (groupFilter && session.group && session.group !== groupFilter) {
+              // Skip this session because it does not belong to the filtered group.
+            } else {
               sessionsByDay[session.day].push({
                 subjectName: subjectData.name,
                 class: subjectData.class,
                 lecturerID: subjectData.lecturerName,
                 startTime: session.startTime,
                 endTime: session.endTime,
-                type: session.type
+                type: session.type,
+                group: session.group || ""
               });
             }
-          });
-        }
-      });
+          }
+        });
+      }
+    });
 
       // 对每一天的 sessions 按 startTime 从早到晚排序
       for (const day in sessionsByDay) {
@@ -940,6 +958,7 @@ function displayUsersForDelete(users) {
                 word-wrap: break-word; /* 让长文本自动换行 */
                 overflow-wrap: break-word;">
                    <strong>${session.subjectName}</strong> (${session.type}) <br><br>
+                   <strong> Group: </strong> ${session.group}<br>
                   <strong> Venue: </strong>${session.class}<br>
                    <strong> Time: </strong>${session.startTime} - ${session.endTime}<br>
                    <strong> Lecturer: </strong> ${session.lecturerID}<br>
@@ -1827,7 +1846,12 @@ function formatTime(timeStr) {
           flex-wrap: wrap;
           align-items: center;
           justify-content: center;
+          max-height: 550px; 
+          overflow-y: auto; 
+          padding: 10px;
         }
+
+
         
           table {
             width: 90%;
@@ -2015,7 +2039,7 @@ function formatTime(timeStr) {
         }    
 
       /* 让 select 也继承这个样式，如果是 <select> */
-      .selectCourse select {
+      .selectCourse select, .filterGroup>select#groupSelect {
           appearance: none;
           -webkit-appearance: none;
           -moz-appearance: none;
@@ -2093,7 +2117,12 @@ function formatTime(timeStr) {
 
     <div class="timeTableSpace AllSpace">
       <p> Timetable</p>
-      <div class="selectCourse function-Btn"></div>    
+      <div class="selectCourse function-Btn"></div> 
+      <div class="filterGroup function-Btn">
+        <select id="groupSelect" class="filterGroupSelect">
+          <option value="">All Groups</option>
+        </select>
+      </div>  
       <button class="function-Btn" id="addTimetableBtn">
         <i class="fas fa-calendar-plus"></i> Add Timetable
       </button>
