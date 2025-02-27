@@ -195,6 +195,14 @@
             subjectSelect.innerHTML = '';
 
             coursesSnapshot.forEach(async courseDoc => {
+                const courseData = courseDoc.data();
+                const expiryDate = courseData.subjectExpiry?.toDate();
+                
+                if (expiryDate && expiryDate < new Date()) {
+                    console.log(`Skipping expired course: ${courseDoc.id}`);
+                    return;
+                }
+
                 const courseId = courseDoc.id;
                 const subjectsRef = coursesRef.doc(courseId).collection("subject");
 

@@ -378,7 +378,6 @@
     // 新增时间表功能
     async function loadTimetable() {
         const lecturerID = sessionStorage.getItem('lectureID');
-        console.log("Current lecturerID:", lecturerID);  // 添加调试信息
         if (!lecturerID) {
             console.error("No lecturer ID found");
             return;
@@ -394,25 +393,35 @@
             let hasData = false;
 
             for (const courseDoc of coursesSnapshot.docs) {
+                const courseData = courseDoc.data();
+                const expiryDate = courseData.subjectExpiry?.toDate(); // 转换Firebase时间戳
+                
+                // 检查课程是否过期
+                if (expiryDate && expiryDate < new Date()) {
+                    console.log(`Skipping expired course: ${courseDoc.id}`);
+                    continue; // 跳过已过期的课程
+                }
+
                 const subjectsSnapshot = await getDocs(collection(db, "course", courseDoc.id, "subject"));
                 
                 for (const subjectDoc of subjectsSnapshot.docs) {
                     const subjectData = subjectDoc.data();
+                    const sessions = subjectData.sessions || [];
                     
-                    if (subjectData.lectureID === lecturerID && subjectData.sessions) {
-                        hasData = true;
-                        subjectData.sessions.forEach(session => {
+                    sessions.forEach(session => {
+                        if (session.lectureID === lecturerID) {
+                            hasData = true;
                             if (sessionsByDay[session.day]) {
                                 sessionsByDay[session.day].push({
                                     course: courseDoc.id,
                                     ...session,
                                     subjectName: subjectData.name,
                                     class: subjectData.class,
-                                    type: session.type || 'lecture' // 确保有默认值
+                                    type: session.type || 'lecture'
                                 });
                             }
-                        });
-                    }
+                        }
+                    });
                 }
             }
 
