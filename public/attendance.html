@@ -511,7 +511,7 @@
                 if (shouldDisplay) {
                     console.log(`Displaying ${isInExtra ? 'EXTRA ' : ''}student ${studentDoc.id}`);
 
-                    const sessionId = `${sessionDate}_${sessionStartTime}_${lectureID}_${sessionType}`;
+                    const sessionId = `${sessionDate}_${sessionStartTime}_${lectureID}_${sessionType}_${sessionGroup}`;
                     const attendanceRef = db.collection("attendance")
                         .doc(courseId)
                         .collection(subjectId)
@@ -589,7 +589,7 @@
 
                 console.log("Selected Session Time:", selectedSessionTime);
 
-                let sessionDate, sessionStartTime, sessionType;
+                let sessionDate, sessionStartTime, sessionType, sessionGroup;
                 
                 if (selectedSessionTime !== 'custom') {
                     const sessionParts = selectedSessionTime.split('|');
@@ -602,7 +602,7 @@
                     const sessionDay = sessionParts[1];
                     sessionStartTime = sessionParts[2];
                     sessionType = sessionParts[3];
-                    const sessionGroup = sessionParts[4];
+                    sessionGroup = sessionParts[4];
 
                     console.log('Parsed session:', {
                         sessionDate,
@@ -619,7 +619,7 @@
                 }
 
                 const lectureID = sessionStorage.getItem('lectureID');
-                const sessionId = `${sessionDate}_${sessionStartTime}_${lectureID}_${sessionType}`;
+                const sessionId = `${sessionDate}_${sessionStartTime}_${lectureID}_${sessionType}_${sessionGroup}`;
 
                 const attendanceRef = db.collection("attendance")
                     .doc(courseId)
@@ -647,7 +647,8 @@
                 const attendanceData = {
                     status: status,
                     method: "manual",
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    group: sessionGroup
                 };
 
                 await attendanceRef.set(attendanceData);
@@ -744,7 +745,9 @@
                 presentStudents: presentStudents,
                 absentStudents: absentStudents,
                 group: sessionGroup,
-                extraStudents: extraStudents
+                extraStudents: extraStudents,
+                sessionType: sessionType,
+                startTime: sessionStartTime
             });
         }
 
