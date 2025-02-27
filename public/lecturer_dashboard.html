@@ -500,9 +500,8 @@
         const pageMap = {
             0: '', // 首页不需要跳转
             1: 'attendance.html',
-            2: 'attendance.html',
-            3: '', // 时间表通过现有逻辑切换
-            4: 'mobile_attendance.html'
+            2: '', // 时间表通过现有逻辑切换
+            3: 'mobile_attendance.html'
         };
 
         navButtons.forEach((button, index) => {
@@ -514,7 +513,7 @@
         });
 
         // 保持原有时间表切换逻辑
-        const timetableBtn = navButtons[3];
+        const timetableBtn = navButtons[2];
         const homeBtn = navButtons[0];
 
         const contentSections = {
@@ -558,7 +557,6 @@
         <div class="header nav2">
             <div class="nav-btn"><p>Home</p></div>
             <div class="nav-btn"><p>Mark Attendance</p></div>
-            <div class="nav-btn"><p>Edit Attendance</p></div>
             <div class="nav-btn"><p>Timetable</p></div>
             <div class="nav-btn"><p>Mobile Attendance(测试)</p></div>
         </div>
