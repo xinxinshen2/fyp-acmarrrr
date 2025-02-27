@@ -218,7 +218,7 @@
                 <input type="time" id="customEndTime">
             </div>
             <button class="confirm-button" onclick="confirmSelection()">
-                <span class="button-text">confirm</span>
+                <span class="button-text">Confirm</span>
                 <span class="loading-dots" style="display: none"></span>
             </button>
         </div>
@@ -381,7 +381,7 @@
         async function confirmSelection() {
             const selectedValue = document.getElementById('subject').value;
             if (!selectedValue) {
-                alert("请先选择科目");
+                alert("Please select a subject first");
                 return;
             }
 
@@ -571,7 +571,7 @@
             }
 
             const originalText = button.textContent;
-            button.innerHTML = `<span class="processing">处理中...</span>`;
+            button.innerHTML = `<span class="processing">Processing...</span>`;
             button.style.opacity = '0.7';
             button.disabled = true;
 
@@ -785,7 +785,7 @@
 
         async function loadDailySubjects(date) {
             const dailySubjectsDiv = document.getElementById('dailySubjects');
-            dailySubjectsDiv.innerHTML = '<div class="loading">加载中...</div>';
+            dailySubjectsDiv.innerHTML = '<div class="loading">Loading...</div>';
             
             const selectedDate = new Date(date);
             const dayOfWeek = selectedDate.toLocaleDateString('en-US', { weekday: 'long' });
@@ -822,7 +822,7 @@
                 }
             }
             
-            dailySubjectsDiv.innerHTML = subjectsHTML || '<div>当日无课程</div>';
+            dailySubjectsDiv.innerHTML = subjectsHTML || '<div>No classes scheduled for this day</div>';
         }
 
         document.getElementById('calendarDate').addEventListener('change', async (e) => {
