@@ -471,9 +471,20 @@
     </style>
 
     <script type="module">
+        // 导入Firebase所需的模块 - 确保包含setDoc
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-app.js";
-        import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-auth.js";
-        import { getFirestore, collection, getDocs, doc, getDoc, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-firestore.js";
+        import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-auth.js";
+        import { 
+            getFirestore, 
+            collection, 
+            getDocs, 
+            doc, 
+            getDoc, 
+            updateDoc, 
+            setDoc,  // 添加setDoc导入
+            arrayUnion, 
+            arrayRemove 
+        } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "REMOVED",
@@ -905,21 +916,53 @@
 
     // 显示缺席类型选择
     window.showAbsenceTypeSelection = function(studentId) {
-        const card = document.querySelector(`.request-card:has(h3:contains('${studentId}'))`);
-        if (card) {
-            card.querySelector('.absence-type-selection').style.display = 'block';
-            card.querySelector('.approve-all-btn').style.display = 'none';
-            card.querySelector('.confirm-approve-btn').style.display = 'inline-block';
+        // 修改选择器，避免使用 :has 选择器，改用更兼容的方法
+        const cards = document.querySelectorAll('.request-card');
+        let targetCard = null;
+        
+        // 遍历所有卡片，找到匹配学生ID的卡片
+        for (const card of cards) {
+            const header = card.querySelector('.request-header h3');
+            if (header && header.textContent.includes(studentId)) {
+                targetCard = card;
+                break;
+            }
+        }
+        
+        if (targetCard) {
+            // 显示缺席类型选择，隐藏原按钮，显示确认按钮
+            targetCard.querySelector('.absence-type-selection').style.display = 'block';
+            targetCard.querySelector('.approve-all-btn').style.display = 'none';
+            targetCard.querySelector('.confirm-approve-btn').style.display = 'inline-block';
+            
+            // 添加调试信息
+            console.log("显示缺席类型选择界面成功");
+        } else {
+            console.error("找不到学生ID为", studentId, "的请求卡片");
         }
     }
 
     // 批准所有缺席申请
     window.approveAllAbsences = async function(studentId) {
+        console.log("开始处理批准申请:", studentId);
+        
         try {
             const lectureID = sessionStorage.getItem('lectureID');
+            console.log("当前讲师ID:", lectureID);
             
             // 获取选中的缺席类型
-            const absenceTypeValue = document.querySelector(`input[name="absenceType_${studentId}"]:checked`).value;
+            const radioSelector = `input[name="absenceType_${studentId}"]:checked`;
+            const selectedRadio = document.querySelector(radioSelector);
+            
+            if (!selectedRadio) {
+                console.error("找不到选中的缺席类型:", radioSelector);
+                alert("请选择缺席类型");
+                return;
+            }
+            
+            const absenceTypeValue = selectedRadio.value;
+            console.log("选中的缺席类型:", absenceTypeValue);
+            
             const absenceTypeMap = {
                 'MC': 'Medical Certificate - Student was ill and has medical proof',
                 'FE': 'Family Emergency - Student had an urgent family matter',
@@ -930,18 +973,25 @@
             
             // 获取所有选中的会话
             const checkboxes = document.querySelectorAll(`.session-checkbox[data-student="${studentId}"]:checked`);
+            console.log("选中的会话数量:", checkboxes.length);
             
             if (checkboxes.length === 0) {
-                alert("No sessions selected");
+                alert("请至少选择一个会话");
                 return;
             }
             
-            // 1. 更新通知状态
+            if (!confirm(`确定要批准 ${checkboxes.length} 个会话的缺席申请吗？`)) {
+                return;
+            }
+            
+            // 1. 更新通知状态 - 保留文件信息
             const notificationRef = doc(db, "notifications", lectureID);
             const notificationDoc = await getDoc(notificationRef);
             
             if (notificationDoc.exists()) {
                 const absenceRequests = notificationDoc.data().absenceRequests || [];
+                console.log("原有请求数量:", absenceRequests.length);
+                
                 const updatedRequests = absenceRequests.map(req => {
                     if (req.studentId === studentId && req.status === "pending") {
                         // 检查这个请求是否在选中的会话中
@@ -953,73 +1003,100 @@
                         );
                         
                         if (isSelected) {
-                            return { ...req, status: "approved", absenceType: absenceTypeValue };
+                            console.log("更新请求状态:", req.sessionId);
+                            return { 
+                                ...req, 
+                                status: "approved", 
+                                absenceType: absenceTypeValue, 
+                                absenceTypeText: absenceTypeText 
+                            };
                         }
                     }
                     return req;
                 });
                 
                 await updateDoc(notificationRef, { absenceRequests: updatedRequests });
+                console.log("通知状态已更新");
             }
             
-            // 2. 为每个选中的会话创建缺席记录
+            // 2. 更新学生的缺席申请状态 - 保留文件信息
             for (const checkbox of checkboxes) {
-                const { course, subject, session, reason } = checkbox.dataset;
+                const { course, subject, session, student, reason } = checkbox.dataset;
                 const [date, startTime, type, group] = session.split('_');
                 
-                // 在attendance中标记为缺席但有理由
-                const attendanceRef = doc(db, "attendance", course, subject, session, "students", studentId);
-                
-                await setDoc(attendanceRef, {
-                    status: "absent",
-                    excused: true,
-                    reason: reason,
-                    absenceType: absenceTypeValue,
-                    absenceTypeText: absenceTypeText,
-                    approvedBy: lectureID,
-                    timestamp: new Date()
-                });
-                
-                // 3. 更新学生的缺席申请状态
-                const absenceRef = doc(db, "absence", course, group, studentId);
+                const absenceRef = doc(db, "absence", course, group, student);
                 const absenceDoc = await getDoc(absenceRef);
                 
                 if (absenceDoc.exists()) {
                     const forms = absenceDoc.data().Form || [];
                     const updatedForms = forms.map(form => {
+                        // 保留文件上传信息
+                        const fileLink = form.fileLink || "";
+                        
                         const updatedSessions = (form.missedSessions || []).map(s => {
                             if (s.sessionId === session) {
                                 return { 
                                     ...s, 
                                     status: "approved", 
-                                    absenceType: absenceTypeValue,
-                                    absenceTypeText: absenceTypeText
+                                    absenceType: absenceTypeValue, 
+                                    absenceTypeText: absenceTypeText 
                                 };
                             }
                             return s;
                         });
                         
-                        // 检查是否所有session都已处理
-                        const allProcessed = updatedSessions.every(s => s.status === "approved" || s.status === "rejected");
-                        
                         return { 
                             ...form, 
                             missedSessions: updatedSessions,
-                            status: allProcessed ? "processed" : form.status
+                            fileLink: fileLink,  // 确保保留文件链接
+                            status: updatedSessions.every(s => s.status !== "pending") ? "processed" : form.status
                         };
                     });
                     
                     await updateDoc(absenceRef, { Form: updatedForms });
+                    console.log(`已更新学生缺席申请状态: ${course}/${group}/${student}`);
+                }
+                
+                // 3. 在attendance记录中创建缺席记录
+                try {
+                    // 获取讲师ID
+                    const lectureID = sessionStorage.getItem('lectureID');
+                    
+                    // 构建文档路径的关键部分
+                    const sessionDocId = `${date}_${startTime}_${lectureID}_${type}_all`; 
+                    
+                    // 创建对学生文档的引用
+                    const studentAttendanceRef = doc(db, 
+                        "attendance", course, 
+                        subject, sessionDocId, 
+                        "students", student
+                    );
+                    
+                    // 准备学生的缺席记录数据 - 只使用简短代码作为reason
+                    const studentRecord = {
+                        status: "absent",           // 缺席状态
+                        method: "leave",            // 请假方式
+                        timestamp: new Date(),      // 时间戳
+                        reason: absenceTypeValue    // 只使用缺席类型代码(MC/FE/PA/MH)作为reason
+                    };
+                    
+                    // 创建或更新学生的出勤记录
+                    await setDoc(studentAttendanceRef, studentRecord);
+                    
+                    console.log(`已创建/更新出勤记录: attendance/${course}/${subject}/${sessionDocId}/students/${student}, reason: ${absenceTypeValue}`);
+                    
+                } catch (error) {
+                    console.error(`创建出勤记录失败，学生: ${student}, 日期: ${date}, 错误:`, error);
                 }
             }
             
-            alert("缺席申请已批准");
+            alert("缺席申请已批准，并已创建相应的出勤记录");
             loadAbsenceRequests(); // 重新加载列表
             loadAbsenceStatistics(); // 更新统计数据
             
         } catch (error) {
-            console.error("Error approving absences:", error);
-            alert("Error: " + error.message);
+            console.error("批准缺席申请失败:", error);
+            alert("错误: " + error.message);
         }
     }
 
