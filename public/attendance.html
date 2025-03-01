@@ -15,16 +15,17 @@
         }
         body {
             display: flex;
-            flex-direction: column;
-            align-items: center;
+            flex-direction: row;
+            align-items: flex-start;
             justify-content: center;
             background-color: #e0e7ff;
             color: #333;
             font-family: 'Poppins', sans-serif;
             margin: 0;
+            padding: 20px;
         }
         .container {
-            width: 90%;
+            flex: 1;
             max-width: 800px;
             background-color: #fff;
             padding: 30px;
@@ -149,9 +150,55 @@
             0% { opacity: 1; transform: translateY(0); }
             100% { opacity: 0; transform: translateY(-10px); }
         }
+        .sidebar {
+            width: 280px;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0px 4px 30px rgba(0, 0, 0, 0.08);
+            padding: 20px;
+            margin-right: 20px;
+            position: sticky;
+            top: 20px;
+        }
+        .calendar {
+            position: relative;
+        }
+        #calendarDate {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .daily-subject {
+            padding: 12px;
+            margin: 8px 0;
+            background: #f8f9fa;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .daily-subject:hover {
+            background: #4f46e5;
+            color: white;
+            transform: translateX(5px);
+        }
+        .daily-subjects {
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
+    <!-- 添加侧边栏 -->
+    <div class="sidebar">
+        <div class="calendar">
+            <input type="date" id="calendarDate" 
+                   value="${new Date().toISOString().split('T')[0]}"
+                   max="${new Date().toISOString().split('T')[0]}">
+            <div id="dailySubjects"></div>
+        </div>
+    </div>
+    
     <div class="container">
         <h1>Mark Attendance</h1>
         <div class="course-select">
@@ -171,7 +218,7 @@
                 <input type="time" id="customEndTime">
             </div>
             <button class="confirm-button" onclick="confirmSelection()">
-                <span class="button-text">confirm</span>
+                <span class="button-text">Confirm</span>
                 <span class="loading-dots" style="display: none"></span>
             </button>
         </div>
@@ -257,6 +304,22 @@
             subjectSelect.addEventListener('change', displaySchedule);
         }
 
+        function getDateOfThisWeek(dayOfWeek, baseDate) {
+            const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            const targetDate = new Date(baseDate);
+            const day = targetDate.getDay();
+            const diff = days.indexOf(dayOfWeek) - day;
+
+            let newDate = new Date(targetDate);
+            newDate.setDate(targetDate.getDate() + diff);
+
+            if (newDate < targetDate) {
+                newDate.setDate(newDate.getDate() + 7);
+            }
+
+            return newDate.toISOString().split('T')[0];
+        }
+
         async function displaySchedule() {
             const selectedValue = document.getElementById('subject').value;
             const sessionTimeSelect = document.getElementById('sessionTime');
@@ -281,30 +344,13 @@
                         let scheduleHTML = '<strong>Schedule:</strong><br>';
                         let firstSessionValue = null;
 
-                        function getDateOfThisWeek(dayOfWeek) {
-                            const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-                            const today = new Date();
-                            const day = today.getDay();
-                            const diff = days.indexOf(dayOfWeek) - day;
-
-                            let newDate = new Date(today);
-                            newDate.setDate(today.getDate() + diff);
-
-                            if (newDate < today) {
-                                newDate.setDate(newDate.getDate() + 7);
-                            }
-
-                            const year = newDate.getFullYear();
-                            const month = String(newDate.getMonth() + 1).padStart(2, '0');
-                            const dayOfMonth = String(newDate.getDate()).padStart(2, '0');
-                            return `${year}-${month}-${dayOfMonth}`;
-                        }
+                        const selectedDate = document.getElementById('calendarDate').value;
+                        const baseDate = selectedDate ? new Date(selectedDate) : new Date();
 
                         filteredSessions.forEach((session, index) => {
-                            const sessionDate = getDateOfThisWeek(session.day);
+                            const sessionDate = getDateOfThisWeek(session.day, baseDate);
                             scheduleHTML += `${session.type}: ${session.day} ${session.startTime}-${session.endTime} (${sessionDate})<br>`;
                             
-                            // 修改option值格式为: sessionDate|day|startTime|type|group
                             const optionValue = `${sessionDate}|${session.day}|${session.startTime}|${session.type}|${session.group || 'all'}`;
                             const optionText = `${session.day} ${session.startTime} - ${session.endTime} (${sessionDate}) [${session.type}] ${session.group ? `{${session.group}}` : ''}`;
                             
@@ -335,7 +381,7 @@
         async function confirmSelection() {
             const selectedValue = document.getElementById('subject').value;
             if (!selectedValue) {
-                alert("请先选择科目");
+                alert("Please select a subject first");
                 return;
             }
 
@@ -391,17 +437,14 @@
             console.log('All sessions:', sessions);
             console.log('Looking for lectureID:', lectureID);
 
-            // 解析session信息（添加错误处理）
             const sessionTimeSelect = document.getElementById('sessionTime');
             const selectedSessionValue = sessionTimeSelect.value;
             
-            // 确保不是custom选项
             if (selectedSessionValue === 'custom') {
                 alert("请先选择具体课程时间段");
                 return;
             }
 
-            // 安全解构参数
             const selectedSessionParts = selectedSessionValue.split('|');
             if (selectedSessionParts.length < 5) {
                 console.error('Invalid session format:', selectedSessionValue);
@@ -424,7 +467,6 @@
                 sessionGroup
             });
 
-            // 现在可以安全使用这些变量
             const currentSession = sessions.find(s => 
                 s.lectureID === lectureID &&
                 s.day === sessionDay &&
@@ -434,9 +476,8 @@
             
             console.log('Found session based on selection:', currentSession !== undefined);
 
-            // 从当前session获取extraStudents
             const excludedStudents = subjectDoc.data().excludedStudents || [];
-            const extraStudents = currentSession?.extraStudents || []; // 从session获取
+            const extraStudents = currentSession?.extraStudents || [];
             console.log('Current session extraStudents:', extraStudents);
 
             const studentsRef = db.collection("student");
@@ -449,11 +490,10 @@
                 const isInExtra = extraStudents.includes(studentDoc.id);
                 const isExcluded = excludedStudents.includes(studentDoc.id);
 
-                // 简化后的判断逻辑
                 const shouldDisplay = !isExcluded && (
-                    isInExtra ||  // 额外学生直接显示
+                    isInExtra || 
                     (
-                        studentData.course === courseId &&  // 本课程学生
+                        studentData.course === courseId && 
                         (sessionGroup === 'all' || studentData.group === sessionGroup)
                     )
                 );
@@ -471,8 +511,7 @@
                 if (shouldDisplay) {
                     console.log(`Displaying ${isInExtra ? 'EXTRA ' : ''}student ${studentDoc.id}`);
 
-                    // 修改考勤记录查询路径，使用sessionId
-                    const sessionId = `${sessionDate}_${sessionStartTime}_${lectureID}_${sessionType}`;
+                    const sessionId = `${sessionDate}_${sessionStartTime}_${lectureID}_${sessionType}_${sessionGroup}`;
                     const attendanceRef = db.collection("attendance")
                         .doc(courseId)
                         .collection(subjectId)
@@ -487,7 +526,6 @@
                     
                     if (attendanceDoc.exists) {
                         const status = attendanceDoc.data().status;
-                        // 根据现有状态隐藏对应按钮
                         presentVisible = status !== 'present';
                         absentVisible = status !== 'absent';
                     }
@@ -533,7 +571,7 @@
             }
 
             const originalText = button.textContent;
-            button.innerHTML = `<span class="processing">处理中...</span>`;
+            button.innerHTML = `<span class="processing">Processing...</span>`;
             button.style.opacity = '0.7';
             button.disabled = true;
 
@@ -551,10 +589,9 @@
 
                 console.log("Selected Session Time:", selectedSessionTime);
 
-                let sessionDate, sessionStartTime, sessionType;
+                let sessionDate, sessionStartTime, sessionType, sessionGroup;
                 
                 if (selectedSessionTime !== 'custom') {
-                    // 使用新的解析格式：sessionDate|day|startTime|type|group
                     const sessionParts = selectedSessionTime.split('|');
                     if (sessionParts.length < 5) {
                         console.error('Invalid session format:', selectedSessionTime);
@@ -564,8 +601,8 @@
                     sessionDate = sessionParts[0];
                     const sessionDay = sessionParts[1];
                     sessionStartTime = sessionParts[2];
-                    sessionType = sessionParts[3];  // 直接获取type，无需slice
-                    const sessionGroup = sessionParts[4];
+                    sessionType = sessionParts[3];
+                    sessionGroup = sessionParts[4];
 
                     console.log('Parsed session:', {
                         sessionDate,
@@ -582,7 +619,7 @@
                 }
 
                 const lectureID = sessionStorage.getItem('lectureID');
-                const sessionId = `${sessionDate}_${sessionStartTime}_${lectureID}_${sessionType}`;
+                const sessionId = `${sessionDate}_${sessionStartTime}_${lectureID}_${sessionType}_${sessionGroup}`;
 
                 const attendanceRef = db.collection("attendance")
                     .doc(courseId)
@@ -610,7 +647,8 @@
                 const attendanceData = {
                     status: status,
                     method: "manual",
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    group: sessionGroup
                 };
 
                 await attendanceRef.set(attendanceData);
@@ -650,11 +688,19 @@
         async function updateAttendanceCounts(courseId, subjectId, sessionId) {
             const subjectRef = db.collection("course").doc(courseId).collection("subject").doc(subjectId);
             const subjectDoc = await subjectRef.get();
-
-            let excludedStudents = [];
-            if (subjectDoc.exists && subjectDoc.data().excludedStudents) {
-                excludedStudents = subjectDoc.data().excludedStudents;
-            }
+            
+            const sessionTimeSelect = document.getElementById('sessionTime');
+            const selectedSessionValue = sessionTimeSelect.value;
+            const [sessionDate, sessionDay, sessionStartTime, sessionType, sessionGroup] = selectedSessionValue.split('|');
+            
+            const excludedStudents = subjectDoc.data().excludedStudents || [];
+            const sessions = subjectDoc.data().sessions || [];
+            const currentSession = sessions.find(s => 
+                s.day === sessionDay && 
+                s.startTime === sessionStartTime && 
+                s.type === sessionType
+            );
+            const extraStudents = currentSession?.extraStudents || [];
 
             const studentsRef = db.collection("student");
             const studentsSnapshot = await studentsRef.get();
@@ -665,7 +711,16 @@
 
             studentsSnapshot.forEach(studentDoc => {
                 const studentData = studentDoc.data();
-                if (studentData.course === courseId && !excludedStudents.includes(studentDoc.id)) {
+                const isInExtra = extraStudents.includes(studentDoc.id);
+                const isExcluded = excludedStudents.includes(studentDoc.id);
+
+                const shouldCount = !isExcluded && (
+                    isInExtra || 
+                    (studentData.course === courseId && 
+                    (sessionGroup === 'all' || studentData.group === sessionGroup))
+                );
+
+                if (shouldCount) {
                     totalStudents++;
                 }
             });
@@ -678,7 +733,6 @@
 
             const presentSnapshot = await attendanceCollectionRef.where("status", "==", "present").get();
             presentStudents = presentSnapshot.size;
-
             absentStudents = totalStudents - presentStudents;
 
             const sessionDocRef = db.collection("attendance")
@@ -689,7 +743,11 @@
             await sessionDocRef.update({
                 totalStudents: totalStudents,
                 presentStudents: presentStudents,
-                absentStudents: absentStudents
+                absentStudents: absentStudents,
+                group: sessionGroup,
+                extraStudents: extraStudents,
+                sessionType: sessionType,
+                startTime: sessionStartTime
             });
         }
 
@@ -725,6 +783,90 @@
                 setTimeout(() => {
                     document.body.removeChild(particle);
                 }, animationDuration * 1000);
+            }
+        }
+
+        async function loadDailySubjects(date) {
+            const dailySubjectsDiv = document.getElementById('dailySubjects');
+            dailySubjectsDiv.innerHTML = '<div class="loading">Loading...</div>';
+            
+            const selectedDate = new Date(date);
+            const dayOfWeek = selectedDate.toLocaleDateString('en-US', { weekday: 'long' });
+            
+            const lectureID = sessionStorage.getItem('lectureID');
+            const db = firebase.firestore();
+            
+            const coursesSnapshot = await db.collection("course")
+                .where("subjectExpiry", ">", new Date())
+                .get();
+
+            let subjectsHTML = '';
+            
+            for (const courseDoc of coursesSnapshot.docs) {
+                const courseId = courseDoc.id;
+                const subjectsRef = db.collection("course").doc(courseId).collection("subject");
+                const subjectsSnapshot = await subjectsRef.get();
+
+                for (const subjectDoc of subjectsSnapshot.docs) {
+                    const subjectData = subjectDoc.data();
+                    const hasSessionToday = subjectData.sessions?.some(s => 
+                        s.day === dayOfWeek && 
+                        s.lectureID === lectureID
+                    );
+
+                    if (hasSessionToday) {
+                        subjectsHTML += `
+                            <div class="daily-subject" 
+                                 onclick="loadSubjectForDate('${courseId}', '${subjectDoc.id}', '${date}')">
+                                ${courseId} - ${subjectData.name}
+                            </div>
+                        `;
+                    }
+                }
+            }
+            
+            dailySubjectsDiv.innerHTML = subjectsHTML || '<div>No classes scheduled for this day</div>';
+        }
+
+        document.getElementById('calendarDate').addEventListener('change', async (e) => {
+            await loadDailySubjects(e.target.value);
+            
+            const subjectSelect = document.getElementById('subject');
+            if (subjectSelect.value) {
+                await displaySchedule();
+                confirmSelection();
+            }
+        });
+
+        window.addEventListener('load', () => {
+            const today = new Date().toISOString().split('T')[0];
+            loadDailySubjects(today);
+        });
+
+        async function loadSubjectForDate(courseId, subjectId, date) {
+            const subjectRef = db.collection("course").doc(courseId).collection("subject").doc(subjectId);
+            const subjectDoc = await subjectRef.get();
+            
+            if (subjectDoc.exists) {
+                document.getElementById('subject').value = `${courseId}+${subjectId}`;
+                
+                document.getElementById('calendarDate').value = date;
+                
+                await displaySchedule();
+                
+                const sessionTimeSelect = document.getElementById('sessionTime');
+                const options = sessionTimeSelect.options;
+                
+                const targetDate = new Date(date).toISOString().split('T')[0];
+                for(let i = 0; i < options.length; i++) {
+                    const optionDate = options[i].value.split('|')[0];
+                    if(optionDate === targetDate) {
+                        sessionTimeSelect.value = options[i].value;
+                        break;
+                    }
+                }
+                
+                confirmSelection();
             }
         }
 
