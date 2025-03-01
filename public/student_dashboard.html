@@ -424,25 +424,37 @@ document.getElementById("absenceForm").addEventListener("submit", async (event) 
         const CLIENT_ID = "REMOVED";
         const API_KEY = "REMOVED";
         const DISCOVERY_DOCS = ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"];
-        const SCOPES = "https://www.googleapis.com/auth/drive.file";
+        const SCOPES = "https://www.googleapis.com/auth/drive";
 
         let accessToken = "";
         
-
-        // 触发 Google 登录授权
-        function authenticate() {
+        function loadGapiClient() {
             return new Promise((resolve) => {
-                const tokenClient = google.accounts.oauth2.initTokenClient({
-                    client_id: CLIENT_ID,
-                    scope: SCOPES,
-                    callback: (tokenResponse) => {
-                        accessToken = tokenResponse.access_token;
-                        resolve();
-                    },
+                gapi.load("client", async () => {
+                    await gapi.client.init({
+                        apiKey: API_KEY,
+                        discoveryDocs: DISCOVERY_DOCS,
+                    });
+                    resolve();
                 });
-                tokenClient.requestAccessToken();
             });
         }
+
+        // 触发 Google 登录授权
+        async function authenticate() {
+    await loadGapiClient();
+    return new Promise((resolve) => {
+        const tokenClient = google.accounts.oauth2.initTokenClient({
+            client_id: CLIENT_ID,
+            scope: SCOPES,
+            callback: (tokenResponse) => {
+                accessToken = tokenResponse.access_token;
+                resolve();
+            },
+        });
+        tokenClient.requestAccessToken();
+    });
+}
 
  
     //     async function uploadFileToDrive(file) {
