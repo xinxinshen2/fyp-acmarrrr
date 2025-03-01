@@ -169,6 +169,12 @@ document.getElementById("absenceForm").addEventListener("submit", async (event) 
     const fileInput = document.getElementById("fileInput");
     if (fileInput.files.length > 0) {
         fileLink = await window.uploadFile();
+        // 如果上传失败，fileLink将是空字符串
+        if (!fileLink) {
+            console.log("文件上传失败或被取消");
+            // 可以选择在这里中断表单提交，或者继续但不包含文件链接
+            // return; // 取消提交
+        }
     }
 
     const startDate = document.getElementById("startDate").value;
@@ -209,7 +215,9 @@ document.getElementById("absenceForm").addEventListener("submit", async (event) 
             startTime,
             type,
             // 构建与attendance系统兼容的sessionId
-            sessionId: `${date}_${startTime}_${type}_${group}`
+            sessionId: `${date}_${startTime}_${type}_${group}`,
+            // 为每个会话添加初始状态
+            status: "pending"
         });
     });
 
@@ -217,16 +225,19 @@ document.getElementById("absenceForm").addEventListener("submit", async (event) 
     const formData = {
         studentId: studentID,
         name: fullName,
-        email: email,
         startDate: startDate,
         endDate: endDate,
         reason: reason,
         comments: comments,
-        file: fileLink,
         status: "pending",
         submittedAt: new Date(),
         missedSessions: missedSessions
     };
+    
+    // 只有当文件链接存在时才添加到formData中
+    if (fileLink) {
+        formData.file = fileLink;
+    }
 
     // 指定要更新的 Firestore 文档路径：absence/DIIT2308/G1/23083140
     const pathString = `absence/${courseCode}/${group}/${studentID}`;
@@ -266,18 +277,28 @@ document.getElementById("absenceForm").addEventListener("submit", async (event) 
                 if (matchingSession && matchingSession.lectureID) {
                     // 创建教师通知
                     const notificationRef = doc(db, "notifications", matchingSession.lectureID);
+                    
+                    // 创建通知对象
+                    const notificationData = {
+                        studentId: studentID,
+                        studentName: fullName,
+                        courseCode: session.courseCode,
+                        subjectId: session.subjectId,
+                        date: session.date,
+                        sessionId: session.sessionId,
+                        reason: reason,
+                        status: "pending",  // 初始状态为pending
+                        submittedAt: new Date()
+                    };
+                    
+                    // 只有当文件链接存在时才添加到通知中
+                    if (fileLink) {
+                        notificationData.file = fileLink;
+                    }
+                    
+                    // 添加通知
                     await setDoc(notificationRef, {
-                        absenceRequests: arrayUnion({
-                            studentId: studentID,
-                            studentName: fullName,
-                            courseCode: session.courseCode,
-                            subjectId: session.subjectId,
-                            date: session.date,
-                            sessionId: session.sessionId,
-                            reason: reason,
-                            status: "pending",
-                            submittedAt: new Date()
-                        })
+                        absenceRequests: arrayUnion(notificationData)
                     }, { merge: true });
                 }
             }

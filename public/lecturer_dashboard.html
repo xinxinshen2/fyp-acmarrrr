@@ -396,6 +396,78 @@
             padding-bottom: 10px;
             border-bottom: 2px solid rgba(255, 255, 255, 0.3);
         }
+
+        /* 缺席类型选择样式 */
+        .absence-type-selection {
+            margin: 15px 0;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            border-left: 4px solid #4f46e5;
+        }
+
+        .absence-types {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .absence-types label {
+            display: flex;
+            align-items: flex-start;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+
+        .absence-types label:hover {
+            background-color: #f0f0f0;
+        }
+
+        .absence-types input[type="radio"] {
+            margin-right: 10px;
+            margin-top: 3px;
+        }
+
+        .type-desc {
+            font-size: 0.85rem;
+            color: #666;
+            margin-left: 5px;
+        }
+
+        .sessions-list {
+            list-style-type: none;
+            padding-left: 10px;
+            margin: 10px 0;
+        }
+
+        .sessions-list li {
+            margin: 8px 0;
+            display: flex;
+            align-items: center;
+        }
+
+        .sessions-list input[type="checkbox"] {
+            margin-right: 10px;
+        }
+
+        .confirm-approve-btn {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        .confirm-approve-btn:hover {
+            filter: brightness(1.1);
+            transform: translateY(-2px);
+        }
     </style>
 
     <script type="module">
@@ -502,26 +574,80 @@
                     return;
                 }
                 
+                // 按学生ID分组请求
+                const requestsByStudent = {};
+                pendingRequests.forEach(request => {
+                    if (!requestsByStudent[request.studentId]) {
+                        requestsByStudent[request.studentId] = [];
+                    }
+                    requestsByStudent[request.studentId].push(request);
+                });
+                
                 let requestsHTML = '<div class="requests-list">';
                 
-                for (const request of pendingRequests) {
-                    const submittedDate = request.submittedAt ? new Date(request.submittedAt.toDate()).toLocaleString() : 'Unknown date';
+                // 遍历每个学生的请求
+                for (const [studentId, requests] of Object.entries(requestsByStudent)) {
+                    // 使用第一个请求获取学生信息
+                    const firstRequest = requests[0];
+                    const submittedDate = firstRequest.submittedAt ? new Date(firstRequest.submittedAt.toDate()).toLocaleString() : 'Unknown date';
                     
                     requestsHTML += `
                         <div class="request-card">
                             <div class="request-header">
-                                <h3>${request.studentName} (${request.studentId})</h3>
+                                <h3>${firstRequest.studentName} (${firstRequest.studentId})</h3>
                                 <span class="request-date">Submitted: ${submittedDate}</span>
                             </div>
                             <div class="request-details">
-                                <p><strong>Course:</strong> ${request.courseCode}</p>
-                                <p><strong>Subject:</strong> ${request.subjectId}</p>
-                                <p><strong>Date:</strong> ${request.date}</p>
-                                <p><strong>Reason:</strong> ${request.reason}</p>
+                                <p><strong>Reason:</strong> ${firstRequest.reason}</p>
+                                ${firstRequest.file ? `<p><strong>Supporting Document:</strong> <a href="${firstRequest.file}" target="_blank">View Document</a></p>` : ''}
+                                <p><strong>Affected Sessions:</strong></p>
+                                <ul class="sessions-list">
+                    `;
+                    
+                    // 列出所有受影响的课程
+                    requests.forEach(request => {
+                        requestsHTML += `
+                            <li>
+                                <input type="checkbox" class="session-checkbox" 
+                                       data-student="${request.studentId}" 
+                                       data-course="${request.courseCode}" 
+                                       data-subject="${request.subjectId}" 
+                                       data-session="${request.sessionId}" 
+                                       data-reason="${request.reason}" 
+                                       checked>
+                                ${request.date}: ${request.courseCode} - ${request.subjectId}
+                            </li>
+                        `;
+                    });
+                    
+                    requestsHTML += `
+                                </ul>
+                            </div>
+                            <div class="absence-type-selection" style="display:none;">
+                                <p><strong>Select Absence Type:</strong></p>
+                                <div class="absence-types">
+                                    <label>
+                                        <input type="radio" name="absenceType_${studentId}" value="MC" checked> 
+                                        MC <span class="type-desc">(Medical Certificate - Student was ill and has medical proof)</span>
+                                    </label>
+                                    <label>
+                                        <input type="radio" name="absenceType_${studentId}" value="FE"> 
+                                        FE <span class="type-desc">(Family Emergency - Student had an urgent family matter)</span>
+                                    </label>
+                                    <label>
+                                        <input type="radio" name="absenceType_${studentId}" value="PA"> 
+                                        PA <span class="type-desc">(Pre-Approved - Student's absence was approved in advance)</span>
+                                    </label>
+                                    <label>
+                                        <input type="radio" name="absenceType_${studentId}" value="MH"> 
+                                        MH <span class="type-desc">(Mental Health - Student needed a mental health day)</span>
+                                    </label>
+                                </div>
                             </div>
                             <div class="request-actions">
-                                <button class="approve-btn" onclick="approveAbsence('${request.studentId}', '${request.courseCode}', '${request.subjectId}', '${request.sessionId}', '${request.reason}')">Approve</button>
-                                <button class="reject-btn" onclick="rejectAbsence('${request.studentId}', '${request.courseCode}', '${request.subjectId}', '${request.sessionId}')">Reject</button>
+                                <button class="approve-all-btn" onclick="showAbsenceTypeSelection('${studentId}')">Approve All</button>
+                                <button class="confirm-approve-btn" style="display:none;" onclick="approveAllAbsences('${studentId}')">Confirm Approval</button>
+                                <button class="reject-all-btn" onclick="rejectAllAbsences('${studentId}')">Reject All</button>
                             </div>
                         </div>
                     `;
@@ -776,68 +902,101 @@
             loadAbsenceRequests(); // 加载缺席申请
         });
     });
-    </script>
 
-    <!-- 添加全局函数用于批准/拒绝缺席申请 -->
-    <script>
-        // 批准缺席申请
-        async function approveAbsence(studentId, courseCode, subjectId, sessionId, reason) {
-            try {
-                const lectureID = sessionStorage.getItem('lectureID');
-                const db = firebase.firestore();
-                
-                // 1. 更新通知状态
-                const notificationRef = db.collection("notifications").doc(lectureID);
-                const notificationDoc = await notificationRef.get();
-                
-                if (notificationDoc.exists()) {
-                    const absenceRequests = notificationDoc.data().absenceRequests || [];
-                    const updatedRequests = absenceRequests.map(req => {
-                        if (req.studentId === studentId && 
-                            req.courseCode === courseCode && 
-                            req.subjectId === subjectId && 
-                            req.sessionId === sessionId) {
-                            return { ...req, status: "approved" };
+    // 显示缺席类型选择
+    window.showAbsenceTypeSelection = function(studentId) {
+        const card = document.querySelector(`.request-card:has(h3:contains('${studentId}'))`);
+        if (card) {
+            card.querySelector('.absence-type-selection').style.display = 'block';
+            card.querySelector('.approve-all-btn').style.display = 'none';
+            card.querySelector('.confirm-approve-btn').style.display = 'inline-block';
+        }
+    }
+
+    // 批准所有缺席申请
+    window.approveAllAbsences = async function(studentId) {
+        try {
+            const lectureID = sessionStorage.getItem('lectureID');
+            
+            // 获取选中的缺席类型
+            const absenceTypeValue = document.querySelector(`input[name="absenceType_${studentId}"]:checked`).value;
+            const absenceTypeMap = {
+                'MC': 'Medical Certificate - Student was ill and has medical proof',
+                'FE': 'Family Emergency - Student had an urgent family matter',
+                'PA': 'Pre-Approved - Student\'s absence was approved in advance',
+                'MH': 'Mental Health - Student needed a mental health day'
+            };
+            const absenceTypeText = `${absenceTypeValue}: ${absenceTypeMap[absenceTypeValue]}`;
+            
+            // 获取所有选中的会话
+            const checkboxes = document.querySelectorAll(`.session-checkbox[data-student="${studentId}"]:checked`);
+            
+            if (checkboxes.length === 0) {
+                alert("No sessions selected");
+                return;
+            }
+            
+            // 1. 更新通知状态
+            const notificationRef = doc(db, "notifications", lectureID);
+            const notificationDoc = await getDoc(notificationRef);
+            
+            if (notificationDoc.exists()) {
+                const absenceRequests = notificationDoc.data().absenceRequests || [];
+                const updatedRequests = absenceRequests.map(req => {
+                    if (req.studentId === studentId && req.status === "pending") {
+                        // 检查这个请求是否在选中的会话中
+                        const isSelected = Array.from(checkboxes).some(checkbox => 
+                            checkbox.dataset.student === req.studentId &&
+                            checkbox.dataset.course === req.courseCode &&
+                            checkbox.dataset.subject === req.subjectId &&
+                            checkbox.dataset.session === req.sessionId
+                        );
+                        
+                        if (isSelected) {
+                            return { ...req, status: "approved", absenceType: absenceTypeValue };
                         }
-                        return req;
-                    });
-                    
-                    await notificationRef.update({ absenceRequests: updatedRequests });
-                }
+                    }
+                    return req;
+                });
                 
-                // 2. 在attendance中标记为缺席但有理由
-                const [date, startTime, type, group] = sessionId.split('_');
-                const attendanceRef = db.collection("attendance")
-                    .doc(courseCode)
-                    .collection(subjectId)
-                    .doc(sessionId)
-                    .collection("students")
-                    .doc(studentId);
+                await updateDoc(notificationRef, { absenceRequests: updatedRequests });
+            }
+            
+            // 2. 为每个选中的会话创建缺席记录
+            for (const checkbox of checkboxes) {
+                const { course, subject, session, reason } = checkbox.dataset;
+                const [date, startTime, type, group] = session.split('_');
                 
-                await attendanceRef.set({
+                // 在attendance中标记为缺席但有理由
+                const attendanceRef = doc(db, "attendance", course, subject, session, "students", studentId);
+                
+                await setDoc(attendanceRef, {
                     status: "absent",
                     excused: true,
                     reason: reason,
+                    absenceType: absenceTypeValue,
+                    absenceTypeText: absenceTypeText,
                     approvedBy: lectureID,
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                    timestamp: new Date()
                 });
                 
                 // 3. 更新学生的缺席申请状态
-                const absenceRef = db.collection("absence")
-                    .doc(courseCode)
-                    .collection(group)
-                    .doc(studentId);
-                    
-                const absenceDoc = await absenceRef.get();
+                const absenceRef = doc(db, "absence", course, group, studentId);
+                const absenceDoc = await getDoc(absenceRef);
                 
                 if (absenceDoc.exists()) {
                     const forms = absenceDoc.data().Form || [];
                     const updatedForms = forms.map(form => {
-                        const updatedSessions = (form.missedSessions || []).map(session => {
-                            if (session.sessionId === sessionId) {
-                                return { ...session, status: "approved" };
+                        const updatedSessions = (form.missedSessions || []).map(s => {
+                            if (s.sessionId === session) {
+                                return { 
+                                    ...s, 
+                                    status: "approved", 
+                                    absenceType: absenceTypeValue,
+                                    absenceTypeText: absenceTypeText
+                                };
                             }
-                            return session;
+                            return s;
                         });
                         
                         // 检查是否所有session都已处理
@@ -850,61 +1009,79 @@
                         };
                     });
                     
-                    await absenceRef.update({ Form: updatedForms });
+                    await updateDoc(absenceRef, { Form: updatedForms });
                 }
-                
-                alert("缺席申请已批准");
-                loadAbsenceRequests(); // 重新加载列表
-                loadAbsenceStatistics(); // 更新统计数据
-                
-            } catch (error) {
-                console.error("Error approving absence:", error);
-                alert("Error: " + error.message);
             }
+            
+            alert("缺席申请已批准");
+            loadAbsenceRequests(); // 重新加载列表
+            loadAbsenceStatistics(); // 更新统计数据
+            
+        } catch (error) {
+            console.error("Error approving absences:", error);
+            alert("Error: " + error.message);
         }
+    }
 
-        // 拒绝缺席申请
-        async function rejectAbsence(studentId, courseCode, subjectId, sessionId) {
-            try {
-                const lectureID = sessionStorage.getItem('lectureID');
-                const db = firebase.firestore();
-                
-                // 1. 更新通知状态
-                const notificationRef = db.collection("notifications").doc(lectureID);
-                const notificationDoc = await notificationRef.get();
-                
-                if (notificationDoc.exists()) {
-                    const absenceRequests = notificationDoc.data().absenceRequests || [];
-                    const updatedRequests = absenceRequests.map(req => {
-                        if (req.studentId === studentId && 
-                            req.courseCode === courseCode && 
-                            req.subjectId === subjectId && 
-                            req.sessionId === sessionId) {
+    // 拒绝所有缺席申请
+    window.rejectAllAbsences = async function(studentId) {
+        if (!confirm("Are you sure you want to reject all absence requests from this student?")) {
+            return;
+        }
+        
+        try {
+            const lectureID = sessionStorage.getItem('lectureID');
+            
+            // 获取所有选中的会话
+            const checkboxes = document.querySelectorAll(`.session-checkbox[data-student="${studentId}"]:checked`);
+            
+            if (checkboxes.length === 0) {
+                alert("No sessions selected");
+                return;
+            }
+            
+            // 1. 更新通知状态
+            const notificationRef = doc(db, "notifications", lectureID);
+            const notificationDoc = await getDoc(notificationRef);
+            
+            if (notificationDoc.exists()) {
+                const absenceRequests = notificationDoc.data().absenceRequests || [];
+                const updatedRequests = absenceRequests.map(req => {
+                    if (req.studentId === studentId && req.status === "pending") {
+                        // 检查这个请求是否在选中的会话中
+                        const isSelected = Array.from(checkboxes).some(checkbox => 
+                            checkbox.dataset.student === req.studentId &&
+                            checkbox.dataset.course === req.courseCode &&
+                            checkbox.dataset.subject === req.subjectId &&
+                            checkbox.dataset.session === req.sessionId
+                        );
+                        
+                        if (isSelected) {
                             return { ...req, status: "rejected" };
                         }
-                        return req;
-                    });
-                    
-                    await notificationRef.update({ absenceRequests: updatedRequests });
-                }
+                    }
+                    return req;
+                });
                 
-                // 2. 更新学生的缺席申请状态
-                const [date, startTime, type, group] = sessionId.split('_');
-                const absenceRef = db.collection("absence")
-                    .doc(courseCode)
-                    .collection(group)
-                    .doc(studentId);
-                    
-                const absenceDoc = await absenceRef.get();
+                await updateDoc(notificationRef, { absenceRequests: updatedRequests });
+            }
+            
+            // 2. 更新学生的缺席申请状态
+            for (const checkbox of checkboxes) {
+                const { course, subject, session } = checkbox.dataset;
+                const [date, startTime, type, group] = session.split('_');
+                
+                const absenceRef = doc(db, "absence", course, group, studentId);
+                const absenceDoc = await getDoc(absenceRef);
                 
                 if (absenceDoc.exists()) {
                     const forms = absenceDoc.data().Form || [];
                     const updatedForms = forms.map(form => {
-                        const updatedSessions = (form.missedSessions || []).map(session => {
-                            if (session.sessionId === sessionId) {
-                                return { ...session, status: "rejected" };
+                        const updatedSessions = (form.missedSessions || []).map(s => {
+                            if (s.sessionId === session) {
+                                return { ...s, status: "rejected" };
                             }
-                            return session;
+                            return s;
                         });
                         
                         // 检查是否所有session都已处理
@@ -917,18 +1094,19 @@
                         };
                     });
                     
-                    await absenceRef.update({ Form: updatedForms });
+                    await updateDoc(absenceRef, { Form: updatedForms });
                 }
-                
-                alert("缺席申请已拒绝");
-                loadAbsenceRequests(); // 重新加载列表
-                loadAbsenceStatistics(); // 更新统计数据
-                
-            } catch (error) {
-                console.error("Error rejecting absence:", error);
-                alert("Error: " + error.message);
             }
+            
+            alert("缺席申请已拒绝");
+            loadAbsenceRequests(); // 重新加载列表
+            loadAbsenceStatistics(); // 更新统计数据
+            
+        } catch (error) {
+            console.error("Error rejecting absences:", error);
+            alert("Error: " + error.message);
         }
+    }
     </script>
 </head>
 <body>
