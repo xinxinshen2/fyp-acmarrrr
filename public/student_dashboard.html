@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard</title>
+    <link rel="stylesheet" href="studentdashboard-style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="https://apis.google.com/js/api.js"></script>
+    <style>
+        .affected-courses-container {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .instruction {
+            color: #666;
+            text-align: center;
+            font-style: italic;
+        }
+        
+        .instruction.error {
+            color: #f44336;
+        }
+        
+        .affected-course {
+            margin-bottom: 15px;
+        }
+        
+        .affected-course h4 {
+            margin: 0 0 5px 0;
+            color: #333;
+        }
+        
+        .affected-course ul {
+            list-style-type: none;
+            padding-left: 10px;
+        }
+        
+        .affected-course li {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navigation Bar -->
+    <nav>
+        <div class="header nav1">
+            <div class="title">
+                <h2>Advanced Attendance System</h2>
+                <h2 class="welcome">Welcome, <span id="username"></span></h2>
+            </div>
+
+            <div class="logout-container">
+                <button class="logout" id="logoutButton">Logout</button>
+                <svg class="progress-ring" width="100" height="50">
+                    <rect class="progress-ring-rect" x="7" y="2.7" width="86" height="45.5" rx="13" ry="13" stroke="#ff4b5c" stroke-width="3" fill="transparent" />
+                </svg>
+            </div>
+        </div>
+
+        <div class="header nav2">
+            <div class="nav-btn"> <p> Home  </p> </div>
+            <div class="nav-btn"> <p> Absence Form  </p> </div>
+            <div class="nav-btn"> <p> Data Analysis </p> </div>
+            <div class="nav-btn"> <p> Timetable  </p> </div>
+            <div class="nav-btn"> <p> Setting  </p> </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="homeSpace">
+        
+    </div>
+
+    <div class="dataSpace" style="display: none;">
+        <h2>Data Analysis</h2>
+    </div>
+
+    <div class="functionSpace" style="display: none;">
+        <h2>User Management</h2>
+    </div>
+
+    <div class="absenceFormSpace" style="display: none;">
+        <h2>Absence Request Form</h2>
+        <p>Please fill out this form to request an absence from school.</p>
+        <form id="absenceForm">
+
+            <div class="form-group">
+                <div class="input-row">
+                    <div>
+                        <label for="startDate">Start Date of Absence</label>
+                        <input type="date" id="startDate" required>
+                    </div>
+                    <div>
+                        <label for="endDate">End Date of Absence</label>
+                        <input type="date" id="endDate" required>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="affectedCourses">Affected Courses</label>
+                <div id="affectedCourses" class="affected-courses-container">
+                    <p class="instruction">Please select dates to see affected courses</p>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="reason">Reason for Absence</label>
+                <input type="text" id="reason" placeholder="Reason for absence" required>
+            </div>
+
+            <div class="form-group">
+                <label for="comments">Additional Comments</label>
+                <textarea id="comments" rows="4" placeholder="Optional"></textarea>
+            </div>
+
+         
+            
+            <div class="form-group">
+                <input type="file" id="fileInput" accept=".pdf,.doc,.docx,.jpg,.png">
+            </div>
+        
+            <div class="form-group">
+                <button id="submitFormBtn" type="submit">提交</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Firebase & JavaScript -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-app.js";
+        import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-auth.js";
+        import { getFirestore, doc ,getDoc , setDoc, updateDoc, arrayUnion, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-firestore.js";
+
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "REMOVED",
+            authDomain: "advanceas-d8db4.firebaseapp.com",
+            databaseURL: "https://advanceas-d8db4-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "advanceas-d8db4",
+            storageBucket: "advanceas-d8db4.firebasestorage.app",
+            messagingSenderId: "878892786344",
+            appId: "1:878892786344:web:33bb5a97d99daf049d189d",
+            measurementId: "G-PLRRKT6RWW"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+
+
+
+
+
+document.getElementById("absenceForm").addEventListener("submit", async (event) => {
+    event.preventDefault();  // 阻止页面刷新
+
+    let fileLink = "";
+    const fileInput = document.getElementById("fileInput");
+    if (fileInput.files.length > 0) {
+        fileLink = await window.uploadFile();
+    }
+
+    const startDate = document.getElementById("startDate").value;
+    const endDate = document.getElementById("endDate").value;
+    const reason = document.getElementById("reason").value.trim();
+    const comments = document.getElementById("comments").value.trim();
+
+    // 获取学生信息
+    const studentID = sessionStorage.getItem('studentID');
+    const studentRef = doc(db, "student", studentID);
+    const studentDoc = await getDoc(studentRef);
+    if (!studentDoc.exists()) {
+        alert("学生数据未找到");
+        return;
+    }
+
+    const studentData = studentDoc.data();
+    const courseCode = studentData.course;
+    const group = studentData.group; 
+    const fullName = studentData.name;
+    const email = studentData.email;
+
+    if (!courseCode || !group) {
+        console.error("缺少课程或分组信息", { courseCode, group });
+        alert("学生数据不完整");
+        return;
+    }
+
+    // 获取选中的缺席课程
+    const missedSessions = [];
+    const checkboxes = document.querySelectorAll('input[name="missedSession"]:checked');
+    checkboxes.forEach(checkbox => {
+        const [courseCode, subjectId, date, startTime, type] = checkbox.value.split('|');
+        missedSessions.push({
+            courseCode,
+            subjectId,
+            date,
+            startTime,
+            type,
+            // 构建与attendance系统兼容的sessionId
+            sessionId: `${date}_${startTime}_${type}_${group}`
+        });
+    });
+
+    // 构造要保存的数据对象
+    const formData = {
+        studentId: studentID,
+        name: fullName,
+        email: email,
+        startDate: startDate,
+        endDate: endDate,
+        reason: reason,
+        comments: comments,
+        file: fileLink,
+        status: "pending",
+        submittedAt: new Date(),
+        missedSessions: missedSessions
+    };
+
+    // 指定要更新的 Firestore 文档路径：absence/DIIT2308/G1/23083140
+    const pathString = `absence/${courseCode}/${group}/${studentID}`;
+    const absenceDocRef = doc(db, pathString);
+
+    try {
+        // 先获取当前文档数据
+        const docSnap = await getDoc(absenceDocRef);
+        if (docSnap.exists()) {
+            // 如果文档存在，读取已有的 Form 数组（如果不存在则初始化为空数组）
+            let currentForms = docSnap.data().Form || [];
+            // 将新的表单数据追加到数组末尾
+            currentForms.push(formData);
+            // 更新文档，保留其他字段（merge: true）
+            await setDoc(absenceDocRef, { Form: currentForms }, { merge: true });
+        } else {
+            // 文档不存在，则创建新文档并写入 Form 数组
+            await setDoc(absenceDocRef, { Form: [formData] });
+        }
+        
+        // 为每个受影响的课程创建通知
+        for (const session of missedSessions) {
+            // 获取该课程的教师ID
+            const subjectRef = doc(db, "course", session.courseCode, "subject", session.subjectId);
+            const subjectDoc = await getDoc(subjectRef);
+            
+            if (subjectDoc.exists()) {
+                const subjectData = subjectDoc.data();
+                const sessions = subjectData.sessions || [];
+                
+                // 找到匹配的session
+                const matchingSession = sessions.find(s => 
+                    s.startTime === session.startTime && 
+                    s.type === session.type
+                );
+                
+                if (matchingSession && matchingSession.lectureID) {
+                    // 创建教师通知
+                    const notificationRef = doc(db, "notifications", matchingSession.lectureID);
+                    await setDoc(notificationRef, {
+                        absenceRequests: arrayUnion({
+                            studentId: studentID,
+                            studentName: fullName,
+                            courseCode: session.courseCode,
+                            subjectId: session.subjectId,
+                            date: session.date,
+                            sessionId: session.sessionId,
+                            reason: reason,
+                            status: "pending",
+                            submittedAt: new Date()
+                        })
+                    }, { merge: true });
+                }
+            }
+        }
+        
+        alert("缺席申请已提交成功！");
+        // 重置表单
+        document.getElementById("absenceForm").reset();
+        document.getElementById("affectedCourses").innerHTML = "<p class='instruction'>Please select dates to see affected courses</p>";
+        
+    } catch (error) {
+        console.error("保存数据出错：", error);
+        alert("保存数据出错：" + error.message);
+    }
+});
+
+
+
+        async function loadStudentName() {
+            const studentID = sessionStorage.getItem('studentID');
+            if (!studentID) {
+                console.error("Student ID not found in session.");
+                window.location.href = 'login.html';
+                return;
+            }
+
+            const studentRef = doc(db, "student", studentID);
+            const studentDoc = await getDoc(studentRef);
+
+            if (studentDoc.exists()) {
+                const studentData = studentDoc.data();
+                document.getElementById('username').textContent = `${studentData.name} (${studentData.ID})`;
+            } else {
+                console.error("No such document!");
+            }
+        }
+
+        window.onload = function() {
+            loadStudentName();
+        };
+
+        // Logout function
+        window.logout = function () {
+            signOut(auth).then(() => {
+                window.location.href = "login.html";
+            }).catch(error => {
+                console.error("Error logging out:", error);
+            });
+        };
+
+        //LOGOUT HERE
+    const logoutButton = document.getElementById("logoutButton");
+    const progressRect = document.querySelector(".progress-ring-rect");
+    let pressTimer;
+    let progressInterval;
+
+    const startProgress = () => {
+        let time = 0;
+        const totalTime = 3000; 
+        const circumference = 284; // 矩形周长 (2 * (width + height) - 8 * rx)
+
+        progressInterval = setInterval(() => {
+            time += 10; // Update every 10ms
+            const progress = (time / totalTime) * circumference;
+            progressRect.style.strokeDashoffset = circumference - progress;
+
+            if (time >= totalTime) {
+                clearInterval(progressInterval);
+                logout(); 
+            }
+        }, 10);
+    };
+
+    const resetProgress = () => {
+        clearInterval(progressInterval);
+        progressRect.style.strokeDashoffset = 284; 
+    };
+
+
+    logoutButton.addEventListener("mousedown", startProgress);
+    logoutButton.addEventListener("mouseup", resetProgress);
+    logoutButton.addEventListener("mouseleave", resetProgress);
+
+
+    logoutButton.addEventListener("touchstart", startProgress);
+    logoutButton.addEventListener("touchend", resetProgress);
+
+
+
+
+        // Navigation Handling
+        document.addEventListener("DOMContentLoaded", function () {
+            const homeBtn = document.querySelector(".nav-btn:nth-child(1)");
+            const absenceFormBtn = document.querySelector(".nav-btn:nth-child(2)");
+            const dataAnalysisBtn = document.querySelector(".nav-btn:nth-child(3)");
+
+            const homeSpace = document.querySelector(".homeSpace");
+            const dataSpace = document.querySelector(".dataSpace");
+            const functionSpace = document.querySelector(".functionSpace");
+            const absenceFormSpace = document.querySelector(".absenceFormSpace");
+
+            homeSpace.style.display = "block";
+            dataSpace.style.display = "none";
+            functionSpace.style.display = "none";
+            absenceFormSpace.style.display = "block";
+
+            absenceFormBtn.addEventListener("click", function () {
+                homeSpace.style.display = "none";
+                dataSpace.style.display = "none";
+                functionSpace.style.display = "none";
+                absenceFormSpace.style.display = "block";
+            });
+
+            dataAnalysisBtn.addEventListener("click", function () {
+                homeSpace.style.display = "none";
+                dataSpace.style.display = "block";
+                functionSpace.style.display = "none";
+                absenceFormSpace.style.display = "none";
+            });
+
+            homeBtn.addEventListener("click", function () {
+                homeSpace.style.display = "block";
+                functionSpace.style.display = "none";
+                dataSpace.style.display = "none";
+                absenceFormSpace.style.display = "none";
+            });
+        });
+
+
+
+        //GOOGLE DRIVE UPLOAD
+        document.addEventListener("DOMContentLoaded", function () {
+    const uploadButton = document.getElementById("submitFormBtn"); // Use a specific ID for the button
+    if (uploadButton) {
+        uploadButton.addEventListener("submit", function (event) {
+            event.preventDefault(); // Prevent form submission
+            uploadFile(file);
+            // uploadFile(file);
+        });
+    }
+});
+
+
+        const CLIENT_ID = "REMOVED";
+        const API_KEY = "REMOVED";
+        const DISCOVERY_DOCS = ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"];
+        const SCOPES = "https://www.googleapis.com/auth/drive.file";
+
+        let accessToken = "";
+        
+
+        // 触发 Google 登录授权
+        function authenticate() {
+            return new Promise((resolve) => {
+                const tokenClient = google.accounts.oauth2.initTokenClient({
+                    client_id: CLIENT_ID,
+                    scope: SCOPES,
+                    callback: (tokenResponse) => {
+                        accessToken = tokenResponse.access_token;
+                        resolve();
+                    },
+                });
+                tokenClient.requestAccessToken();
+            });
+        }
+
+ 
+    //     async function uploadFileToDrive(file) {
+    // // 这里写上传代码，上传成功后返回文件链接（URL）
+    // // 示例代码仅返回占位符链接：
+    //      return "https://drive.google.com/file/d/REMOVED/view?usp=sharing";
+    //     }
+        // 上传文件到 Google Drive
+// Upload file to Google Drive event
+window.uploadFile = async function () { 
+    // Ensure it's accessible globally
+    // event.preventDefault(); 
+    // Fix: Pass event to prevent default form submission
+    // alert("uploadFile function called!");
+
+    const fileInput = document.getElementById("fileInput");
+    if (!fileInput.files.length) {
+        alert("请选择文件");
+        return;
+    }
+
+    // 获取学生 ID
+    const studentID = sessionStorage.getItem("studentID");
+    if (!studentID) {
+        alert("未找到学生 ID，请先登录");
+        return;
+    }
+
+    // ✅ 获取 Firebase 学生数据
+    const studentRef = doc(db, "student", studentID);
+    const studentDoc = await getDoc(studentRef);
+
+    if (!studentDoc.exists()) {
+        alert("学生数据未找到");
+        return;
+    }
+
+    const studentData = studentDoc.data();
+    const course = studentData.course || "UNKNOWN_COURSE";
+    const studentName = studentData.name || "UNKNOWN_NAME";
+
+    // ✅ 生成文件名
+    const today = new Date().toISOString().split("T")[0]; // 获取 YYYY-MM-DD 格式
+    const file = fileInput.files[0];
+    const fileName = `${course}_${studentName}_${studentID}_${today}.${file.name.split('.').pop()}`;
+
+    // ✅ 先获取 Google Drive 授权
+    await authenticate();
+
+    // ✅ 创建文件元数据
+    const metadata = {
+        name: fileName,
+        mimeType: file.type,
+        parents: ["REMOVED"], // 确保是一个有效的 Google Drive 文件夹 ID
+    };
+
+    // ✅ 构造表单数据
+    const formData = new FormData();
+    formData.append("metadata", new Blob([JSON.stringify(metadata)], { type: "application/json" }));
+    formData.append("file", file);
+
+    // ✅ 发送请求到 Google Drive
+    try {
+        const response = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart", {
+            method: "POST",
+            headers: new Headers({ Authorization: `Bearer ${accessToken}` }),
+            body: formData,
+        });
+
+        console.log("Response status:", response.status);
+        const result = await response.json();
+        console.log("上传成功", result);
+        
+        if (response.ok && result.id) {
+      // 构造分享链接
+      const fileLink = `https://drive.google.com/file/d/${result.id}/view?usp=sharing`;
+      alert("文件上传成功！");
+      return fileLink;
+    } else {
+      alert("文件上传失败，请重试！");
+      return "";
+    }
+
+
+    } catch (error) {
+        console.error("上传失败", error);
+        alert("文件上传失败，请重试！");
+    }
+};
+
+document.getElementById("startDate").addEventListener("change", updateAffectedCourses);
+document.getElementById("endDate").addEventListener("change", updateAffectedCourses);
+
+async function updateAffectedCourses() {
+    const startDate = document.getElementById("startDate").value;
+    const endDate = document.getElementById("endDate").value;
+    const affectedCoursesContainer = document.getElementById("affectedCourses");
+    
+    // Clear previous content
+    affectedCoursesContainer.innerHTML = "";
+    
+    // If either date is not selected, show instruction
+    if (!startDate || !endDate) {
+        affectedCoursesContainer.innerHTML = "<p class='instruction'>Please select both start and end dates</p>";
+        return;
+    }
+    
+    // If end date is before start date, show error
+    if (new Date(endDate) < new Date(startDate)) {
+        affectedCoursesContainer.innerHTML = "<p class='instruction error'>End date cannot be before start date</p>";
+        return;
+    }
+    
+    // Show loading indicator
+    affectedCoursesContainer.innerHTML = "<p class='instruction'>Loading affected courses...</p>";
+    
+    try {
+        const studentID = sessionStorage.getItem('studentID');
+        const studentRef = doc(db, "student", studentID);
+        const studentDoc = await getDoc(studentRef);
+        
+        if (!studentDoc.exists()) {
+            affectedCoursesContainer.innerHTML = "<p class='instruction error'>Student data not found</p>";
+            return;
+        }
+        
+        const studentData = studentDoc.data();
+        const courseCode = studentData.course;
+        const group = studentData.group;
+        
+        // Get all days between start and end date
+        const days = getDaysBetweenDates(startDate, endDate);
+        
+        // Get course subjects
+        const courseRef = doc(db, "course", courseCode);
+        const subjectsCollection = collection(db, "course", courseCode, "subject");
+        const subjectsSnapshot = await getDocs(subjectsCollection);
+        
+        let affectedCoursesHTML = "";
+        let hasAffectedCourses = false;
+        
+        subjectsSnapshot.forEach(subjectDoc => {
+            const subjectData = subjectDoc.data();
+            const sessions = subjectData.sessions || [];
+            
+            // Filter sessions for student's group
+            const relevantSessions = sessions.filter(session => 
+                session.group === group || session.group === 'all'
+            );
+            
+            // Check if any session falls within the selected date range
+            const affectedSessions = relevantSessions.filter(session => {
+                const sessionDay = session.day;
+                return days.some(day => 
+                    day.toLocaleDateString('en-US', { weekday: 'long' }) === sessionDay
+                );
+            });
+            
+            if (affectedSessions.length > 0) {
+                hasAffectedCourses = true;
+                
+                affectedCoursesHTML += `
+                    <div class="affected-course">
+                        <h4>${subjectData.name}</h4>
+                        <ul>
+                `;
+                
+                affectedSessions.forEach(session => {
+                    // Find which dates this session occurs on
+                    const sessionDates = days.filter(day => 
+                        day.toLocaleDateString('en-US', { weekday: 'long' }) === session.day
+                    ).map(day => day.toISOString().split('T')[0]);
+                    
+                    sessionDates.forEach(date => {
+                        affectedCoursesHTML += `
+                            <li>
+                                <input type="checkbox" name="missedSession" value="${courseCode}|${subjectDoc.id}|${date}|${session.startTime}|${session.type}" checked>
+                                ${date} (${session.day}): ${session.startTime}-${session.endTime} (${session.type})
+                            </li>
+                        `;
+                    });
+                });
+                
+                affectedCoursesHTML += `
+                        </ul>
+                    </div>
+                `;
+            }
+        });
+        
+        if (hasAffectedCourses) {
+            affectedCoursesContainer.innerHTML = affectedCoursesHTML;
+        } else {
+            affectedCoursesContainer.innerHTML = "<p class='instruction'>No courses affected during this period</p>";
+        }
+        
+    } catch (error) {
+        console.error("Error fetching affected courses:", error);
+        affectedCoursesContainer.innerHTML = `<p class='instruction error'>Error: ${error.message}</p>`;
+    }
+}
+
+// Helper function to get all days between two dates
+function getDaysBetweenDates(startDate, endDate) {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const days = [];
+    
+    // Set time to noon to avoid timezone issues
+    start.setHours(12, 0, 0, 0);
+    end.setHours(12, 0, 0, 0);
+    
+    // Clone start date
+    let current = new Date(start);
+    
+    // Loop through all days
+    while (current <= end) {
+        days.push(new Date(current));
+        current.setDate(current.getDate() + 1);
+    }
+    
+    return days;
+}
+
+// Update the form submission to include affected courses
+document.getElementById("absenceForm").addEventListener("submit", async (event) => {
+    // ... existing code ...
+    
+    // Get selected missed sessions
+    const missedSessions = [];
+    const checkboxes = document.querySelectorAll('input[name="missedSession"]:checked');
+    checkboxes.forEach(checkbox => {
+        const [courseCode, subjectId, date, startTime, type] = checkbox.value.split('|');
+        missedSessions.push({
+            courseCode,
+            subjectId,
+            date,
+            startTime,
+            type
+        });
+    });
+    
+    // Add missed sessions to form data
+    formData.missedSessions = missedSessions;
+    
+    // ... rest of existing code ...
+});
+    </script>
+
+</body>
+</html>
