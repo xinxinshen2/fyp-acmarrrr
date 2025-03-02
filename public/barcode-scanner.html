@@ -236,15 +236,71 @@
             if (doc.data().status === "present") {
                 return { success: false, message: "Already checked in" };
             }
+            
+            // Check if there's a pending absence request
+            if (doc.data().status === "pending_absence") {
+                // This student has a pending absence request
+                // Barcode scan means they are present, so reject the absence request
+                await attendanceRef.update({
+                    status: "rejected_absence",
+                    method: "barcode_absence_rejected",
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                // Update the absence request status in the absence collection
+                try {
+                    // Get student data to find the absence document
+                    const studentRef = db.collection("student").doc(studentId);
+                    const studentDoc = await studentRef.get();
+                    if (studentDoc.exists) {
+                        const studentData = studentDoc.data();
+                        const courseCode = studentData.course;
+                        const group = studentData.group;
+                        
+                        // Find and update the absence request
+                        const absenceRef = db.collection("absence")
+                            .doc(courseCode)
+                            .collection(group)
+                            .doc(studentId);
+                        
+                        const absenceDoc = await absenceRef.get();
+                        if (absenceDoc.exists) {
+                            const forms = absenceDoc.data().Form || [];
+                            let updated = false;
+                            
+                            // Find the form with this session
+                            for (const form of forms) {
+                                for (const session of form.missedSessions || []) {
+                                    if (session.sessionId === sessionId) {
+                                        session.status = "rejected";
+                                        session.approvedAt = new Date();
+                                        updated = true;
+                                    }
+                                }
+                            }
+                            
+                            if (updated) {
+                                await absenceRef.update({ Form: forms });
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error("Error updating absence request:", error);
+                }
+                
+                await updateAttendanceCounts(courseId, subjectId, sessionId);
+                return { success: true, message: "Absence request rejected" };
+            } else {
+                // Normal attendance marking
+                await attendanceRef.update({
+                    status: "present",
+                    method: "barcode",
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
 
-            await attendanceRef.update({
-                status: "present",
-                method: "barcode",
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
-            });
-
-            await updateAttendanceCounts(courseId, subjectId, sessionId);
-            return { success: true, message: "Check-in successful" };
+                await updateAttendanceCounts(courseId, subjectId, sessionId);
+                return { success: true, message: "Check-in successful" };
+            }
         }
 
         // 更新统计方法

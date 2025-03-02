@@ -806,6 +806,22 @@
                             await setDoc(notificationRef, {
                                 absenceRequests: arrayUnion(notificationData)
                             }, { merge: true });
+                            
+                            // 检查是否已经存在该session的考勤记录
+                            const attendanceRef = doc(db, "attendance", session.courseCode, session.subjectId, session.sessionId, "students", studentID);
+                            const attendanceDoc = await getDoc(attendanceRef);
+                            
+                            // 如果考勤记录不存在，则创建一个标记为"pending_absence"的记录
+                            // 这样可以防止与其他考勤方式冲突
+                            if (!attendanceDoc.exists()) {
+                                await setDoc(attendanceRef, {
+                                    status: "pending_absence",
+                                    reason: reason,
+                                    timestamp: new Date(),
+                                    method: "absence_request",
+                                    group: group
+                                });
+                            }
                         }
                     }
                 }
@@ -1467,6 +1483,31 @@ document.getElementById("absenceForm").addEventListener("submit", async (event) 
                     const dateB = b.submittedAt.toDate ? b.submittedAt.toDate() : new Date(b.submittedAt);
                     return dateB - dateA;
                 });
+                
+                // For each form, check the actual attendance records to ensure status is up-to-date
+                for (const form of forms) {
+                    for (const session of form.missedSessions) {
+                        try {
+                            // Check the attendance record for this session
+                            const attendanceRef = doc(db, "attendance", session.courseCode, session.subjectId, session.sessionId, "students", studentID);
+                            const attendanceDoc = await getDoc(attendanceRef);
+                            
+                            if (attendanceDoc.exists()) {
+                                const attendanceData = attendanceDoc.data();
+                                // Update the session status based on the attendance record
+                                if (attendanceData.status === "approved_absence") {
+                                    session.status = "approved";
+                                    session.approvedAt = attendanceData.timestamp;
+                                } else if (attendanceData.status === "rejected_absence") {
+                                    session.status = "rejected";
+                                    session.approvedAt = attendanceData.timestamp;
+                                }
+                            }
+                        } catch (error) {
+                            console.error("Error checking attendance record:", error);
+                        }
+                    }
+                }
                 
                 // Store forms in a global variable for filtering
                 window.absenceForms = forms;
