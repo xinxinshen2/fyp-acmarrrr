@@ -411,6 +411,108 @@
                 margin-top: 160px;
             }
         }
+        
+        /* Styled Form */
+        .styled-form {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        
+        .styled-form .form-group {
+            margin-bottom: 25px;
+        }
+        
+        .styled-form label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+            font-size: 1.05em;
+        }
+        
+        .styled-form input[type="text"],
+        .styled-form textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: all 0.2s;
+        }
+        
+        .styled-form input[type="date"] {
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+            width: 100%;
+            transition: all 0.2s;
+        }
+        
+        .styled-form input:focus,
+        .styled-form textarea:focus {
+            outline: none;
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
+        }
+        
+        .styled-form .date-range .input-row {
+            display: flex;
+            gap: 20px;
+        }
+        
+        .styled-form .date-range .form-field {
+            flex: 1;
+        }
+        
+        .styled-form .file-upload {
+            background-color: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px dashed #ccc;
+        }
+        
+        .styled-form .file-input-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .styled-form .file-input-info {
+            font-size: 0.85em;
+            color: #666;
+        }
+        
+        .styled-form .file-input-info p {
+            margin: 3px 0;
+        }
+        
+        .styled-form #submitFormBtn {
+            background-color: #4f46e5;
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+        }
+        
+        .styled-form #submitFormBtn:hover {
+            background-color: #4338ca;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+        }
+        
+        .styled-form .submit-group {
+            margin-top: 35px;
+        }
     </style>
 </head>
 <body>
@@ -486,15 +588,15 @@
     <div class="absenceFormSpace" style="display: none;">
         <h2>Absence Request Form</h2>
         <p>Please fill out this form to request an absence from school.</p>
-        <form id="absenceForm">
+        <form id="absenceForm" class="styled-form">
 
-            <div class="form-group">
+            <div class="form-group date-range">
                 <div class="input-row">
-                    <div>
+                    <div class="form-field">
                         <label for="startDate">Start Date of Absence</label>
                         <input type="date" id="startDate" required>
                     </div>
-                    <div>
+                    <div class="form-field">
                         <label for="endDate">End Date of Absence</label>
                         <input type="date" id="endDate" required>
                     </div>
@@ -518,14 +620,19 @@
                 <textarea id="comments" rows="4" placeholder="Optional"></textarea>
             </div>
 
-         
-            
-            <div class="form-group">
-                <input type="file" id="fileInput" accept=".pdf,.doc,.docx,.jpg,.png">
+            <div class="form-group file-upload">
+                <label for="fileInput">Supporting Document</label>
+                <div class="file-input-container">
+                    <input type="file" id="fileInput" accept=".pdf,.doc,.docx,.jpg,.png">
+                    <div class="file-input-info">
+                        <p>Accepted formats: PDF, DOC, DOCX, JPG, PNG</p>
+                        <p>Maximum file size: 10MB</p>
+                    </div>
+                </div>
             </div>
         
-            <div class="form-group">
-                <button id="submitFormBtn" type="submit">提交</button>
+            <div class="form-group submit-group">
+                <button id="submitFormBtn" type="submit">Submit Request</button>
             </div>
         </form>
     </div>
@@ -553,173 +660,166 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
+        document.getElementById("absenceForm").addEventListener("submit", async (event) => {
+            event.preventDefault();  // 阻止页面刷新
 
-
-
-
-
-document.getElementById("absenceForm").addEventListener("submit", async (event) => {
-    event.preventDefault();  // 阻止页面刷新
-
-    let fileLink = "";
-    const fileInput = document.getElementById("fileInput");
-    if (fileInput.files.length > 0) {
-        fileLink = await window.uploadFile();
-        // 如果上传失败，fileLink将是空字符串
-        if (!fileLink) {
-            console.log("文件上传失败或被取消");
-            // 可以选择在这里中断表单提交，或者继续但不包含文件链接
-            // return; // 取消提交
-        }
-    }
-
-    const startDate = document.getElementById("startDate").value;
-    const endDate = document.getElementById("endDate").value;
-    const reason = document.getElementById("reason").value.trim();
-    const comments = document.getElementById("comments").value.trim();
-
-    // 获取学生信息
-    const studentID = sessionStorage.getItem('studentID');
-    const studentRef = doc(db, "student", studentID);
-    const studentDoc = await getDoc(studentRef);
-    if (!studentDoc.exists()) {
-        alert("学生数据未找到");
-        return;
-    }
-
-    const studentData = studentDoc.data();
-    const courseCode = studentData.course;
-    const group = studentData.group; 
-    const fullName = studentData.name;
-    const email = studentData.email;
-
-    if (!courseCode || !group) {
-        console.error("缺少课程或分组信息", { courseCode, group });
-        alert("学生数据不完整");
-        return;
-    }
-
-    // 获取选中的缺席课程
-    const missedSessions = [];
-    const checkboxes = document.querySelectorAll('input[name="missedSession"]:checked');
-    checkboxes.forEach(checkbox => {
-        const [courseCode, subjectId, date, startTime, type] = checkbox.value.split('|');
-        const subjectName = checkbox.getAttribute('data-subject-name') || '';
-        const endTime = checkbox.getAttribute('data-end-time') || '';
-        
-        missedSessions.push({
-            courseCode,
-            subjectId,
-            subjectName,  // 添加科目名称
-            date,
-            startTime,
-            endTime,      // 添加结束时间
-            type,
-            // 构建与attendance系统兼容的sessionId
-            sessionId: `${date}_${startTime}_${type}_${group}`,
-            // 为每个会话添加初始状态
-            status: "pending"
-        });
-    });
-
-    // 构造要保存的数据对象
-    const formData = {
-        studentId: studentID,
-        name: fullName,
-        startDate: startDate,
-        endDate: endDate,
-        reason: reason,
-        comments: comments,
-        status: "pending",
-        submittedAt: new Date(),
-        missedSessions: missedSessions
-    };
-    
-    // 只有当文件链接存在时才添加到formData中
-    if (fileLink) {
-        formData.file = fileLink;
-    }
-
-    // 指定要更新的 Firestore 文档路径：absence/DIIT2308/G1/23083140
-    const pathString = `absence/${courseCode}/${group}/${studentID}`;
-    const absenceDocRef = doc(db, pathString);
-
-    try {
-        // 先获取当前文档数据
-        const docSnap = await getDoc(absenceDocRef);
-        if (docSnap.exists()) {
-            // 如果文档存在，读取已有的 Form 数组（如果不存在则初始化为空数组）
-            let currentForms = docSnap.data().Form || [];
-            // 将新的表单数据追加到数组末尾
-            currentForms.push(formData);
-            // 更新文档，保留其他字段（merge: true）
-            await setDoc(absenceDocRef, { Form: currentForms }, { merge: true });
-        } else {
-            // 文档不存在，则创建新文档并写入 Form 数组
-            await setDoc(absenceDocRef, { Form: [formData] });
-        }
-        
-        // 为每个受影响的课程创建通知
-        for (const session of missedSessions) {
-            // 获取该课程的教师ID
-            const subjectRef = doc(db, "course", session.courseCode, "subject", session.subjectId);
-            const subjectDoc = await getDoc(subjectRef);
-            
-            if (subjectDoc.exists()) {
-                const subjectData = subjectDoc.data();
-                const sessions = subjectData.sessions || [];
-                
-                // 找到匹配的session
-                const matchingSession = sessions.find(s => 
-                    s.startTime === session.startTime && 
-                    s.type === session.type
-                );
-                
-                if (matchingSession && matchingSession.lectureID) {
-                    // 创建教师通知
-                    const notificationRef = doc(db, "notifications", matchingSession.lectureID);
-                    
-                    // 创建通知对象
-                    const notificationData = {
-                        studentId: studentID,
-                        studentName: fullName,
-                        courseCode: session.courseCode,
-                        subjectId: session.subjectId,
-                        subjectName: session.subjectName,  // 添加科目名称
-                        date: session.date,
-                        startTime: session.startTime,
-                        endTime: session.endTime,          // 添加结束时间
-                        sessionId: session.sessionId,
-                        reason: reason,
-                        status: "pending",  // 初始状态为pending
-                        submittedAt: new Date()
-                    };
-                    
-                    // 只有当文件链接存在时才添加到通知中
-                    if (fileLink) {
-                        notificationData.file = fileLink;
-                    }
-                    
-                    // 添加通知
-                    await setDoc(notificationRef, {
-                        absenceRequests: arrayUnion(notificationData)
-                    }, { merge: true });
+            let fileLink = "";
+            const fileInput = document.getElementById("fileInput");
+            if (fileInput.files.length > 0) {
+                fileLink = await window.uploadFile();
+                // 如果上传失败，fileLink将是空字符串
+                if (!fileLink) {
+                    console.log("文件上传失败或被取消");
+                    // 可以选择在这里中断表单提交，或者继续但不包含文件链接
+                    // return; // 取消提交
                 }
             }
-        }
-        
-        alert("缺席申请已提交成功！");
-        // 重置表单
-        document.getElementById("absenceForm").reset();
-        document.getElementById("affectedCourses").innerHTML = "<p class='instruction'>Please select dates to see affected courses</p>";
-        
-    } catch (error) {
-        console.error("保存数据出错：", error);
-        alert("保存数据出错：" + error.message);
-    }
-});
 
+            const startDate = document.getElementById("startDate").value;
+            const endDate = document.getElementById("endDate").value;
+            const reason = document.getElementById("reason").value.trim();
+            const comments = document.getElementById("comments").value.trim();
 
+            // 获取学生信息
+            const studentID = sessionStorage.getItem('studentID');
+            const studentRef = doc(db, "student", studentID);
+            const studentDoc = await getDoc(studentRef);
+            if (!studentDoc.exists()) {
+                alert("学生数据未找到");
+                return;
+            }
+
+            const studentData = studentDoc.data();
+            const courseCode = studentData.course;
+            const group = studentData.group; 
+            const fullName = studentData.name;
+            const email = studentData.email;
+
+            if (!courseCode || !group) {
+                console.error("缺少课程或分组信息", { courseCode, group });
+                alert("学生数据不完整");
+                return;
+            }
+
+            // 获取选中的缺席课程
+            const missedSessions = [];
+            const checkboxes = document.querySelectorAll('input[name="missedSession"]:checked');
+            checkboxes.forEach(checkbox => {
+                const [courseCode, subjectId, date, startTime, type] = checkbox.value.split('|');
+                const subjectName = checkbox.getAttribute('data-subject-name') || '';
+                const endTime = checkbox.getAttribute('data-end-time') || '';
+                
+                missedSessions.push({
+                    courseCode,
+                    subjectId,
+                    subjectName,  // 添加科目名称
+                    date,
+                    startTime,
+                    endTime,      // 添加结束时间
+                    type,
+                    // 构建与attendance系统兼容的sessionId
+                    sessionId: `${date}_${startTime}_${type}_${group}`,
+                    // 为每个会话添加初始状态
+                    status: "pending"
+                });
+            });
+
+            // 构造要保存的数据对象
+            const formData = {
+                studentId: studentID,
+                name: fullName,
+                startDate: startDate,
+                endDate: endDate,
+                reason: reason,
+                comments: comments,
+                status: "pending",
+                submittedAt: new Date(),
+                missedSessions: missedSessions
+            };
+            
+            // 只有当文件链接存在时才添加到formData中
+            if (fileLink) {
+                formData.file = fileLink;
+            }
+
+            // 指定要更新的 Firestore 文档路径：absence/DIIT2308/G1/23083140
+            const pathString = `absence/${courseCode}/${group}/${studentID}`;
+            const absenceDocRef = doc(db, pathString);
+
+            try {
+                // 先获取当前文档数据
+                const docSnap = await getDoc(absenceDocRef);
+                if (docSnap.exists()) {
+                    // 如果文档存在，读取已有的 Form 数组（如果不存在则初始化为空数组）
+                    let currentForms = docSnap.data().Form || [];
+                    // 将新的表单数据追加到数组末尾
+                    currentForms.push(formData);
+                    // 更新文档，保留其他字段（merge: true）
+                    await setDoc(absenceDocRef, { Form: currentForms }, { merge: true });
+                } else {
+                    // 文档不存在，则创建新文档并写入 Form 数组
+                    await setDoc(absenceDocRef, { Form: [formData] });
+                }
+                
+                // 为每个受影响的课程创建通知
+                for (const session of missedSessions) {
+                    // 获取该课程的教师ID
+                    const subjectRef = doc(db, "course", session.courseCode, "subject", session.subjectId);
+                    const subjectDoc = await getDoc(subjectRef);
+                    
+                    if (subjectDoc.exists()) {
+                        const subjectData = subjectDoc.data();
+                        const sessions = subjectData.sessions || [];
+                        
+                        // 找到匹配的session
+                        const matchingSession = sessions.find(s => 
+                            s.startTime === session.startTime && 
+                            s.type === session.type
+                        );
+                        
+                        if (matchingSession && matchingSession.lectureID) {
+                            // 创建教师通知
+                            const notificationRef = doc(db, "notifications", matchingSession.lectureID);
+                            
+                            // 创建通知对象
+                            const notificationData = {
+                                studentId: studentID,
+                                studentName: fullName,
+                                courseCode: session.courseCode,
+                                subjectId: session.subjectId,
+                                subjectName: session.subjectName,  // 添加科目名称
+                                date: session.date,
+                                startTime: session.startTime,
+                                endTime: session.endTime,          // 添加结束时间
+                                sessionId: session.sessionId,
+                                reason: reason,
+                                status: "pending",  // 初始状态为pending
+                                submittedAt: new Date()
+                            };
+                            
+                            // 只有当文件链接存在时才添加到通知中
+                            if (fileLink) {
+                                notificationData.file = fileLink;
+                            }
+                            
+                            // 添加通知
+                            await setDoc(notificationRef, {
+                                absenceRequests: arrayUnion(notificationData)
+                            }, { merge: true });
+                        }
+                    }
+                }
+                
+                alert("缺席申请已提交成功！");
+                // 重置表单
+                document.getElementById("absenceForm").reset();
+                document.getElementById("affectedCourses").innerHTML = "<p class='instruction'>Please select dates to see affected courses</p>";
+                
+            } catch (error) {
+                console.error("保存数据出错：", error);
+                alert("保存数据出错：" + error.message);
+            }
+        });
 
         async function loadStudentName() {
             const studentID = sessionStorage.getItem('studentID');
