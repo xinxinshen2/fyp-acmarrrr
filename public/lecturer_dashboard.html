@@ -656,9 +656,9 @@
                                 </div>
                             </div>
                             <div class="request-actions">
-                                <button class="approve-all-btn" onclick="showAbsenceTypeSelection('${studentId}')">Approve All</button>
-                                <button class="confirm-approve-btn" style="display:none;" onclick="approveAllAbsences('${studentId}')">Confirm Approval</button>
-                                <button class="reject-all-btn" onclick="rejectAllAbsences('${studentId}')">Reject All</button>
+                                <button class="approve-btn approve-all-btn" onclick="showAbsenceTypeSelection('${studentId}')">Approve</button>
+                                <button class="confirm-approve-btn" style="display:none;" onclick="approveAllAbsences('${studentId}')">Confirm Approve</button>
+                                <button class="reject-btn" onclick="rejectAllAbsences('${studentId}')">Reject</button>
                             </div>
                         </div>
                     `;
@@ -669,7 +669,7 @@
                 
             } catch (error) {
                 console.error("Error loading absence requests:", error);
-                pendingRequestsDiv.innerHTML = `<p class="error">Error: ${error.message}</p>`;
+                pendingRequestsDiv.innerHTML = `<p class="error">Error loading requests: ${error.message}</p>`;
             }
         }
 
@@ -916,11 +916,10 @@
 
     // 显示缺席类型选择
     window.showAbsenceTypeSelection = function(studentId) {
-        // 修改选择器，避免使用 :has 选择器，改用更兼容的方法
+        // 找到对应学生ID的请求卡片
         const cards = document.querySelectorAll('.request-card');
         let targetCard = null;
         
-        // 遍历所有卡片，找到匹配学生ID的卡片
         for (const card of cards) {
             const header = card.querySelector('.request-header h3');
             if (header && header.textContent.includes(studentId)) {
@@ -931,11 +930,14 @@
         
         if (targetCard) {
             // 显示缺席类型选择，隐藏原按钮，显示确认按钮
-            targetCard.querySelector('.absence-type-selection').style.display = 'block';
-            targetCard.querySelector('.approve-all-btn').style.display = 'none';
-            targetCard.querySelector('.confirm-approve-btn').style.display = 'inline-block';
+            const typeSelection = targetCard.querySelector('.absence-type-selection');
+            const approveBtn = targetCard.querySelector('.approve-all-btn');
+            const confirmBtn = targetCard.querySelector('.confirm-approve-btn');
             
-            // 添加调试信息
+            if (typeSelection) typeSelection.style.display = 'block';
+            if (approveBtn) approveBtn.style.display = 'none';
+            if (confirmBtn) confirmBtn.style.display = 'inline-block';
+            
             console.log("显示缺席类型选择界面成功");
         } else {
             console.error("找不到学生ID为", studentId, "的请求卡片");
