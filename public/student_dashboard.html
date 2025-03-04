@@ -10,7 +10,7 @@
     <script src="https://apis.google.com/js/api.js"></script>
     <style>
         .affected-courses-container {
-            max-height: 300px;
+            max-height:300px;
             overflow-y: auto;
             border: 1px solid #ddd;
             border-radius: 8px;
@@ -513,6 +513,180 @@
         .styled-form .submit-group {
             margin-top: 35px;
         }
+        
+        /* Add styles for dismiss button */
+        .notification-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .dismiss-btn {
+            background: none;
+            border: none;
+            color: #666;
+            cursor: pointer;
+            padding: 4px 8px;
+            font-size: 14px;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+        
+        .dismiss-btn:hover {
+            background-color: rgba(0,0,0,0.1);
+            color: #333;
+        }
+        
+        /* Add styles for subject details in notifications */
+        .subject-details {
+            margin-top: 10px;
+        }
+        
+        .subject-item {
+            background-color: rgba(255, 255, 255, 0.7);
+            border-radius: 6px;
+            padding: 10px;
+            margin-bottom: 8px;
+        }
+        
+        .subject-name {
+            font-weight: 600;
+            color: #333;
+            margin: 0 0 5px 0;
+        }
+        
+        .session-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .session-list li {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            padding: 4px 0;
+            font-size: 0.9em;
+            color: #555;
+        }
+        
+        .session-date {
+            min-width: 100px;
+        }
+        
+        .session-time {
+            min-width: 120px;
+            color: #666;
+        }
+        
+        .session-type {
+            background-color: #f0f0f0;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        
+        .notification.approved .subject-item {
+            border-left: 3px solid #48bb78;
+        }
+        
+        .notification.rejected .subject-item {
+            border-left: 3px solid #f56565;
+        }
+        
+        /* Add styles for session location */
+        .session-location {
+            background-color: #e5e7eb;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            color: #4b5563;
+        }
+
+        /* Add timetable styles */
+        .timeTableSpace {
+            width: 90%;
+            margin: 20px auto;
+            padding: 30px;
+            background: linear-gradient(-229deg, rgba(207, 145, 255, 0.7), rgba(87, 130, 245, 0.7));
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .timetable-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .timetable-table th,
+        .timetable-table td {
+            padding: 15px;
+            border: 1px solid rgba(221, 221, 221, 0.3);
+            vertical-align: top;
+        }
+
+        .timetable-table th {
+            background-color: rgba(242, 242, 242, 0.9);
+            width: 12%;
+            text-align: center;
+        }
+
+        .day-header {
+            color: #2d2d2d;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .session-card {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+        }
+
+        .session-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .session-title {
+            color: #5782f5;
+            font-size: 0.95em;
+            margin-bottom: 5px;
+        }
+
+        .session-detail {
+            font-size: 0.85em;
+            color: #666;
+            margin: 3px 0;
+        }
+
+        .session-type {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.75em;
+            background: #cf91ff;
+            color: white;
+            margin-left: 5px;
+        }
+
+        .timeTableSpace h2 {
+            color: #fff;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
+            margin-bottom: 25px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .extra-course {
+            border-left: 3px solid #48bb78;
+        }
     </style>
 </head>
 <body>
@@ -637,6 +811,13 @@
         </form>
     </div>
 
+    <div class="timeTableSpace" style="display: none;">
+        <h2>Timetable</h2>
+        <div class="tableDisplay">
+            <!-- Timetable content will be dynamically inserted here -->
+        </div>
+    </div>
+
     <!-- Firebase & JavaScript -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-app.js";
@@ -726,6 +907,7 @@
 
             // 构造要保存的数据对象
             const formData = {
+                formId: Date.now().toString(), // Generate a unique ID
                 studentId: studentID,
                 name: fullName,
                 startDate: startDate,
@@ -734,7 +916,8 @@
                 comments: comments,
                 status: "pending",
                 submittedAt: new Date(),
-                missedSessions: missedSessions
+                missedSessions: missedSessions,
+                notificationDismissed: false // Add notification status
             };
             
             // 只有当文件链接存在时才添加到formData中
@@ -1151,81 +1334,103 @@ async function updateAffectedCourses() {
         }
         
         const studentData = studentDoc.data();
-        const courseCode = studentData.course;
-        const group = studentData.group;
+        const studentCourse = studentData.course;
+        const studentGroup = studentData.group;
         
         // Get all days between start and end date
         const days = getDaysBetweenDates(startDate, endDate);
         
-        // Get course subjects
-        const courseRef = doc(db, "course", courseCode);
-        const subjectsCollection = collection(db, "course", courseCode, "subject");
-        const subjectsSnapshot = await getDocs(subjectsCollection);
+        // Get all courses (including those where student might be an extra student)
+        const coursesCollection = collection(db, "course");
+        const coursesSnapshot = await getDocs(coursesCollection);
         
         let affectedCoursesHTML = "";
         let hasAffectedCourses = false;
         
-        subjectsSnapshot.forEach(subjectDoc => {
-            const subjectData = subjectDoc.data();
-            const sessions = subjectData.sessions || [];
+        // Process each course
+        for (const courseDoc of coursesSnapshot.docs) {
+            const courseCode = courseDoc.id;
             
-            // Filter sessions for student's group
-            const relevantSessions = sessions.filter(session => 
-                session.group === group || session.group === 'all'
-            );
+            // Get all subjects for this course
+            const subjectsCollection = collection(db, "course", courseCode, "subject");
+            const subjectsSnapshot = await getDocs(subjectsCollection);
             
-            // Check if any session falls within the selected date range
-            const affectedSessions = relevantSessions.filter(session => {
-                const sessionDay = session.day;
-                return days.some(day => 
-                    day.toLocaleDateString('en-US', { weekday: 'long' }) === sessionDay
-                );
-            });
-            
-            if (affectedSessions.length > 0) {
-                hasAffectedCourses = true;
+            for (const subjectDoc of subjectsSnapshot.docs) {
+                const subjectData = subjectDoc.data();
+                const sessions = subjectData.sessions || [];
                 
-                affectedCoursesHTML += `
-                    <div class="affected-course">
-                        <h4>${subjectData.name}</h4>
-                        <ul>
-                `;
-                
-                affectedSessions.forEach(session => {
-                    // Find which dates this session occurs on
-                    const sessionDates = days.filter(day => 
-                        day.toLocaleDateString('en-US', { weekday: 'long' }) === session.day
-                    ).map(day => day.toISOString().split('T')[0]);
+                // Filter sessions based on student's group and extra/excluded status
+                const relevantSessions = sessions.filter(session => {
+                    // Check if student is excluded
+                    if (subjectData.excludedStudents && subjectData.excludedStudents.includes(studentID)) {
+                        return false;
+                    }
                     
-                    sessionDates.forEach(date => {
-                        affectedCoursesHTML += `
-                            <li>
-                                <div class="checkbox-wrapper">
-                                    <input type="checkbox" name="missedSession" 
-                                           value="${courseCode}|${subjectDoc.id}|${date}|${session.startTime}|${session.type}" 
-                                           data-subject-name="${subjectData.name}"
-                                           data-start-time="${session.startTime}"
-                                           data-end-time="${session.endTime}"
-                                           checked>
-                                </div>
-                                <div class="session-info">
-                                    <div class="session-date">${date} (${session.day})</div>
-                                    <div class="session-details">
-                                        <span class="session-time">${session.startTime}-${session.endTime}</span>
-                                        <span class="session-type">${session.type}</span>
-                                    </div>
-                                </div>
-                            </li>
-                        `;
-                    });
+                    // Check if this is student's course
+                    if (courseCode === studentCourse) {
+                        // Include if session is for student's group or all groups
+                        return session.group === studentGroup || session.group === 'all';
+                    } else {
+                        // For other courses, check if student is in extraStudents
+                        return session.extraStudents && session.extraStudents.includes(studentID);
+                    }
                 });
                 
-                affectedCoursesHTML += `
-                        </ul>
-                    </div>
-                `;
+                // Check if any session falls within the selected date range
+                const affectedSessions = relevantSessions.filter(session => {
+                    const sessionDay = session.day;
+                    return days.some(day => 
+                        day.toLocaleDateString('en-US', { weekday: 'long' }) === sessionDay
+                    );
+                });
+                
+                if (affectedSessions.length > 0) {
+                    hasAffectedCourses = true;
+                    
+                    affectedCoursesHTML += `
+                        <div class="affected-course">
+                            <h4>${subjectData.name} (${courseCode})</h4>
+                            <ul>
+                    `;
+                    
+                    affectedSessions.forEach(session => {
+                        // Find which dates this session occurs on
+                        const sessionDates = days.filter(day => 
+                            day.toLocaleDateString('en-US', { weekday: 'long' }) === session.day
+                        ).map(day => day.toISOString().split('T')[0]);
+                        
+                        sessionDates.forEach(date => {
+                            affectedCoursesHTML += `
+                                <li>
+                                    <div class="checkbox-wrapper">
+                                        <input type="checkbox" name="missedSession" 
+                                               value="${courseCode}|${subjectDoc.id}|${date}|${session.startTime}|${session.type}" 
+                                               data-subject-name="${subjectData.name}"
+                                               data-start-time="${session.startTime}"
+                                               data-end-time="${session.endTime}"
+                                               data-lecturer-id="${session.lectureID || ''}"
+                                               checked>
+                                    </div>
+                                    <div class="session-info">
+                                        <div class="session-date">${date} (${session.day})</div>
+                                        <div class="session-details">
+                                            <span class="session-time">${session.startTime}-${session.endTime}</span>
+                                            <span class="session-type">${session.type}</span>
+                                            <span class="session-location">${session.class}</span>
+                                        </div>
+                                    </div>
+                                </li>
+                            `;
+                        });
+                    });
+                    
+                    affectedCoursesHTML += `
+                            </ul>
+                        </div>
+                    `;
+                }
             }
-        });
+        }
         
         if (hasAffectedCourses) {
             affectedCoursesContainer.innerHTML = affectedCoursesHTML;
@@ -1325,6 +1530,11 @@ document.getElementById("absenceForm").addEventListener("submit", async (event) 
                 let notificationsHTML = '';
                 
                 forms.forEach(form => {
+                    // Skip if notification has been dismissed
+                    if (form.notificationDismissed) {
+                        return;
+                    }
+                    
                     // Check if any sessions were recently approved or rejected
                     const recentlyProcessedSessions = form.missedSessions.filter(session => {
                         if (!session.approvedAt) return false;
@@ -1345,6 +1555,15 @@ document.getElementById("absenceForm").addEventListener("submit", async (event) 
                         
                         // Create notification for approved sessions
                         if (approved.length > 0) {
+                            // Group approved sessions by subject
+                            const approvedBySubject = {};
+                            approved.forEach(session => {
+                                if (!approvedBySubject[session.subjectId]) {
+                                    approvedBySubject[session.subjectId] = [];
+                                }
+                                approvedBySubject[session.subjectId].push(session);
+                            });
+
                             const latestApproval = approved.reduce((latest, current) => {
                                 const currentDate = current.approvedAt.toDate ? 
                                     current.approvedAt.toDate() : new Date(current.approvedAt);
@@ -1357,14 +1576,32 @@ document.getElementById("absenceForm").addEventListener("submit", async (event) 
                                 latestApproval.approvedAt.toDate() : new Date(latestApproval.approvedAt);
                                 
                             notificationsHTML += `
-                                <div class="notification approved" data-id="${form.submittedAt.seconds || ''}">
+                                <div class="notification approved" data-id="${form.submittedAt.seconds || ''}" data-form-id="${form.formId || ''}">
                                     <div class="notification-title">
                                         <span>Absence Request Approved</span>
-                                        <span class="notification-date">${approvedDate.toLocaleDateString()}</span>
+                                        <div class="notification-controls">
+                                            <span class="notification-date">${approvedDate.toLocaleDateString()}</span>
+                                            <button class="dismiss-btn" onclick="dismissNotification(this)">✕</button>
+                                        </div>
                                     </div>
                                     <div class="notification-content">
-                                        <p>Your absence request for ${approved.length} session(s) has been approved.</p>
                                         <p><strong>Reason:</strong> ${form.reason}</p>
+                                        <div class="subject-details">
+                                            ${Object.entries(approvedBySubject).map(([subjectId, sessions]) => `
+                                                <div class="subject-item">
+                                                    <p class="subject-name">${sessions[0].subjectName}</p>
+                                                    <ul class="session-list">
+                                                        ${sessions.map(session => `
+                                                            <li>
+                                                                <span class="session-date">${session.date}</span>
+                                                                <span class="session-time">${session.startTime} - ${session.endTime}</span>
+                                                                <span class="session-type">${session.type}</span>
+                                                            </li>
+                                                        `).join('')}
+                                                    </ul>
+                                                </div>
+                                            `).join('')}
+                                        </div>
                                     </div>
                                 </div>
                             `;
@@ -1372,6 +1609,15 @@ document.getElementById("absenceForm").addEventListener("submit", async (event) 
                         
                         // Create notification for rejected sessions
                         if (rejected.length > 0) {
+                            // Group rejected sessions by subject
+                            const rejectedBySubject = {};
+                            rejected.forEach(session => {
+                                if (!rejectedBySubject[session.subjectId]) {
+                                    rejectedBySubject[session.subjectId] = [];
+                                }
+                                rejectedBySubject[session.subjectId].push(session);
+                            });
+
                             const latestRejection = rejected.reduce((latest, current) => {
                                 const currentDate = current.approvedAt.toDate ? 
                                     current.approvedAt.toDate() : new Date(current.approvedAt);
@@ -1384,14 +1630,32 @@ document.getElementById("absenceForm").addEventListener("submit", async (event) 
                                 latestRejection.approvedAt.toDate() : new Date(latestRejection.approvedAt);
                                 
                             notificationsHTML += `
-                                <div class="notification rejected" data-id="${form.submittedAt.seconds || ''}">
+                                <div class="notification rejected" data-id="${form.submittedAt.seconds || ''}" data-form-id="${form.formId || ''}">
                                     <div class="notification-title">
                                         <span>Absence Request Rejected</span>
-                                        <span class="notification-date">${rejectedDate.toLocaleDateString()}</span>
+                                        <div class="notification-controls">
+                                            <span class="notification-date">${rejectedDate.toLocaleDateString()}</span>
+                                            <button class="dismiss-btn" onclick="dismissNotification(this)">✕</button>
+                                        </div>
                                     </div>
                                     <div class="notification-content">
-                                        <p>Your absence request for ${rejected.length} session(s) has been rejected.</p>
                                         <p><strong>Reason:</strong> ${form.reason}</p>
+                                        <div class="subject-details">
+                                            ${Object.entries(rejectedBySubject).map(([subjectId, sessions]) => `
+                                                <div class="subject-item">
+                                                    <p class="subject-name">${sessions[0].subjectName}</p>
+                                                    <ul class="session-list">
+                                                        ${sessions.map(session => `
+                                                            <li>
+                                                                <span class="session-date">${session.date}</span>
+                                                                <span class="session-time">${session.startTime} - ${session.endTime}</span>
+                                                                <span class="session-type">${session.type}</span>
+                                                            </li>
+                                                        `).join('')}
+                                                    </ul>
+                                                </div>
+                                            `).join('')}
+                                        </div>
                                     </div>
                                 </div>
                             `;
@@ -1430,21 +1694,111 @@ document.getElementById("absenceForm").addEventListener("submit", async (event) 
             }
         }
         
-        // Dismiss all notifications
-        window.dismissAllNotifications = function() {
-            const notifications = document.querySelectorAll('.notification');
-            if (notifications.length === 0) return;
+        // Dismiss single notification
+        window.dismissNotification = async function(button) {
+            const notification = button.closest('.notification');
+            const formId = notification.getAttribute('data-form-id');
             
-            notifications.forEach(notification => {
-                notification.style.opacity = '0';
-                notification.style.transform = 'translateY(10px)';
-            });
-            
-            setTimeout(() => {
-                const notificationsList = document.getElementById('notificationsList');
-                notificationsList.innerHTML = '<p>No notifications at this time.</p>';
-                document.querySelector('.dismiss-all-btn').style.display = 'none';
-            }, 300);
+            try {
+                const studentID = sessionStorage.getItem('studentID');
+                const studentData = await getStudentData(studentID);
+                
+                if (!studentData) {
+                    console.error('Could not load student data');
+                    return;
+                }
+                
+                const courseCode = studentData.course;
+                const group = studentData.group;
+                
+                // Update the form in Firestore to mark notification as dismissed
+                const absenceRef = doc(db, "absence", courseCode, group, studentID);
+                const absenceDoc = await getDoc(absenceRef);
+                
+                if (absenceDoc.exists()) {
+                    const forms = absenceDoc.data().Form;
+                    const updatedForms = forms.map(form => {
+                        if (form.formId === formId) {
+                            return {
+                                ...form,
+                                notificationDismissed: true
+                            };
+                        }
+                        return form;
+                    });
+                    
+                    await updateDoc(absenceRef, {
+                        Form: updatedForms
+                    });
+                    
+                    // Animate and remove the notification
+                    notification.style.opacity = '0';
+                    notification.style.transform = 'translateY(10px)';
+                    
+                    setTimeout(() => {
+                        notification.remove();
+                        
+                        // Check if there are any remaining notifications
+                        const remainingNotifications = document.querySelectorAll('.notification');
+                        if (remainingNotifications.length === 0) {
+                            const notificationsList = document.getElementById('notificationsList');
+                            notificationsList.innerHTML = '<p>No notifications at this time.</p>';
+                            document.querySelector('.dismiss-all-btn').style.display = 'none';
+                        }
+                    }, 300);
+                }
+            } catch (error) {
+                console.error('Error dismissing notification:', error);
+                alert('Failed to dismiss notification. Please try again.');
+            }
+        };
+        
+        // Update dismiss all notifications function
+        window.dismissAllNotifications = async function() {
+            try {
+                const studentID = sessionStorage.getItem('studentID');
+                const studentData = await getStudentData(studentID);
+                
+                if (!studentData) {
+                    console.error('Could not load student data');
+                    return;
+                }
+                
+                const courseCode = studentData.course;
+                const group = studentData.group;
+                
+                // Update all forms in Firestore to mark notifications as dismissed
+                const absenceRef = doc(db, "absence", courseCode, group, studentID);
+                const absenceDoc = await getDoc(absenceRef);
+                
+                if (absenceDoc.exists()) {
+                    const forms = absenceDoc.data().Form;
+                    const updatedForms = forms.map(form => ({
+                        ...form,
+                        notificationDismissed: true
+                    }));
+                    
+                    await updateDoc(absenceRef, {
+                        Form: updatedForms
+                    });
+                    
+                    // Animate and remove all notifications
+                    const notifications = document.querySelectorAll('.notification');
+                    notifications.forEach(notification => {
+                        notification.style.opacity = '0';
+                        notification.style.transform = 'translateY(10px)';
+                    });
+                    
+                    setTimeout(() => {
+                        const notificationsList = document.getElementById('notificationsList');
+                        notificationsList.innerHTML = '<p>No notifications at this time.</p>';
+                        document.querySelector('.dismiss-all-btn').style.display = 'none';
+                    }, 300);
+                }
+            } catch (error) {
+                console.error('Error dismissing all notifications:', error);
+                alert('Failed to dismiss notifications. Please try again.');
+            }
         };
         
         // Load absence history
@@ -1621,6 +1975,177 @@ document.getElementById("absenceForm").addEventListener("submit", async (event) 
             
             displayAbsenceForms(filteredForms);
         }
+
+        // Add timetable loading function
+        async function loadTimetable() {
+            const studentID = sessionStorage.getItem('studentID');
+            if (!studentID) {
+                console.error("No student ID found");
+                return;
+            }
+
+            const sessionsByDay = {
+                Monday: [], Tuesday: [], Wednesday: [],
+                Thursday: [], Friday: [], Saturday: [], Sunday: []
+            };
+
+            try {
+                // Get student data
+                const studentRef = doc(db, "student", studentID);
+                const studentDoc = await getDoc(studentRef);
+                
+                if (!studentDoc.exists()) {
+                    console.error("Student data not found");
+                    return;
+                }
+
+                const studentData = studentDoc.data();
+                const studentCourse = studentData.course;
+                const studentGroup = studentData.group;
+
+                // Get all courses
+                const coursesSnapshot = await getDocs(collection(db, "course"));
+                let hasData = false;
+
+                // Process each course
+                for (const courseDoc of coursesSnapshot.docs) {
+                    const courseCode = courseDoc.id;
+                    const courseData = courseDoc.data();
+                    
+                    // Check course expiry
+                    const expiryDate = courseData.subjectExpiry?.toDate();
+                    if (expiryDate && expiryDate < new Date()) {
+                        continue;
+                    }
+
+                    // Get subjects for this course
+                    const subjectsSnapshot = await getDocs(collection(db, "course", courseCode, "subject"));
+                    
+                    for (const subjectDoc of subjectsSnapshot.docs) {
+                        const subjectData = subjectDoc.data();
+                        const sessions = subjectData.sessions || [];
+                        
+                        // Check if student is excluded from this subject
+                        const isExcluded = subjectData.excludedStudents && 
+                                         subjectData.excludedStudents.includes(studentID);
+
+                        // Process sessions based on whether it's student's course or extra course
+                        sessions.forEach(session => {
+                            const isRelevantSession = courseCode === studentCourse ?
+                                // For student's course: check if not excluded and session matches group
+                                (!isExcluded && (session.group === studentGroup || session.group === 'all')) :
+                                // For other courses: check if student is in extraStudents
+                                (session.extraStudents && session.extraStudents.includes(studentID));
+
+                            if (isRelevantSession) {
+                                hasData = true;
+                                if (sessionsByDay[session.day]) {
+                                    sessionsByDay[session.day].push({
+                                        course: courseCode,
+                                        ...session,
+                                        subjectName: subjectData.name,
+                                        class: session.class || 'TBA',
+                                        type: session.type || 'lecture',
+                                        isExtra: courseCode !== studentCourse
+                                    });
+                                }
+                            }
+                        });
+                    }
+                }
+
+                if (!hasData) {
+                    document.querySelector(".tableDisplay").innerHTML = 
+                        "<p style='color: white; text-align: center;'>No timetable entries found.</p>";
+                    return;
+                }
+
+                // Sort sessions by time for each day
+                for (const day in sessionsByDay) {
+                    sessionsByDay[day].sort((a, b) => 
+                        a.startTime.localeCompare(b.startTime)
+                    );
+                }
+
+                renderTimetable(sessionsByDay);
+
+            } catch (error) {
+                console.error("Error loading timetable:", error);
+                document.querySelector(".tableDisplay").innerHTML = 
+                    "<p style='color: white; text-align: center;'>Error loading timetable. Please try again later.</p>";
+            }
+        }
+
+        function renderTimetable(sessionsByDay) {
+            const container = document.querySelector('.tableDisplay');
+            const daysOrder = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+            
+            let html = `<table class="timetable-table">`;
+            
+            // Table header
+            html += `<tr>`;
+            daysOrder.forEach(day => {
+                html += `<th>${day}</th>`;
+            });
+            html += `</tr>`;
+            
+            // Content row
+            html += `<tr>`;
+            daysOrder.forEach(day => {
+                const sessions = sessionsByDay[day] || [];
+                html += `<td>`;
+                if (sessions.length === 0) {
+                    html += `<div class="session-card" style="opacity:0.5;">-</div>`;
+                } else {
+                    sessions.forEach(session => {
+                        html += `
+                        <div class="session-card ${session.isExtra ? 'extra-course' : ''}">
+                            <div class="session-title">
+                                ${session.subjectName}
+                                <span class="session-type">${session.type}</span>
+                            </div>
+                            <div class="session-detail">Course: ${session.course}</div>
+                            <div class="session-detail">Venue: ${session.class}</div>
+                            <div class="session-detail">Time: ${session.startTime} - ${session.endTime}</div>
+                            ${session.isExtra ? '<div class="session-detail" style="color: #48bb78;">Extra Course</div>' : ''}
+                        </div>`;
+                    });
+                }
+                html += `</td>`;
+            });
+            html += `</tr></table>`;
+            
+            container.innerHTML = html;
+        }
+
+        // Update navigation event listeners
+        document.addEventListener("DOMContentLoaded", function () {
+            const navButtons = document.querySelectorAll(".nav2 .nav-btn");
+            const timetableBtn = navButtons[4]; // Timetable button
+            const homeBtn = navButtons[0];    // Home button
+
+            const contentSections = {
+                home: document.querySelector(".homeSpace"),
+                timetable: document.querySelector(".timeTableSpace")
+            };
+
+            // Initialize display
+            contentSections.home.style.display = "block";
+            contentSections.timetable.style.display = "none";
+
+            // Timetable button click
+            timetableBtn.addEventListener("click", function() {
+                contentSections.home.style.display = "none";
+                contentSections.timetable.style.display = "block";
+                loadTimetable(); // Load timetable data
+            });
+
+            // Home button click
+            homeBtn.addEventListener("click", function() {
+                contentSections.home.style.display = "block";
+                contentSections.timetable.style.display = "none";
+            });
+        });
     </script>
 
 </body>
