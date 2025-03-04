@@ -15,16 +15,17 @@
         }
         body {
             display: flex;
-            flex-direction: column;
-            align-items: center;
+            flex-direction: row;
+            align-items: flex-start;
             justify-content: center;
             background-color: #e0e7ff;
             color: #333;
             font-family: 'Poppins', sans-serif;
             margin: 0;
+            padding: 20px;
         }
         .container {
-            width: 90%;
+            flex: 1;
             max-width: 800px;
             background-color: #fff;
             padding: 30px;
@@ -149,9 +150,55 @@
             0% { opacity: 1; transform: translateY(0); }
             100% { opacity: 0; transform: translateY(-10px); }
         }
+        .sidebar {
+            width: 280px;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0px 4px 30px rgba(0, 0, 0, 0.08);
+            padding: 20px;
+            margin-right: 20px;
+            position: sticky;
+            top: 20px;
+        }
+        .calendar {
+            position: relative;
+        }
+        #calendarDate {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .daily-subject {
+            padding: 12px;
+            margin: 8px 0;
+            background: #f8f9fa;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .daily-subject:hover {
+            background: #4f46e5;
+            color: white;
+            transform: translateX(5px);
+        }
+        .daily-subjects {
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
+    <!-- 添加侧边栏 -->
+    <div class="sidebar">
+        <div class="calendar">
+            <input type="date" id="calendarDate" 
+                   value="${new Date().toISOString().split('T')[0]}"
+                   max="${new Date().toISOString().split('T')[0]}">
+            <div id="dailySubjects"></div>
+        </div>
+    </div>
+    
     <div class="container">
         <h1>Mark Attendance</h1>
         <div class="course-select">
@@ -162,7 +209,7 @@
             <div id="scheduleDisplay"></div>
             <label for="sessionTime">Select Session Time:</label>
             <select id="sessionTime">
-                <option value="custom">Custom Time</option>
+                <!-- 移除custom选项 -->
             </select>
             <div id="customTimeInputs" style="display:none;">
                 <label for="customStartTime">Custom Start Time:</label>
@@ -171,7 +218,7 @@
                 <input type="time" id="customEndTime">
             </div>
             <button class="confirm-button" onclick="confirmSelection()">
-                <span class="button-text">confirm</span>
+                <span class="button-text">Confirm</span>
                 <span class="loading-dots" style="display: none"></span>
             </button>
         </div>
@@ -199,32 +246,53 @@
 
         async function loadSubjects() {
             const lectureID = sessionStorage.getItem('lectureID');
-            console.log("Lecture ID from session:", lectureID); // Debugging line
             if (!lectureID) {
                 alert("Lecture ID not found in session.");
                 return;
             }
 
+            const now = new Date();
             const coursesRef = db.collection("course");
-            const coursesSnapshot = await coursesRef.get();
+            
+            const query = coursesRef.where("subjectExpiry", ">", now);
+            const coursesSnapshot = await query.get();
+            
             const subjectSelect = document.getElementById('subject');
-            subjectSelect.innerHTML = ''; // Clear previous options
+            subjectSelect.innerHTML = '';
 
             coursesSnapshot.forEach(courseDoc => {
                 const courseId = courseDoc.id;
+                const courseData = courseDoc.data();
+                
+                if (courseData.subjectExpiry && courseData.subjectExpiry.toDate() < now) {
+                    console.log(`跳过过期课程: ${courseId}`);
+                    return;
+                }
+
                 const subjectsRef = coursesRef.doc(courseId).collection("subject");
 
-                subjectsRef.where("lectureID", "==", lectureID).get().then(subjectsSnapshot => {
+                subjectsRef.get().then(subjectsSnapshot => {
                     subjectsSnapshot.forEach(subjectDoc => {
-                        const subjectId = subjectDoc.id;
                         const subjectData = subjectDoc.data();
-                        const option = document.createElement('option');
+                        const hasMatchingSession = subjectData.sessions?.some(session => 
+                            session.lectureID === lectureID
+                        );
 
-                        option.value = `${courseId}+${subjectId}`;
-                        option.textContent = `${courseId}+${subjectData.name}`;
-                        subjectSelect.appendChild(option);
+                        if (hasMatchingSession) {
+                            const subjectId = subjectDoc.id;
+                            const option = document.createElement('option');
+                            
+                            const matchingSession = subjectData.sessions.find(s => 
+                                s.lectureID === lectureID
+                            );
+                            const group = matchingSession?.group || '';
+                            const groupSuffix = group && group !== 'all' ? ` {${group}}` : '';
+
+                            option.value = `${courseId}+${subjectId}`;
+                            option.textContent = `${courseId}+${subjectData.name}${groupSuffix}`;
+                            subjectSelect.appendChild(option);
+                        }
                     });
-                    // After loading all subjects, trigger displaySchedule if there's a selected subject
                     if (subjectSelect.value) {
                         displaySchedule();
                     }
@@ -236,10 +304,25 @@
             subjectSelect.addEventListener('change', displaySchedule);
         }
 
+        function getDateOfThisWeek(dayOfWeek, baseDate) {
+            const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            const targetDate = new Date(baseDate);
+            const day = targetDate.getDay();
+            const diff = days.indexOf(dayOfWeek) - day;
+
+            let newDate = new Date(targetDate);
+            newDate.setDate(targetDate.getDate() + diff);
+
+            if (newDate < targetDate) {
+                newDate.setDate(newDate.getDate() + 7);
+            }
+
+            return newDate.toISOString().split('T')[0];
+        }
+
         async function displaySchedule() {
             const selectedValue = document.getElementById('subject').value;
             const sessionTimeSelect = document.getElementById('sessionTime');
-            const customTimeInputs = document.getElementById('customTimeInputs');
 
             if (selectedValue) {
                 const [courseId, subjectId] = selectedValue.split('+');
@@ -249,93 +332,77 @@
                 const doc = await subjectRef.get();
                 if (doc.exists) {
                     const subjectData = doc.data();
+                    const filteredSessions = subjectData.sessions?.filter(s => 
+                        s.lectureID === sessionStorage.getItem('lectureID')
+                    ) || [];
+
                     const scheduleDisplay = document.getElementById('scheduleDisplay');
                     scheduleDisplay.innerHTML = '';
-                    sessionTimeSelect.innerHTML = '<option value="custom">Custom Time</option>';
+                    sessionTimeSelect.innerHTML = '';
 
-                    if (subjectData.sessions && subjectData.sessions.length > 0) {
+                    if (filteredSessions.length > 0) {
                         let scheduleHTML = '<strong>Schedule:</strong><br>';
                         let firstSessionValue = null;
 
-                        // Function to get the date of the given day of the week
-                        function getDateOfThisWeek(dayOfWeek) {
-                            const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-                            const today = new Date();
-                            const day = today.getDay(); // Day of the week (0-6)
-                            const diff = days.indexOf(dayOfWeek) - day; // Difference between the desired day and today
+                        const selectedDate = document.getElementById('calendarDate').value;
+                        const baseDate = selectedDate ? new Date(selectedDate) : new Date();
 
-                            let newDate = new Date(today);
-                            newDate.setDate(today.getDate() + diff); // Add the difference to get the desired date
-
-                            // If the date is in the past, move to next week
-                            if (newDate < today) {
-                                newDate.setDate(newDate.getDate() + 7);
-                            }
-
-                            const year = newDate.getFullYear();
-                            const month = String(newDate.getMonth() + 1).padStart(2, '0');
-                            const dayOfMonth = String(newDate.getDate()).padStart(2, '0');
-                            return `${year}-${month}-${dayOfMonth}`;
-                        }
-
-                        subjectData.sessions.forEach((session, index) => {
-                            const sessionDate = getDateOfThisWeek(session.day); // Get the date for the session
+                        filteredSessions.forEach((session, index) => {
+                            const sessionDate = getDateOfThisWeek(session.day, baseDate);
                             scheduleHTML += `${session.type}: ${session.day} ${session.startTime}-${session.endTime} (${sessionDate})<br>`;
-                            const sessionValue = `${session.day} ${session.startTime} - ${session.endTime} (${session.type})`;
+                            
+                            const optionValue = `${sessionDate}|${session.day}|${session.startTime}|${session.type}|${session.group || 'all'}`;
+                            const optionText = `${session.day} ${session.startTime} - ${session.endTime} (${sessionDate}) [${session.type}] ${session.group ? `{${session.group}}` : ''}`;
+                            
                             const option = document.createElement('option');
-                            option.value = `${sessionDate} ${session.day} ${session.startTime} - ${session.endTime} (${session.type})`; // Include the date in the value
-                            option.textContent = `${session.day} ${session.startTime} - ${session.endTime} (${sessionDate}) (${session.type})`; // Include the date in the display text
+                            option.value = optionValue;
+                            option.textContent = optionText;
                             sessionTimeSelect.appendChild(option);
 
                             if (index === 0) {
-                                firstSessionValue = `${sessionDate} ${session.day} ${session.startTime} - ${session.endTime} (${session.type})`; // Update firstSessionValue to include the date
+                                firstSessionValue = `${sessionDate} ${session.day} ${session.startTime} - ${session.endTime} (${session.type})`;
                             }
                         });
 
                         scheduleDisplay.innerHTML = scheduleHTML;
                         sessionTimeSelect.value = firstSessionValue;
-                        customTimeInputs.style.display = 'none';
                     } else {
                         scheduleDisplay.innerHTML = '<p>No schedule available</p>';
-                        customTimeInputs.style.display = 'none';
                     }
                 } else {
                     console.log("No such document!");
-                    customTimeInputs.style.display = 'none';
                 }
             } else {
                 document.getElementById('scheduleDisplay').innerHTML = '';
-                sessionTimeSelect.innerHTML = '<option value="custom">Custom Time</option>';
-                customTimeInputs.style.display = 'none';
+                sessionTimeSelect.innerHTML = '';
             }
-
-            sessionTimeSelect.addEventListener('change', function() {
-                if (sessionTimeSelect.value === 'custom') {
-                    customTimeInputs.style.display = 'block';
-                } else {
-                    customTimeInputs.style.display = 'none';
-                }
-            });
         }
 
         async function confirmSelection() {
+            const selectedValue = document.getElementById('subject').value;
+            if (!selectedValue) {
+                alert("Please select a subject first");
+                return;
+            }
+
+            const [courseId, subjectId] = selectedValue.split('+');
+            const courseRef = db.collection("course").doc(courseId);
+            const courseDoc = await courseRef.get();
+            
+            const courseExpiry = courseDoc.data().subjectExpiry?.toDate();
+            if (courseExpiry && courseExpiry < new Date()) {
+                alert("该课程已过期，无法操作");
+                return;
+            }
+
             const btn = document.querySelector('.confirm-button');
             const originalText = btn.textContent;
             
             btn.disabled = true;
-            btn.querySelector('.button-text').textContent = '加载中';
             btn.querySelector('.loading-dots').style.display = 'inline';
 
             try {
-                const selectedValue = document.getElementById('subject').value;
-                console.log("Selected value:", selectedValue); // Debugging line
-                if (selectedValue) {
-                    const [courseId, subjectId] = selectedValue.split('+');
-                    console.log("Course ID:", courseId); // Debugging line
-                    await loadStudents(courseId);
-                } else {
-                    alert("Please select a subject.");
-                }
+                await loadStudents(courseId);
             } finally {
                 btn.disabled = false;
                 btn.querySelector('.button-text').textContent = originalText;
@@ -348,65 +415,136 @@
             const studentList = document.getElementById('studentList');
             studentList.innerHTML = '';
 
+            const lectureID = sessionStorage.getItem('lectureID');
+            if (!lectureID) {
+                alert("Lecture ID not found in session.");
+                return;
+            }
+
+            const selectedValue = document.getElementById('subject').value;
+            const [courseIdFromValue, subjectId] = selectedValue.split('+');
+            
+            if (courseIdFromValue !== courseId) {
+                console.error('Course ID mismatch:', courseIdFromValue, courseId);
+                return;
+            }
+
+            const subjectRef = db.collection("course").doc(courseId).collection("subject").doc(subjectId);
+            const subjectDoc = await subjectRef.get();
+            
+            const sessions = subjectDoc.data().sessions || [];
+            
+            console.log('All sessions:', sessions);
+            console.log('Looking for lectureID:', lectureID);
+
+            const sessionTimeSelect = document.getElementById('sessionTime');
+            const selectedSessionValue = sessionTimeSelect.value;
+            
+            if (selectedSessionValue === 'custom') {
+                alert("请先选择具体课程时间段");
+                return;
+            }
+
+            const selectedSessionParts = selectedSessionValue.split('|');
+            if (selectedSessionParts.length < 5) {
+                console.error('Invalid session format:', selectedSessionValue);
+                return;
+            }
+            
+            const [
+                sessionDate, 
+                sessionDay, 
+                sessionStartTime, 
+                sessionType, 
+                sessionGroup
+            ] = selectedSessionParts;
+
+            console.log('Parsed session parameters:', {
+                sessionDate,
+                sessionDay, 
+                sessionStartTime,
+                sessionType,
+                sessionGroup
+            });
+
+            const currentSession = sessions.find(s => 
+                s.lectureID === lectureID &&
+                s.day === sessionDay &&
+                s.startTime === sessionStartTime &&
+                s.type === sessionType
+            );
+            
+            console.log('Found session based on selection:', currentSession !== undefined);
+
+            const excludedStudents = subjectDoc.data().excludedStudents || [];
+            const extraStudents = currentSession?.extraStudents || [];
+            console.log('Current session extraStudents:', extraStudents);
+
             const studentsRef = db.collection("student");
             const studentsSnapshot = await studentsRef.get();
             
-            // 添加计数器
             let studentNumber = 1;
+            const sessionId = `${sessionDate}_${sessionStartTime}_${lectureID}_${sessionType}_${sessionGroup}`;
 
-            console.log("Total students snapshot size:", studentsSnapshot.size);
+            // 初始化session文档
+            const sessionRef = db.collection("attendance")
+                .doc(courseId)
+                .collection(subjectId)
+                .doc(sessionId);
 
-            let found = false; // Flag to check if student is found
+            let totalStudents = 0;
+            studentsSnapshot.forEach(studentDoc => {
+                const studentData = studentDoc.data();
+                const isInExtra = extraStudents.includes(studentDoc.id);
+                const isExcluded = excludedStudents.includes(studentDoc.id);
+                const shouldDisplay = !isExcluded && (
+                    isInExtra || 
+                    (
+                        studentData.course === courseId && 
+                        (sessionGroup === 'all' || studentData.group === sessionGroup)
+                    )
+                );
+                if (shouldDisplay) {
+                    totalStudents++;
+                }
+            });
 
-            const selectedValue = document.getElementById('subject').value;
-            const [_, subjectId] = selectedValue.split('+');
-
-            const sessionTimeSelect = document.getElementById('sessionTime');
-            const selectedSessionTime = sessionTimeSelect.value.trim();
-
-            let customStartTime = document.getElementById('customStartTime').value;
-            let customEndTime = document.getElementById('customEndTime').value;
-
-            let sessionDate, sessionStartTime, sessionType;
-            if (selectedSessionTime !== 'custom') {
-                const sessionParts = selectedSessionTime.split(' ');
-                sessionDate = sessionParts[0];
-                const day = sessionParts[1];
-                sessionStartTime = sessionParts[2];
-                const endTime = sessionParts[4];
-                sessionType = sessionParts[5].slice(1, -1);
-            } else {
-                const now = new Date();
-                sessionDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-                sessionStartTime = customStartTime;
-                sessionType = 'custom';
-            }
-            const sessionId = `${sessionDate}_${sessionStartTime}_${sessionType}`;
-
-            // Get the subject document
-            const subjectRef = db.collection("course").doc(courseId).collection("subject").doc(subjectId);
-            const subjectDoc = await subjectRef.get();
-
-            let excludedStudents = [];
-            if (subjectDoc.exists && subjectDoc.data().excludedStudents) {
-                excludedStudents = subjectDoc.data().excludedStudents;
-            }
+            await sessionRef.set({
+                totalStudents: totalStudents,
+                presentStudents: 0,
+                absentStudents: totalStudents,
+                sessionDate: sessionDate,
+                startTime: sessionStartTime,
+                sessionType: sessionType,
+                group: sessionGroup
+            }, { merge: true });
 
             studentsSnapshot.forEach(async studentDoc => {
                 const studentData = studentDoc.data();
-                console.log("Student course:", studentData.course);
-                if (studentData.course === courseId) { // Filter in the code
-                    // Check if student is excluded
-                    console.log("excludedStudents:", excludedStudents);
-                    console.log("studentDoc.id:", studentDoc.id);
-                    if (excludedStudents.includes(studentDoc.id)) {
-                        console.log(`Student ${studentDoc.id} is excluded from this subject.`);
-                        return; // Skip to the next student
-                    }
+                const isInExtra = extraStudents.includes(studentDoc.id);
+                const isExcluded = excludedStudents.includes(studentDoc.id);
 
-                    found = true;
+                const shouldDisplay = !isExcluded && (
+                    isInExtra || 
+                    (
+                        studentData.course === courseId && 
+                        (sessionGroup === 'all' || studentData.group === sessionGroup)
+                    )
+                );
 
-                    // Check if attendance data exists
+                console.log(`Student ${studentDoc.id}:`, {
+                    isInExtra,
+                    isExcluded,
+                    course: studentData.course,
+                    requiredCourse: courseId,
+                    group: studentData.group,
+                    requiredGroup: sessionGroup,
+                    shouldDisplay
+                });
+
+                if (shouldDisplay) {
+                    console.log(`Displaying ${isInExtra ? 'EXTRA ' : ''}student ${studentDoc.id}`);
+
                     const attendanceRef = db.collection("attendance")
                         .doc(courseId)
                         .collection(subjectId)
@@ -418,14 +556,41 @@
                     
                     let presentVisible = true;
                     let absentVisible = true;
+                    let statusLabel = "";
+                    let statusClass = "";
                     
                     if (attendanceDoc.exists) {
                         const status = attendanceDoc.data().status;
-                        presentVisible = status !== 'present';
-                        absentVisible = status !== 'absent';
+                        
+                        // Handle different status types
+                        if (status === "present") {
+                            presentVisible = false;
+                            absentVisible = true;
+                            statusLabel = "Present";
+                            statusClass = "present-status";
+                        } else if (status === "absent") {
+                            presentVisible = true;
+                            absentVisible = false;
+                            statusLabel = "Absent";
+                            statusClass = "absent-status";
+                        } else if (status === "approved_absence") {
+                            presentVisible = false;
+                            absentVisible = false;
+                            statusLabel = "Approved Absence";
+                            statusClass = "approved-absence-status";
+                        } else if (status === "rejected_absence") {
+                            presentVisible = true;
+                            absentVisible = false;
+                            statusLabel = "Rejected Absence";
+                            statusClass = "rejected-absence-status";
+                        } else if (status === "pending_absence") {
+                            presentVisible = true;
+                            absentVisible = true;
+                            statusLabel = "Pending Absence Request";
+                            statusClass = "pending-absence-status";
+                        }
                     }
 
-                    // 添加序号和学号显示
                     const studentDiv = document.createElement('div');
                     studentDiv.className = 'student';
                     studentDiv.innerHTML = `
@@ -433,6 +598,7 @@
                             <span style="min-width: 30px">${studentNumber++}.</span>
                             <span style="font-family: monospace">${studentDoc.id}</span>
                             <span>${studentData.name}</span>
+                            ${statusLabel ? `<span class="${statusClass}" style="margin-left: auto; padding: 3px 8px; border-radius: 4px; font-size: 0.8em;">${statusLabel}</span>` : ''}
                         </div>
                         <div class="attendance-buttons">
                             <button class="present" 
@@ -447,61 +613,101 @@
                 }
             });
 
-            if (!found) {
+            if (!currentSession) {
                 console.log("No students found for this course.");
                 studentList.innerHTML = '<p>No students found for this course.</p>';
             }
+            
+            // Add CSS for status labels
+            const style = document.createElement('style');
+            style.textContent = `
+                .present-status {
+                    background-color: #e8f5e9;
+                    color: #2e7d32;
+                }
+                .absent-status {
+                    background-color: #ffebee;
+                    color: #c62828;
+                }
+                .approved-absence-status {
+                    background-color: #e3f2fd;
+                    color: #1565c0;
+                }
+                .rejected-absence-status {
+                    background-color: #fff3e0;
+                    color: #e65100;
+                }
+                .pending-absence-status {
+                    background-color: #f3e5f5;
+                    color: #6a1b9a;
+                }
+            `;
+            document.head.appendChild(style);
         }
 
         async function markAttendance(studentId, status, button) {
+            const selectedValue = document.getElementById('subject').value;
+            const [courseId] = selectedValue.split('+');
+            
+            const courseRef = db.collection("course").doc(courseId);
+            const courseDoc = await courseRef.get();
+            const courseExpiry = courseDoc.data().subjectExpiry?.toDate();
+
+            if (courseExpiry && courseExpiry < new Date()) {
+                alert("该课程已过期，无法记录考勤");
+                return;
+            }
+
             const originalText = button.textContent;
-            button.innerHTML = `<span class="processing">处理中...</span>`;
+            button.innerHTML = `<span class="processing">Processing...</span>`;
             button.style.opacity = '0.7';
             button.disabled = true;
 
             try {
                 console.log(`Marking attendance for studentId: ${studentId}, status: ${status}`);
-                const selectedValue = document.getElementById('subject').value;
-                const [courseId, subjectId] = selectedValue.split('+');
+                const [courseIdFromValue, subjectId] = selectedValue.split('+');
 
-                const sessionTimeSelect = document.getElementById('sessionTime');
-                const selectedSessionTime = sessionTimeSelect.value.trim(); // Trim whitespace
-
-                // Debugging
-                console.log("Selected Session Time:", selectedSessionTime);
-
-                let customStartTime = null;
-                let customEndTime = null;
-
-                if (selectedSessionTime === 'custom') {
-                    customStartTime = document.getElementById('customStartTime').value;
-                    customEndTime = document.getElementById('customEndTime').value;
-                     // Ensure that the custom time input fields are not empty
-                    if (!customStartTime || !customEndTime) {
-                        alert("Please enter both custom start and end times.");
-                        return;
-                    }
+                if (courseIdFromValue !== courseId) {
+                    console.error('Course ID mismatch:', courseIdFromValue, courseId);
+                    return;
                 }
 
-                let sessionType = null;
-                let sessionDate = null;
-                let sessionStartTime = null;
+                const sessionTimeSelect = document.getElementById('sessionTime');
+                const selectedSessionTime = sessionTimeSelect.value;
 
+                console.log("Selected Session Time:", selectedSessionTime);
+
+                let sessionDate, sessionStartTime, sessionType, sessionGroup;
+                
                 if (selectedSessionTime !== 'custom') {
-                    const sessionParts = selectedSessionTime.split(' ');
+                    const sessionParts = selectedSessionTime.split('|');
+                    if (sessionParts.length < 5) {
+                        console.error('Invalid session format:', selectedSessionTime);
+                        return;
+                    }
+
                     sessionDate = sessionParts[0];
-                    const day = sessionParts[1];
+                    const sessionDay = sessionParts[1];
                     sessionStartTime = sessionParts[2];
-                    const endTime = sessionParts[4];
-                    sessionType = sessionParts[5].slice(1, -1);
+                    sessionType = sessionParts[3];
+                    sessionGroup = sessionParts[4];
+
+                    console.log('Parsed session:', {
+                        sessionDate,
+                        sessionDay,
+                        sessionStartTime,
+                        sessionType,
+                        sessionGroup
+                    });
                 } else {
                     const now = new Date();
                     sessionDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-                    sessionStartTime = customStartTime;
+                    sessionStartTime = document.getElementById('customStartTime').value;
                     sessionType = 'custom';
                 }
 
-                const sessionId = `${sessionDate}_${sessionStartTime}_${sessionType}`;
+                const lectureID = sessionStorage.getItem('lectureID');
+                const sessionId = `${sessionDate}_${sessionStartTime}_${lectureID}_${sessionType}_${sessionGroup}`;
 
                 const attendanceRef = db.collection("attendance")
                     .doc(courseId)
@@ -510,43 +716,150 @@
                     .collection("students")
                     .doc(studentId);
 
-                // Ensure the course, subject, and session documents exist
                 const courseDocRef = db.collection("attendance").doc(courseId);
                 const subjectCollectionRef = courseDocRef.collection(subjectId);
                 const sessionDocRef = subjectCollectionRef.doc(sessionId);
 
-                // Create the course document if it doesn't exist
                 const courseDoc = await courseDocRef.get();
                 if (!courseDoc.exists) {
-                    await courseDocRef.set({}); // Create an empty document
+                    await courseDocRef.set({});
                     console.log(`Course document created: ${courseId}`);
                 }
 
-                // No need to create the subject collection, Firestore creates it automatically when a document is added
-
-                // Create the session document if it doesn't exist
                 const sessionDoc = await sessionDocRef.get();
                 if (!sessionDoc.exists) {
-                    await sessionDocRef.set({}); // Create an empty document
+                    await sessionDocRef.set({});
                     console.log(`Session document created: ${sessionId}`);
                 }
 
-                const attendanceData = {
+                // Check if there's a pending absence request
+                const attendanceDoc = await attendanceRef.get();
+                let attendanceData = {
                     status: status,
                     method: "manual",
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    group: sessionGroup
                 };
+
+                if (attendanceDoc.exists && attendanceDoc.data().status === "pending_absence") {
+                    // This student has a pending absence request
+                    // If marking as absent, update the status to approved_absence
+                    if (status === "absent") {
+                        attendanceData.status = "approved_absence";
+                        attendanceData.method = "absence_request_approved";
+                        attendanceData.reason = attendanceDoc.data().reason || "Approved absence request";
+                        
+                        // Update the absence request status in the absence collection
+                        try {
+                            // Get student data to find the absence document
+                            const studentRef = db.collection("student").doc(studentId);
+                            const studentDoc = await studentRef.get();
+                            if (studentDoc.exists) {
+                                const studentData = studentDoc.data();
+                                const courseCode = studentData.course;
+                                const group = studentData.group;
+                                
+                                // Find and update the absence request
+                                const absenceRef = db.collection("absence")
+                                    .doc(courseCode)
+                                    .collection(group)
+                                    .doc(studentId);
+                                
+                                const absenceDoc = await absenceRef.get();
+                                if (absenceDoc.exists) {
+                                    const forms = absenceDoc.data().Form || [];
+                                    let updated = false;
+                                    
+                                    // Find the form with this session
+                                    for (const form of forms) {
+                                        for (const session of form.missedSessions || []) {
+                                            if (session.sessionId === sessionId) {
+                                                session.status = "approved";
+                                                session.approvedAt = new Date();
+                                                updated = true;
+                                            }
+                                        }
+                                    }
+                                    
+                                    if (updated) {
+                                        await absenceRef.update({ Form: forms });
+                                    }
+                                }
+                            }
+                        } catch (error) {
+                            console.error("Error updating absence request:", error);
+                        }
+                    } else {
+                        // If marking as present, update the status to rejected_absence
+                        attendanceData.status = "rejected_absence";
+                        attendanceData.method = "absence_request_rejected";
+                        
+                        // Update the absence request status in the absence collection
+                        try {
+                            // Get student data to find the absence document
+                            const studentRef = db.collection("student").doc(studentId);
+                            const studentDoc = await studentRef.get();
+                            if (studentDoc.exists) {
+                                const studentData = studentDoc.data();
+                                const courseCode = studentData.course;
+                                const group = studentData.group;
+                                
+                                // Find and update the absence request
+                                const absenceRef = db.collection("absence")
+                                    .doc(courseCode)
+                                    .collection(group)
+                                    .doc(studentId);
+                                
+                                const absenceDoc = await absenceRef.get();
+                                if (absenceDoc.exists) {
+                                    const forms = absenceDoc.data().Form || [];
+                                    let updated = false;
+                                    
+                                    // Find the form with this session
+                                    for (const form of forms) {
+                                        for (const session of form.missedSessions || []) {
+                                            if (session.sessionId === sessionId) {
+                                                session.status = "rejected";
+                                                session.approvedAt = new Date();
+                                                updated = true;
+                                            }
+                                        }
+                                    }
+                                    
+                                    if (updated) {
+                                        await absenceRef.update({ Form: forms });
+                                    }
+                                }
+                            }
+                        } catch (error) {
+                            console.error("Error updating absence request:", error);
+                        }
+                    }
+                }
 
                 await attendanceRef.set(attendanceData);
 
-                // Update attendance counts in the session document
-                await updateAttendanceCounts(courseId, subjectId, sessionId);
+                // Update session statistics
+                const sessionRef = db.collection("attendance")
+                    .doc(courseId)
+                    .collection(subjectId)
+                    .doc(sessionId);
 
-                // Make the button disappear with a particle effect
+                if (status === "present") {
+                    await sessionRef.update({
+                        presentStudents: firebase.firestore.FieldValue.increment(1),
+                        absentStudents: firebase.firestore.FieldValue.increment(-1)
+                    });
+                } else if (status === "absent" || status === "approved_absence") {
+                    await sessionRef.update({
+                        presentStudents: firebase.firestore.FieldValue.increment(-1),
+                        absentStudents: firebase.firestore.FieldValue.increment(1)
+                    });
+                }
+
                 createParticles(button);
                 button.style.display = 'none';
 
-                // Show the other button
                 const attendanceButtons = button.parentNode;
                 let otherButton;
                 if (button.classList.contains('present')) {
@@ -559,7 +872,6 @@
                     otherButton.style.display = 'inline-block';
                 }
 
-                // 添加临时状态反馈
                 const feedback = document.createElement('span');
                 feedback.textContent = status === 'present' ? '✓' : '✕';
                 feedback.style.color = status === 'present' ? '#4CAF50' : '#f44336';
@@ -578,11 +890,19 @@
         async function updateAttendanceCounts(courseId, subjectId, sessionId) {
             const subjectRef = db.collection("course").doc(courseId).collection("subject").doc(subjectId);
             const subjectDoc = await subjectRef.get();
-
-            let excludedStudents = [];
-            if (subjectDoc.exists && subjectDoc.data().excludedStudents) {
-                excludedStudents = subjectDoc.data().excludedStudents;
-            }
+            
+            const sessionTimeSelect = document.getElementById('sessionTime');
+            const selectedSessionValue = sessionTimeSelect.value;
+            const [sessionDate, sessionDay, sessionStartTime, sessionType, sessionGroup] = selectedSessionValue.split('|');
+            
+            const excludedStudents = subjectDoc.data().excludedStudents || [];
+            const sessions = subjectDoc.data().sessions || [];
+            const currentSession = sessions.find(s => 
+                s.day === sessionDay && 
+                s.startTime === sessionStartTime && 
+                s.type === sessionType
+            );
+            const extraStudents = currentSession?.extraStudents || [];
 
             const studentsRef = db.collection("student");
             const studentsSnapshot = await studentsRef.get();
@@ -593,7 +913,16 @@
 
             studentsSnapshot.forEach(studentDoc => {
                 const studentData = studentDoc.data();
-                if (studentData.course === courseId && !excludedStudents.includes(studentDoc.id)) {
+                const isInExtra = extraStudents.includes(studentDoc.id);
+                const isExcluded = excludedStudents.includes(studentDoc.id);
+
+                const shouldCount = !isExcluded && (
+                    isInExtra || 
+                    (studentData.course === courseId && 
+                    (sessionGroup === 'all' || studentData.group === sessionGroup))
+                );
+
+                if (shouldCount) {
                     totalStudents++;
                 }
             });
@@ -606,7 +935,6 @@
 
             const presentSnapshot = await attendanceCollectionRef.where("status", "==", "present").get();
             presentStudents = presentSnapshot.size;
-
             absentStudents = totalStudents - presentStudents;
 
             const sessionDocRef = db.collection("attendance")
@@ -617,7 +945,11 @@
             await sessionDocRef.update({
                 totalStudents: totalStudents,
                 presentStudents: presentStudents,
-                absentStudents: absentStudents
+                absentStudents: absentStudents,
+                group: sessionGroup,
+                extraStudents: extraStudents,
+                sessionType: sessionType,
+                startTime: sessionStartTime
             });
         }
 
@@ -645,16 +977,98 @@
                 const x = distance * Math.cos(angle * Math.PI / 180);
                 const y = distance * Math.sin(angle * Math.PI / 180);
 
-                // Delay the start of the animation slightly
                 setTimeout(() => {
                     particle.style.transform = `translate(${x}px, ${y}px)`;
                     particle.style.opacity = 0;
                 }, 10);
 
-                // Remove the particle after the animation completes
                 setTimeout(() => {
                     document.body.removeChild(particle);
                 }, animationDuration * 1000);
+            }
+        }
+
+        async function loadDailySubjects(date) {
+            const dailySubjectsDiv = document.getElementById('dailySubjects');
+            dailySubjectsDiv.innerHTML = '<div class="loading">Loading...</div>';
+            
+            const selectedDate = new Date(date);
+            const dayOfWeek = selectedDate.toLocaleDateString('en-US', { weekday: 'long' });
+            
+            const lectureID = sessionStorage.getItem('lectureID');
+            const db = firebase.firestore();
+            
+            const coursesSnapshot = await db.collection("course")
+                .where("subjectExpiry", ">", new Date())
+                .get();
+
+            let subjectsHTML = '';
+            
+            for (const courseDoc of coursesSnapshot.docs) {
+                const courseId = courseDoc.id;
+                const subjectsRef = db.collection("course").doc(courseId).collection("subject");
+                const subjectsSnapshot = await subjectsRef.get();
+
+                for (const subjectDoc of subjectsSnapshot.docs) {
+                    const subjectData = subjectDoc.data();
+                    const hasSessionToday = subjectData.sessions?.some(s => 
+                        s.day === dayOfWeek && 
+                        s.lectureID === lectureID
+                    );
+
+                    if (hasSessionToday) {
+                        subjectsHTML += `
+                            <div class="daily-subject" 
+                                 onclick="loadSubjectForDate('${courseId}', '${subjectDoc.id}', '${date}')">
+                                ${courseId} - ${subjectData.name}
+                            </div>
+                        `;
+                    }
+                }
+            }
+            
+            dailySubjectsDiv.innerHTML = subjectsHTML || '<div>No classes scheduled for this day</div>';
+        }
+
+        document.getElementById('calendarDate').addEventListener('change', async (e) => {
+            await loadDailySubjects(e.target.value);
+            
+            const subjectSelect = document.getElementById('subject');
+            if (subjectSelect.value) {
+                await displaySchedule();
+                confirmSelection();
+            }
+        });
+
+        window.addEventListener('load', () => {
+            const today = new Date().toISOString().split('T')[0];
+            loadDailySubjects(today);
+        });
+
+        async function loadSubjectForDate(courseId, subjectId, date) {
+            const subjectRef = db.collection("course").doc(courseId).collection("subject").doc(subjectId);
+            const subjectDoc = await subjectRef.get();
+            
+            if (subjectDoc.exists) {
+                document.getElementById('subject').value = `${courseId}+${subjectId}`;
+                
+                document.getElementById('calendarDate').value = date;
+                
+                await displaySchedule();
+                
+                const sessionTimeSelect = document.getElementById('sessionTime');
+                const options = sessionTimeSelect.options;
+                
+                const targetDate = new Date(date).toISOString().split('T')[0];
+                for(let i = 0; i < options.length; i++) {
+                    const optionDate = options[i].value.split('|')[0];
+                    if(optionDate === targetDate) {
+                        sessionTimeSelect.value = options[i].value;
+                        break;
+                    }
+                }
+                
+                confirmSelection();
             }
         }
 
