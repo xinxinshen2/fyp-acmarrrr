@@ -683,9 +683,77 @@
             }
         }
 
+        // 在loadAbsenceStatistics函数之后添加以下新函数
+        async function loadAttendanceRate() {
+            const lectureID = sessionStorage.getItem('lectureID');
+            if (!lectureID) {
+                console.error("No lecturer ID found");
+                return;
+            }
+
+            try {
+                const oneMonthAgo = new Date();
+                oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+
+                let totalPresent = 0;
+                let totalStudents = 0;
+                
+                // 获取所有课程
+                const coursesSnapshot = await getDocs(collection(db, "course"));
+                
+                for (const courseDoc of coursesSnapshot.docs) {
+                    const courseId = courseDoc.id;
+                    
+                    // 获取课程下的所有科目
+                    const subjectsSnapshot = await getDocs(collection(db, "course", courseId, "subject"));
+                    
+                    for (const subjectDoc of subjectsSnapshot.docs) {
+                        const subjectId = subjectDoc.id;
+                        
+                        // 获取该科目下的所有attendance会话
+                        const sessionsSnapshot = await getDocs(
+                            collection(db, "attendance", courseId, subjectId)
+                        );
+
+                        for (const sessionDoc of sessionsSnapshot.docs) {
+                            const sessionData = sessionDoc.data();
+                            
+                            // 解析会话信息
+                            const [sessionDate, startTime, sessionLecturerId, sessionType, group] = 
+                                sessionDoc.id.split('_');
+                            
+                            // 检查是否属于当前讲师且是最近一个月内的课程
+                            if (sessionLecturerId === lectureID) {
+                                const sessionDateObj = new Date(sessionDate);
+                                if (sessionDateObj >= oneMonthAgo) {
+                                    totalPresent += sessionData.presentStudents || 0;
+                                    totalStudents += sessionData.totalStudents || 0;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 计算出席率
+                let attendanceRate = 'N/A';
+                if (totalStudents > 0) {
+                    attendanceRate = `${Math.round((totalPresent / totalStudents) * 100)}%`;
+                }
+
+                // 更新页面显示
+                document.querySelector('.statistics div:first-child p').textContent = attendanceRate;
+                
+            } catch (error) {
+                console.error("Error loading attendance rate:", error);
+                document.querySelector('.statistics div:first-child p').textContent = 'Error';
+            }
+        }
+
+        // 在window.onload中添加调用
         window.onload = function() {
             loadLecturerName();
-            loadAbsenceStatistics(); // 加载缺席统计
+            loadAbsenceStatistics();
+            loadAttendanceRate(); // 新增调用
         };
 
         window.logout = function() {
@@ -1326,7 +1394,7 @@
                 <div class="statistics">
                     <div>
                         <h3>Attendance Rate</h3>
-                        <p>85%</p>
+                        <p>N/A</p>
                     </div>
                     <div>
                         <h3>Leave Requests</h3>
