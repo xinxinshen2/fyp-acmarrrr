@@ -606,11 +606,13 @@
         /* Add timetable styles */
         .timeTableSpace {
             width: 90%;
-            margin: 20px auto;
+            margin: 120px auto 20px auto;  /* Add top margin to match other sections */
             padding: 30px;
             background: linear-gradient(-229deg, rgba(207, 145, 255, 0.7), rgba(87, 130, 245, 0.7));
             border-radius: 15px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            min-height: calc(100vh - 160px);  /* Match other sections' min-height */
+            display: none;  /* Hide by default */
         }
 
         .timetable-table {
@@ -619,6 +621,7 @@
             background: rgba(255, 255, 255, 0.9);
             border-radius: 10px;
             overflow: hidden;
+            margin-top: 20px;
         }
 
         .timetable-table th,
@@ -626,12 +629,18 @@
             padding: 15px;
             border: 1px solid rgba(221, 221, 221, 0.3);
             vertical-align: top;
+            min-width: 200px;  /* Ensure minimum width for columns */
         }
 
-        .timetable-table th {
-            background-color: rgba(242, 242, 242, 0.9);
-            width: 12%;
-            text-align: center;
+        .timetable-table td {
+            height: calc(100vh - 350px);  /* Set fixed height for cells */
+            overflow-y: auto;  /* Enable vertical scrolling within cells */
+        }
+
+        .tableDisplay {
+            overflow-x: auto;  /* Enable horizontal scrolling if needed */
+            margin-top: 20px;
+            padding-bottom: 20px;  /* Add some padding at the bottom */
         }
 
         .day-header {
@@ -1095,66 +1104,56 @@
 
         // Navigation Handling
         document.addEventListener("DOMContentLoaded", function () {
-            const homeBtn = document.querySelector(".nav-btn:nth-child(1)");
-            const absenceFormBtn = document.querySelector(".nav-btn:nth-child(2)");
-            const historyBtn = document.querySelector(".nav-btn:nth-child(3)");
-            const dataAnalysisBtn = document.querySelector(".nav-btn:nth-child(4)");
-            const timetableBtn = document.querySelector(".nav-btn:nth-child(5)");
+            const navButtons = document.querySelectorAll(".nav2 .nav-btn");
+            const spaces = {
+                home: document.querySelector(".homeSpace"),
+                absenceForm: document.querySelector(".absenceFormSpace"),
+                history: document.querySelector(".historySpace"),
+                data: document.querySelector(".dataSpace"),
+                timetable: document.querySelector(".timeTableSpace")
+            };
 
-            const homeSpace = document.querySelector(".homeSpace");
-            const absenceFormSpace = document.querySelector(".absenceFormSpace");
-            const historySpace = document.querySelector(".historySpace");
-            const dataSpace = document.querySelector(".dataSpace");
-            const functionSpace = document.querySelector(".functionSpace");
-
-            homeSpace.style.display = "block";
-            absenceFormSpace.style.display = "none";
-            historySpace.style.display = "none";
-            dataSpace.style.display = "none";
-            functionSpace.style.display = "none";
-
-            homeBtn.addEventListener("click", function () {
-                homeSpace.style.display = "block";
-                absenceFormSpace.style.display = "none";
-                historySpace.style.display = "none";
-                dataSpace.style.display = "none";
-                functionSpace.style.display = "none";
-                loadNotifications(); // Refresh notifications
+            // Hide all spaces initially except home
+            Object.values(spaces).forEach(space => {
+                if (space !== spaces.home) {
+                    space.style.display = "none";
+                }
             });
 
-            absenceFormBtn.addEventListener("click", function () {
-                homeSpace.style.display = "none";
-                absenceFormSpace.style.display = "block";
-                historySpace.style.display = "none";
-                dataSpace.style.display = "none";
-                functionSpace.style.display = "none";
-            });
-            
-            historyBtn.addEventListener("click", function () {
-                homeSpace.style.display = "none";
-                absenceFormSpace.style.display = "none";
-                historySpace.style.display = "block";
-                dataSpace.style.display = "none";
-                functionSpace.style.display = "none";
-                loadAbsenceHistory(); // Load absence history
+            // Add click handlers for navigation
+            navButtons.forEach((btn, index) => {
+                btn.addEventListener("click", function() {
+                    // Hide all spaces
+                    Object.values(spaces).forEach(space => {
+                        space.style.display = "none";
+                    });
+
+                    // Show selected space
+                    switch(index) {
+                        case 0:
+                            spaces.home.style.display = "block";
+                            break;
+                        case 1:
+                            spaces.absenceForm.style.display = "block";
+                            break;
+                        case 2:
+                            spaces.history.style.display = "block";
+                            loadAbsenceHistory();
+                            break;
+                        case 3:
+                            spaces.data.style.display = "block";
+                            break;
+                        case 4:
+                            spaces.timetable.style.display = "block";
+                            loadTimetable();
+                            break;
+                    }
+
+                    // Scroll to top when switching sections
+                    window.scrollTo(0, 0);
+                });
             });
 
-            dataAnalysisBtn.addEventListener("click", function () {
-                homeSpace.style.display = "none";
-                absenceFormSpace.style.display = "none";
-                historySpace.style.display = "none";
-                dataSpace.style.display = "block";
-                functionSpace.style.display = "none";
-            });
-            
-            timetableBtn.addEventListener("click", function () {
-                homeSpace.style.display = "none";
-                absenceFormSpace.style.display = "none";
-                historySpace.style.display = "none";
-                dataSpace.style.display = "none";
-                functionSpace.style.display = "block";
-            });
-            
             // Set up filter buttons for history page
             const filterButtons = document.querySelectorAll('.filter-btn');
             filterButtons.forEach(button => {
@@ -2121,29 +2120,53 @@ document.getElementById("absenceForm").addEventListener("submit", async (event) 
         // Update navigation event listeners
         document.addEventListener("DOMContentLoaded", function () {
             const navButtons = document.querySelectorAll(".nav2 .nav-btn");
-            const timetableBtn = navButtons[4]; // Timetable button
-            const homeBtn = navButtons[0];    // Home button
-
-            const contentSections = {
+            const spaces = {
                 home: document.querySelector(".homeSpace"),
+                absenceForm: document.querySelector(".absenceFormSpace"),
+                history: document.querySelector(".historySpace"),
+                data: document.querySelector(".dataSpace"),
                 timetable: document.querySelector(".timeTableSpace")
             };
 
-            // Initialize display
-            contentSections.home.style.display = "block";
-            contentSections.timetable.style.display = "none";
-
-            // Timetable button click
-            timetableBtn.addEventListener("click", function() {
-                contentSections.home.style.display = "none";
-                contentSections.timetable.style.display = "block";
-                loadTimetable(); // Load timetable data
+            // Hide all spaces initially except home
+            Object.values(spaces).forEach(space => {
+                if (space !== spaces.home) {
+                    space.style.display = "none";
+                }
             });
 
-            // Home button click
-            homeBtn.addEventListener("click", function() {
-                contentSections.home.style.display = "block";
-                contentSections.timetable.style.display = "none";
+            // Add click handlers for navigation
+            navButtons.forEach((btn, index) => {
+                btn.addEventListener("click", function() {
+                    // Hide all spaces
+                    Object.values(spaces).forEach(space => {
+                        space.style.display = "none";
+                    });
+
+                    // Show selected space
+                    switch(index) {
+                        case 0:
+                            spaces.home.style.display = "block";
+                            break;
+                        case 1:
+                            spaces.absenceForm.style.display = "block";
+                            break;
+                        case 2:
+                            spaces.history.style.display = "block";
+                            loadAbsenceHistory();
+                            break;
+                        case 3:
+                            spaces.data.style.display = "block";
+                            break;
+                        case 4:
+                            spaces.timetable.style.display = "block";
+                            loadTimetable();
+                            break;
+                    }
+
+                    // Scroll to top when switching sections
+                    window.scrollTo(0, 0);
+                });
             });
         });
     </script>
