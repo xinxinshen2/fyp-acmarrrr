@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Today's Sessions</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        html, body {
+            height: 100%;
+        }
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: #e0e7ff;
+            color: #333;
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+        }
+        .container {
+            width: 90%;
+            max-width: 800px;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0px 4px 30px rgba(0, 0, 0, 0.08);
+            transition: transform 0.3s ease;
+        }
+        .container:hover {
+            transform: translateY(-10px);
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #4f46e5;
+        }
+        .course-select, .student-list {
+            margin-bottom: 20px;
+        }
+        .student {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 20px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            background: #fff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
+            transition: background-color 0.3s;
+        }
+        .student:hover {
+            background-color: #f8f9fa;
+        }
+        .student:last-child {
+            border-bottom: none;
+        }
+        .attendance-buttons button {
+            margin-left: 10px;
+            padding: 5px 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            min-width: 80px;
+            position: relative;
+        }
+        .attendance-buttons button::after {
+            content: "";
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            border-radius: 5px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .attendance-buttons button.present:hover::after {
+            border: 2px solid #4CAF50;
+            opacity: 0.2;
+        }
+        .attendance-buttons button.absent:hover::after {
+            border: 2px solid #f44336;
+            opacity: 0.2;
+        }
+        .confirm-button {
+            display: block;
+            margin: 0 auto;
+            padding: 10px 20px;
+            background-color: #4f46e5;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .confirm-button:hover {
+            transform: translateY(-1px);
+        }
+        .confirm-button:active {
+            transform: translateY(1px);
+        }
+        .particle {
+            position: absolute;
+            background-color: #fff;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+        label {
+            font-size: 0.95rem;
+            margin-bottom: 8px;
+            color: #4a5568;
+            display: block;
+        }
+        select, input[type="time"] {
+            padding: 8px 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            transition: border-color 0.2s;
+            font-size: 0.95rem;
+        }
+        select:focus, input[type="time"]:focus {
+            border-color: #4f46e5;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
+        }
+        .loading-dots {
+            display: inline-block;
+            padding: 0 5px;
+        }
+        .loading-dots::after {
+            content: '...';
+            animation: dots 1s steps(5, end) infinite;
+        }
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+        @keyframes fadeOut {
+            0% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-10px); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Today's Sessions</h1>
+        <div class="course-select">
+            <label for="subject">Select Subject:</label>
+            <select id="subject">
+                <!-- Options will be populated dynamically -->
+            </select>
+            <div id="scheduleDisplay"></div>
+            <button class="confirm-button" onclick="confirmSelection()">
+                <span class="button-text">Confirm</span>
+            </button>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "REMOVED",
+            authDomain: "advanceas-d8db4.firebaseapp.com",
+            projectId: "advanceas-d8db4",
+            storageBucket: "advanceas-d8db4.firebasestorage.app",
+            messagingSenderId: "878892786344",
+            appId: "1:878892786344:web:33bb5a97d99daf049d189d",
+            measurementId: "G-PLRRKT6RWW"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        async function loadSubjects() {
+            const lectureID = sessionStorage.getItem('lectureID');
+            console.log("Current Lecture ID:", lectureID);
+            const today = new Date();
+            const todayString = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+
+            const coursesRef = db.collection("course");
+            const coursesSnapshot = await coursesRef.get();
+            const subjectSelect = document.getElementById('subject');
+            subjectSelect.innerHTML = '';
+
+            coursesSnapshot.forEach(async courseDoc => {
+                const courseData = courseDoc.data();
+                const expiryDate = courseData.subjectExpiry?.toDate();
+                
+                if (expiryDate && expiryDate < new Date()) {
+                    console.log(`Skipping expired course: ${courseDoc.id}`);
+                    return;
+                }
+
+                const courseId = courseDoc.id;
+                const subjectsRef = coursesRef.doc(courseId).collection("subject");
+
+                const subjectsSnapshot = await subjectsRef.get();
+
+                subjectsSnapshot.forEach(subjectDoc => {
+                    const subjectData = subjectDoc.data();
+                    const sessions = subjectData.sessions || [];
+                    
+                    sessions.forEach(session => {
+                        const sessionDate = getDateOfSession(session.day);
+                        if (session.lectureID === lectureID && sessionDate === todayString) {
+                            const option = document.createElement('option');
+                            option.value = `${courseId}+${subjectDoc.id}+${session.startTime}+${session.type}+${session.group}`;
+                            option.textContent = `${subjectDoc.id} - ${subjectData.name} | ${session.type} - ${session.startTime} [${session.group}] (${courseId})`;
+                            subjectSelect.appendChild(option);
+                        }
+                    });
+                });
+            });
+        }
+
+        function getDateOfSession(dayOfWeek) {
+            const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            const today = new Date();
+            const targetDayIndex = days.indexOf(dayOfWeek);
+            
+            if (targetDayIndex === -1) return '';
+            
+            const dayDifference = targetDayIndex - today.getDay();
+            const targetDate = new Date(today);
+            targetDate.setDate(today.getDate() + dayDifference);
+            
+            return `${targetDate.getFullYear()}-${String(targetDate.getMonth()+1).padStart(2,'0')}-${String(targetDate.getDate()).padStart(2,'0')}`;
+        }
+
+        async function confirmSelection() {
+            const selectedValue = document.getElementById('subject').value;
+            if (!selectedValue) {
+                alert("Please select a subject");
+                return;
+            }
+
+            const [courseId, subjectId, startTime, sessionType, group] = selectedValue.split('+');
+            const today = new Date();
+            const sessionDate = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+            const lectureID = sessionStorage.getItem('lectureID');
+            const sessionId = `${sessionDate}_${startTime}_${lectureID}_${sessionType}_${group}`;
+
+            // 初始化所有学生为absent
+            const subjectRef = db.collection("course").doc(courseId).collection("subject").doc(subjectId);
+            const subjectDoc = await subjectRef.get();
+            
+            if (subjectDoc.exists) {
+                const sessions = subjectDoc.data().sessions || [];
+                const todaySession = sessions.find(session => {
+                    const sessionDate = getDateOfSession(session.day);
+                    return sessionDate === sessionDate;
+                });
+
+                if (todaySession) {
+                    const extraStudents = todaySession.extraStudents || [];
+                    const excludedStudents = subjectDoc.data().excludedStudents || [];
+                    
+                    let totalStudents = 0;
+
+                    // 处理常规学生时统计人数
+                    const studentsSnapshot = await db.collection("student")
+                        .where("course", "==", courseId)
+                        .get();
+
+                    studentsSnapshot.forEach(studentDoc => {
+                        if (!excludedStudents.includes(studentDoc.id)) {
+                            const studentData = studentDoc.data();
+                            if (group === 'all' || 
+                                studentData.group === group || 
+                                extraStudents.includes(studentDoc.id)) {
+                                totalStudents++;
+                            }
+                        }
+                    });
+
+                    // 处理额外学生时统计人数
+                    extraStudents.forEach(studentId => {
+                        if (!excludedStudents.includes(studentId)) {
+                            totalStudents++;
+                        }
+                    });
+
+                    // 创建session文档时初始化统计
+                    const sessionRef = db.collection("attendance")
+                        .doc(courseId)
+                        .collection(subjectId)
+                        .doc(sessionId);
+
+                    await sessionRef.set({
+                        totalStudents: totalStudents,
+                        presentStudents: 0,
+                        absentStudents: totalStudents,
+                        sessionDate: sessionDate,
+                        startTime: startTime,
+                        sessionType: sessionType,
+                        group: group
+                    });
+
+                    const batch = db.batch();
+                    
+                    // 处理常规学生
+                    studentsSnapshot.forEach(studentDoc => {
+                        if (!excludedStudents.includes(studentDoc.id)) {
+                            const studentData = studentDoc.data();
+                            if (group === 'all' || 
+                                studentData.group === group || 
+                                extraStudents.includes(studentDoc.id)) {
+                                
+                                const attendanceRef = db.collection("attendance")
+                                    .doc(courseId)
+                                    .collection(subjectId)
+                                    .doc(sessionId)
+                                    .collection("students")
+                                    .doc(studentDoc.id);
+                                
+                                // 初始状态设为absent
+                                batch.set(attendanceRef, {
+                                    status: "absent",
+                                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                                    lectureID: lectureID,
+                                    group: studentData.group || 'default',
+                                    isExtra: extraStudents.includes(studentDoc.id)
+                                }, { merge: true });
+                            }
+                        }
+                    });
+
+                    // 处理额外学生
+                    extraStudents.forEach(studentId => {
+                        if (!excludedStudents.includes(studentId)) {
+                            const attendanceRef = db.collection("attendance")
+                                .doc(courseId)
+                                .collection(subjectId)
+                                .doc(sessionId)
+                                .collection("students")
+                                .doc(studentId);
+                            
+                            batch.set(attendanceRef, {
+                                status: "absent",
+                                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                                lectureID: lectureID,
+                                group: 'extra',
+                                isExtra: true
+                            }, { merge: true });
+                        }
+                    });
+
+                    await batch.commit();
+
+                    // 存储session数据
+                    const sessionData = {
+                        sessionId: sessionId,
+                        courseId: courseId,
+                        subjectId: subjectId,
+                        lectureId: lectureID,
+                        group: group
+                    };
+                    sessionStorage.setItem('attendanceSession', JSON.stringify(sessionData));
+                    
+                    window.location.href = 'barcode-scanner.html';
+                }
+            }
+        }
+
+        window.onload = loadSubjects;
+    </script>
+</body>
+</html>

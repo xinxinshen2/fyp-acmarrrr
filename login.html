@@ -300,8 +300,8 @@
                         window.location.href = 'lecturer_dashboard.html';
                         sessionStorage.setItem('lectureID', userData.ID);
                     } else if (userData.role === "admin"){
+                        sessionStorage.setItem('adminID', userData.ID);
                          window.location.href = 'admin_dashboard.html';
-                         sessionStorage.setItem('adminID', userData.ID);
                     }else {
                         messageDiv.textContent = "unknown user";
                         messageDiv.style.color = "red";
