@@ -1,0 +1,2482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <!-- <script src="cannotView.js"></script> -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-app.js";
+        import { getAuth, signOut, onAuthStateChanged, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-auth.js";
+        import { getFirestore, collection, query, where, getDocs, getDoc, deleteDoc, doc, setDoc,addDoc } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-firestore.js";
+        import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-functions.js";
+
+    
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "REMOVED",
+            authDomain: "advanceas-d8db4.firebaseapp.com",
+            databaseURL: "https://advanceas-d8db4-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "advanceas-d8db4",
+            storageBucket: "advanceas-d8db4.firebasestorage.app",
+            messagingSenderId: "878892786344",
+            appId: "1:878892786344:web:33bb5a97d99daf049d189d",
+            measurementId: "G-PLRRKT6RWW"
+        };
+    
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const functions = getFunctions(app);
+    
+          
+       
+
+async function loadAdminName() {
+  const adminID = sessionStorage.getItem('adminID');
+  console.log("Admin ID from session:", adminID); 
+  if (!adminID) {
+    console.error("Admin ID not found in session.");
+    window.location.href = 'login.html';
+    return;
+  }
+
+  const adminRef = doc(db, "admin", adminID);
+  const adminDoc = await getDoc(adminRef);
+
+  if (adminDoc.exists()) {
+    const adminData = adminDoc.data();
+    console.log("Admin data retrieved:", adminData); 
+     const displayText = `${adminData.name} (${adminData.ID})`;
+    document.getElementById('username').textContent =displayText;
+  } else {
+    console.error("No such document!");
+  }
+}
+
+window.onload = function() {
+  loadAdminName();
+};
+        // Logout function
+        window.logout = function () {
+            signOut(auth).then(() => {
+                console.log("User signed out successfully.");
+                window.location.href = "login.html";
+            }).catch(error => {
+                console.error("Error logging out:", error);
+            });
+        };
+    
+//LOGOUT HERE
+    const logoutButton = document.getElementById("logoutButton");
+    const progressRect = document.querySelector(".progress-ring-rect");
+    let pressTimer;
+    let progressInterval;
+
+    const startProgress = () => {
+        let time = 0;
+        const totalTime = 3000; 
+        const circumference = 284; // 矩形周长 (2 * (width + height) - 8 * rx)
+
+        progressInterval = setInterval(() => {
+            time += 10; // Update every 10ms
+            const progress = (time / totalTime) * circumference;
+            progressRect.style.strokeDashoffset = circumference - progress;
+
+            if (time >= totalTime) {
+                clearInterval(progressInterval);
+                logout(); 
+            }
+        }, 10);
+    };
+
+    const resetProgress = () => {
+        clearInterval(progressInterval);
+        progressRect.style.strokeDashoffset = 284; 
+    };
+
+
+    logoutButton.addEventListener("mousedown", startProgress);
+    logoutButton.addEventListener("mouseup", resetProgress);
+    logoutButton.addEventListener("mouseleave", resetProgress);
+
+
+    logoutButton.addEventListener("touchstart", startProgress);
+    logoutButton.addEventListener("touchend", resetProgress);
+
+
+
+    const userContainer = document.querySelector(".currentOpen");
+const searchInput = document.getElementById("searchInput");
+const filterButton = document.querySelector(".changeUser-role");
+const filterIcon = filterButton.querySelector("i");
+
+//FILTER USER ROLE 
+
+let filterState = "all"; 
+let longPressTimer = null;
+let longPressActive = false;
+
+
+const roleIcons = {
+    all: "fas fa-user",          
+    student: "fas fa-user-graduate", 
+    lecturer: "fas fa-chalkboard-teacher" 
+};
+
+function updateIcon() {
+    filterIcon.className = roleIcons[filterState];
+}
+
+filterButton.addEventListener("click", () => {
+    if (longPressActive) {
+        longPressActive = false;
+        return;
+    }
+
+    if (filterState === "all") {
+        filterState = "student";
+    } else if (filterState === "student") {
+        filterState = "lecturer";
+    } else {
+        filterState = "all";
+    }
+
+    updateIcon();
+    fetchUsers();
+});
+
+filterButton.addEventListener("mousedown", () => {
+    longPressTimer = setTimeout(() => {
+        filterState = "all";
+        longPressActive = true;
+        updateIcon();
+        fetchUsers();
+    }, 2000);
+});
+
+filterButton.addEventListener("mouseup", () => clearTimeout(longPressTimer));
+filterButton.addEventListener("mouseleave", () => clearTimeout(longPressTimer));
+
+
+document.addEventListener("DOMContentLoaded", () => {
+    filterState = "all";
+    updateIcon();
+    fetchUsers();
+});
+
+
+async function fetchUsers() {
+    console.log("Current Filter Status:", filterState);
+    userContainer.innerHTML = "<p>Loading...</p>";
+
+    let users = [];
+
+    try {
+
+        const adminSnapshot = await getDocs(collection(db, "admin"));
+        adminSnapshot.forEach(doc => {
+            users.push({ id: doc.data().ID, name: doc.data().name, email: doc.data().email, role: "admin" });
+        });
+
+
+        const lecturerSnapshot = await getDocs(collection(db, "lecturer"));
+        lecturerSnapshot.forEach(doc => {
+            users.push({ id: doc.data().ID, name: doc.data().name, email: doc.data().email, role: "lecturer" });
+        });
+
+
+        const studentSnapshot = await getDocs(collection(db, "student"));
+        studentSnapshot.forEach(doc => {
+            // users.push({ id: doc.data().ID, name: doc.data().name, email: doc.data().email, role: "student" });
+            users.push({ id: doc.data().ID, name: doc.data().name, email: doc.data().email, course: doc.data().course, group: doc.data().group, role: "student" });
+
+        });
+
+
+        let filteredUsers = users;
+        if (filterState === "student") {
+            filteredUsers = users.filter(user => user.role === "student");
+        } else if (filterState === "lecturer") {
+            filteredUsers = users.filter(user => user.role === "lecturer");
+        }
+
+        displayUsers(filteredUsers);
+
+    } catch (error) {
+        console.error("获取数据时出错:", error);
+        userContainer.innerHTML = "<p>数据加载失败，请检查数据库连接。</p>";
+    }
+}
+
+
+function displayUsers(users) {
+  userContainer.innerHTML = ""; 
+
+  if (users.length === 0) {
+    userContainer.innerHTML = "<p>No users found.</p>";
+    return;
+  }
+
+  const table = document.createElement("table");
+  table.border = "1";
+  table.style.borderCollapse = "collapse";
+
+  const thead = document.createElement("thead");
+
+  if (filterState === "student") {
+    thead.innerHTML = `
+      <tr style="background-color: #f2f2f2; text-align: left;">
+        <th style="padding: 10px;">No.</th>
+        <th style="padding: 10px;">ID</th>
+        <th style="padding: 10px;">Name</th>
+        <th style="padding: 10px;">Email</th>
+        <th style="padding: 10px;">Course</th>
+        <th style="padding: 10px;">Group</th>
+        <th style="padding: 10px;">Role</th>
+      </tr>
+    `;
+  } else {
+    thead.innerHTML = `
+      <tr style="background-color: #f2f2f2; text-align: left;">
+        <th style="padding: 10px;">No.</th>
+        <th style="padding: 10px;">ID</th>
+        <th style="padding: 10px;">Name</th>
+        <th style="padding: 10px;">Email</th>
+        <th style="padding: 10px;">Role</th>
+      </tr>
+    `;
+  }
+  
+  table.appendChild(thead);
+
+  const tbody = document.createElement("tbody");
+
+  users.forEach((user, index) => {
+    const row = document.createElement("tr");
+
+    if (filterState === "student") {
+      row.innerHTML = `
+        <td style="padding: 10px; text-align: center;">${index + 1}</td>
+        <td style="padding: 10px;">${user.id}</td>
+        <td style="padding: 10px;">${user.name}</td>
+        <td style="padding: 10px;">${user.email}</td>
+        <td style="padding: 10px;">${user.course}</td>
+        <td style="padding: 10px;">${user.group}</td>
+        <td style="padding: 10px;">${user.role}</td>
+      `;
+    } else {
+      row.innerHTML = `
+        <td style="padding: 10px; text-align: center;">${index + 1}</td>
+        <td style="padding: 10px;">${user.id}</td>
+        <td style="padding: 10px;">${user.name}</td>
+        <td style="padding: 10px;">${user.email}</td>
+        <td style="padding: 10px;">${user.role}</td>
+      `;
+    }
+    
+    tbody.appendChild(row);
+  });
+
+  table.appendChild(tbody);
+  userContainer.appendChild(table);
+}
+
+
+// SEARCH AT HERE
+searchInput.addEventListener("input", (e) => {
+  // Trim input and split by whitespace into tokens
+  const query = e.target.value.trim().toLowerCase();
+  const tokens = query.split(/\s+/).filter(token => token.length > 0);
+  const rows = document.querySelectorAll(".currentOpen table tbody tr");
+
+  rows.forEach(row => {
+    const text = row.textContent.toLowerCase();
+    // Check if every token is found in the row text
+    const matchesAll = tokens.every(token => text.includes(token));
+    row.style.display = matchesAll ? "table-row" : "none";
+  });
+});
+
+
+
+
+
+
+//ADDUSER
+document.addEventListener('DOMContentLoaded', () => {
+
+      const addUserBtn = document.querySelector('.AddUser');
+      addUserBtn.addEventListener('click', () => {
+        document.querySelector('.currentOpen').innerHTML = `
+          <form id="addUserForm">
+            <h2>Add New User </h2>
+            <br>
+            <br>
+            <div>
+              <label for="name">Name:</label>
+              <input type="text" id="name" name="name" required>
+            </div>
+            <div>
+              <label for="email">Email:</label>
+              <input type="email" id="email" name="email" required>
+            </div>
+            <div>
+              <label for="course">Course:</label>
+               <select id="course" name="course" required>
+                <option value="">Choose Course</option>
+              </select>
+            </div>
+            <div>
+              <label for="uid">UID (card_id):</label>
+              <input type="text" id="uid" name="uid" required>
+            </div>
+            <div>
+              <label for="idDisplay">ID:</label>
+              <span id="idDisplay"></span>
+            </div>
+
+            <div>
+              <label for="role">Role:</label>
+              <select id="role" name="role">
+                <option value="student">Student</option>
+                <option value="lecturer">Lecturer</option>
+              </select>
+            </div>
+            <div>
+              <button type="submit">Submit</button>
+            </div>
+          </form>
+        `;
+
+        async function populateCourseOptions() {
+  const courseSelect = document.getElementById("course");
+  try {
+    const coursesSnapshot = await getDocs(collection(db, "course"));
+    coursesSnapshot.forEach(docSnap => {
+      const option = document.createElement("option");
+      option.value = docSnap.id;
+      option.textContent = docSnap.id;
+      courseSelect.appendChild(option);
+    });
+  } catch (error) {
+    console.error("获取课程列表出错:", error);
+    alert("获取课程列表出错，请检查控制台了解详细信息。");
+  }
+}
+populateCourseOptions();
+
+document.getElementById("role").addEventListener("change", function() {
+
+  
+  // We'll assume these are contained in their own divs. Adjust the selectors as needed.
+  const courseDiv = document.querySelector("label[for='course']").parentElement;
+  const uidDiv = document.querySelector("label[for='uid']").parentElement;
+  const courseInput = document.getElementById("course");
+  const uidInput = document.getElementById("uid");
+
+  if (this.value === "lecturer") {
+    // Hide course and UID fields for lecturer
+    courseDiv.style.display = "none";
+    uidDiv.style.display = "none";
+    courseInput.required = false;
+    uidInput.required = false;
+    
+  } else if (this.value === "student") {
+    // Show them for other roles
+    courseDiv.style.display = "block";
+    courseDiv.style.marginBottom = "15px";
+    courseDiv.style.display = "flex";
+    courseDiv.style.alignItems = "center";
+    courseDiv.style.justifyContent = "center";
+
+    uidDiv.style.display = "block";
+    uidDiv.style.marginBottom = "15px";
+    uidDiv.style.display = "flex";
+    uidDiv.style.alignItems = "center";
+    uidDiv.style.justifyContent = "center";
+
+    courseInput.required = true;
+    uidInput.required = true;
+  }
+});
+
+// margin-bottom: 15px;
+//     display: flex
+// ;
+//     align-items: center;
+//     justify-content: center;
+
+
+document.getElementById("course").addEventListener("change", async (e) => {
+  const selectedCourse = e.target.value;
+
+  const role = document.getElementById("role").value;
+  if (role !== "student") {
+    return;
+  }
+  
+try {
+  if(role == "student"){
+  const studentsQuery = query(
+    collection(db, "student"),
+    where("course", "==", selectedCourse)
+  );
+  const querySnapshot = await getDocs(studentsQuery);
+  
+  let maxId = 0;
+  querySnapshot.forEach((docSnap) => {
+    const currentId = parseInt(docSnap.id, 10);
+    if (!isNaN(currentId) && currentId > maxId) {
+      maxId = currentId;
+    }
+  });
+  
+  let newID = "";
+  if (maxId === 0) {
+    // If no student IDs are found, extract the digits from the course ID and append "0001"
+    const courseDigitsMatch = selectedCourse.match(/\d+$/);
+    if (courseDigitsMatch) {
+      const courseDigits = courseDigitsMatch[0];
+      newID = courseDigits + "0001";
+    } else {
+      newID = "0001"; // fallback if no digits found in course ID
+    }
+  } else {
+    newID = (maxId + 1).toString();
+  }
+  
+  console.log("New Student ID:", newID);
+  document.getElementById("idDisplay").textContent = newID;
+}
+
+} catch (error) {
+  console.error("查询记录出错：", error);
+  alert("查询记录出错，请检查控制台了解详细信息。");
+}
+});
+
+document.getElementById("role").addEventListener("change", async (e) => {
+  const role = e.target.value;
+  if (role === "lecturer") {
+    // Since lecturers don't need a course, immediately calculate lecturer ID
+    try {
+      let newLecturerID = "";
+      const lecturersSnapshot = await getDocs(collection(db, "lecturer"));
+      let maxId = 0;
+      lecturersSnapshot.forEach(docSnap => {
+        const currentId = parseInt(docSnap.id, 10);
+        if (!isNaN(currentId) && currentId > maxId) {
+          maxId = currentId;
+        }
+      });
+      newLecturerID = (maxId + 1).toString();
+      console.log("Calculated new lecturer ID:", newLecturerID);
+      document.getElementById("idDisplay").textContent = newLecturerID;
+    } catch (error) {
+      console.error("Error calculating new lecturer ID:", error);
+      alert("Error calculating lecturer ID. Check the console for details.");
+    }
+  } else if (role === "student") {
+    // Optionally clear the idDisplay or let the course event handle it
+    document.getElementById("idDisplay").textContent = "";
+  }
+});
+
+
+// 绑定表单提交事件
+const form = document.getElementById("addUserForm");
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  // Get form values
+  const name = form.name.value;
+  const email = form.email.value;
+  const course = form.course.value;
+  const inputUID = form.uid.value;  
+  const newID = document.getElementById("idDisplay").textContent;
+  const role = form.role.value;
+
+  try {
+    // Create auth user
+    const userCredential = await createUserWithEmailAndPassword(auth, email, "abcd1234");
+    const authUid = userCredential.user.uid;
+    console.log("Firebase Authentication UID:", authUid);
+
+    // Save common user data into Firestore "user" collection
+    await setDoc(doc(db, "user", authUid), {
+      role: role,
+      ID: newID
+    }, { merge: true });
+
+    if (role === "student") {
+      // For students, assign a group:
+      let groupNumber = 1;
+      let groupName = `G${groupNumber}`;
+
+      // Query student collection for the selected course
+      const studentsQuery = query(
+        collection(db, "student"),
+        where("course", "==", course)
+      );
+      const querySnapshot = await getDocs(studentsQuery);
+      
+      let groupCount = {}; // Count each group's members
+      querySnapshot.forEach((docSnap) => {
+        const studentData = docSnap.data();
+        const studentGroup = studentData.group || "G1";
+        groupCount[studentGroup] = (groupCount[studentGroup] || 0) + 1;
+      });
+      
+      // If current group is full (>=10), move to the next group
+      while (groupCount[groupName] && groupCount[groupName] >= 10) {
+        groupNumber++;
+        groupName = `G${groupNumber}`;
+      }
+      console.log(`Assigning student to: ${groupName}`);
+      
+      // Save student document
+      await setDoc(doc(db, "student", newID), {
+        name: name,
+        email: email,
+        ID: newID,
+        UID: inputUID,
+        course: course,
+        group: groupName
+      });
+    } else if (role === "lecturer") {
+     
+  // Calculate new lecturer ID right here
+  let newLecturerID = "";
+  try {
+    const lecturersSnapshot = await getDocs(collection(db, "lecturer"));
+    let maxId = 0;
+    lecturersSnapshot.forEach(docSnap => {
+      const currentId = parseInt(docSnap.id, 10);
+      if (!isNaN(currentId) && currentId > maxId) {
+        maxId = currentId;
+      }
+    });
+    newLecturerID = (maxId + 1).toString();
+    console.log("Calculated new lecturer ID:", newLecturerID);
+    // Optionally update the display:
+    document.getElementById("idDisplay").textContent = newLecturerID;
+  } catch (error) {
+    console.error("Error calculating new lecturer ID:", error);
+    showAlert("Error calculating lecturer ID.");
+    return;
+  }
+  
+  // Save lecturer document
+  try {
+    await setDoc(doc(db, "lecturer", newLecturerID), {
+      name: name,
+      email: email,
+      ID: newLecturerID
+    });
+    showAlert("Lecturer added successfully!", "success");
+  } catch (error) {
+    console.error("Error adding lecturer:", error);
+    showAlert("Error adding lecturer.");
+  }
+}      
+        alert("User created successfully!");
+        const currentRole = form.role.value;
+        form.reset();
+        form.role.value = currentRole;
+
+        document.getElementById("idDisplay").textContent = "";
+            } catch (error) {
+        console.error("Error creating user:", error);
+        // If the user was created in Authentication, remove it to roll back.
+        if (auth.currentUser) {
+          await auth.currentUser.delete();
+        }
+        
+        if (error.code === "auth/email-already-in-use") {
+          alert("This email is already in use.");
+        } else {
+          alert("Error creating user, please check the console for details.");
+        }
+      }
+
+    });
+  });
+});
+
+
+
+      //DELETE IS HERE
+document.querySelector('.DeleteUser').addEventListener('click', () => {
+        fetchUsersForDelete();
+});
+
+
+async function fetchUsersForDelete() {
+  let users = [];
+  try {
+
+    const adminSnapshot = await getDocs(collection(db, "admin"));
+    adminSnapshot.forEach(docSnap => {
+      const data = docSnap.data();
+      users.push({ 
+        id: data.ID, 
+        name: data.name, 
+        email: data.email, 
+        role: "admin",
+        authUid: data.authUid 
+      });
+    });
+
+    const lecturerSnapshot = await getDocs(collection(db, "lecturer"));
+    lecturerSnapshot.forEach(docSnap => {
+      const data = docSnap.data();
+      users.push({ 
+        id: data.ID, 
+        name: data.name, 
+        email: data.email, 
+        role: "teacher",
+        authUid: data.authUid 
+      });
+    });
+
+    const studentSnapshot = await getDocs(collection(db, "student"));
+    studentSnapshot.forEach(docSnap => {
+      const data = docSnap.data();
+      users.push({ 
+        id: data.ID, 
+        name: data.name, 
+        email: data.email, 
+        role: "student",
+        authUid: data.authUid 
+      });
+    });
+    
+
+    displayUsersForDelete(users);
+  } catch (error) {
+    console.error("Error fetching users for deletion:", error);
+    document.querySelector('.currentOpen').innerHTML = "<p>Data load failed. Please check your database connection.</p>";
+  }
+}
+
+
+function displayUsersForDelete(users) {
+  const container = document.querySelector('.currentOpen');
+  container.innerHTML = ""; 
+
+  if (users.length === 0) {
+    container.innerHTML = "<p>No users found.</p>";
+    return;
+  }
+
+
+
+
+  const table = document.createElement("table");
+  table.border = "1";
+  // table.style.width = "100%";
+  table.style.borderCollapse = "collapse";
+  table.id = "deleteTable";
+
+  const thead = document.createElement("thead");
+  thead.innerHTML = `
+    <tr>
+      <th >No.</th>
+      <th >ID</th>
+      <th >Name</th>
+      <th >Email</th>
+      <th >Role</th>
+      <th >Select</th>
+    </tr>
+  `;
+  table.appendChild(thead);
+
+  
+  const tbody = document.createElement("tbody");
+  users.forEach((user, index) => {
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      
+      <td style="padding: 10px; text-align: center;">${index + 1}</td>
+      <td style="padding: 10px;">${user.id}</td>
+      <td style="padding: 10px;">${user.name}</td>
+      <td style="padding: 10px;">${user.email}</td>
+      <td style="padding: 10px;">${user.role}</td>
+      <td style="padding: 10px; text-align: center;">
+        <input type="checkbox" class="deleteCheckbox" 
+               data-user-id="${user.id}" 
+               data-user-role="${user.role}"
+               data-auth-uid="${user.authUid}">
+      </td>
+    `;
+    tbody.appendChild(row);
+  });
+  table.appendChild(tbody);
+  container.appendChild(table);
+
+  const deleteBtn = document.createElement("button");
+  deleteBtn.id = "deleteSelectedBtn";
+  deleteBtn.textContent = "Delete Selected";
+  deleteBtn.style.marginBottom = "10px";
+  container.appendChild(deleteBtn);
+
+  deleteBtn.addEventListener("click", async () => {
+    const checkboxes = document.querySelectorAll(".deleteCheckbox:checked");
+    const usersToDelete = [];
+    const authUIDsToDelete = [];
+
+    checkboxes.forEach(cb => {
+        const userId = cb.getAttribute("data-user-id");
+        const userRole = cb.getAttribute("data-user-role");
+        const authUid = cb.getAttribute("data-auth-uid");
+        usersToDelete.push({ id: userId, role: userRole });
+        if (authUid) {
+            authUIDsToDelete.push(authUid);
+        }
+    });
+
+    if (usersToDelete.length === 0) {
+        alert("No users selected for deletion.");
+        return;
+    }
+    if (!confirm("Are you sure you want to delete the selected users?")) {
+        return;
+    }
+
+    // 删除 Firestore 里对应角色的用户文档
+    for (const userObj of usersToDelete) {
+        let collectionName;
+        if (userObj.role === "admin") {
+            collectionName = "admin";
+        } else if (userObj.role === "teacher") {
+            collectionName = "lecturer";
+        } else if (userObj.role === "student") {
+            collectionName = "student";
+        }
+
+        try {
+            await deleteDoc(doc(db, collectionName, userObj.id));
+            console.log(`Deleted user ${userObj.id} from ${collectionName}`);
+        } catch (error) {
+            console.error("Error deleting Firestore document:", error);
+        }
+    }
+
+    // **删除 `user` 集合中的文档（优化查询）**
+    try {
+    const userCollectionRef = collection(db, "user");
+    const userSnapshot = await getDocs(userCollectionRef); // 读取所有文档
+
+    for (const docSnap of userSnapshot.docs) {
+        const userData = docSnap.data(); // 获取文档数据
+        const docID = docSnap.id; // Firestore 文档ID
+        const userID = userData.ID; // 读取文档内部的 "ID" 字段
+
+        // 检查 userID 是否在 usersToDelete 列表中
+        if (usersToDelete.some(userObj => userObj.id === userID)) {
+            try {
+                await deleteDoc(doc(db, "user", userID)); // 根据文档ID删除
+                console.log(`Deleted user ${docID} with ID ${userID} from user collection`);
+            } catch (error) {
+                console.error("Error deleting Firestore document from user collection:", error);
+            }
+        }
+    }
+} catch (error) {
+    console.error("Error retrieving users from user collection:", error);
+}
+    alert("Selected users deleted.");
+
+    fetchUsers(); // 重新获取用户列表
+});
+}
+
+async function loadGroups(courseId) {
+  const filterGroupContainer = document.querySelector(".filterGroup");
+  try {
+    const studentsQuerySnapshot = await getDocs(
+      query(collection(db, "student"), where("course", "==", courseId))
+    );
+    const groupsSet = new Set();
+    studentsQuerySnapshot.forEach(docSnap => {
+      const data = docSnap.data();
+      if (data.group) {
+        groupsSet.add(data.group);
+      }
+    });
+    const groups = Array.from(groupsSet).sort();
+    let html = `<select id="groupSelect"><option value="">All Groups</option>`;
+    groups.forEach(group => {
+      html += `<option value="${group}">${group}</option>`;
+    });
+    html += `</select>`;
+    filterGroupContainer.innerHTML = html;
+
+    // Attach change event after the select is inserted
+    document.getElementById("groupSelect").addEventListener("change", (e) => {
+      selectedGroup = e.target.value;
+      const selectedCourse = document.getElementById("courseSelect").value;
+      if (selectedCourse) {
+        loadTimetable(selectedCourse, selectedGroup);
+      }
+    });
+  } catch (error) {
+    console.error("Error loading groups: ", error);
+    filterGroupContainer.innerHTML = "<p>Error loading groups.</p>";
+  }
+}
+
+
+
+
+
+//TIMETABLE
+let selectedGroup = "";
+
+  // 1. 加载课程列表，并在 .selectCourse 中生成下拉框
+  async function loadCourses() {
+    const courseContainer = document.querySelector(".selectCourse");
+
+    
+    try {
+      const courseSnapshot = await getDocs(collection(db, "course"));
+      let html = `<select id="courseSelect"><option value="">Choose Course</option>`;
+      courseSnapshot.forEach(docSnap => {
+        const courseId = docSnap.id; // 假设文档ID为课程代码，如 DIIT2308
+        html += `<option value="${courseId}">${courseId}</option>`;
+      });
+      html += `</select>`;
+      courseContainer.innerHTML = html;
+
+     
+      document.getElementById("courseSelect").addEventListener("change", (e) => {
+        const selectedCourse = e.target.value;
+        if (selectedCourse) {
+          loadTimetable(selectedCourse, selectedGroup);
+          loadGroups(selectedCourse);
+
+
+        } else {
+          document.querySelector(".tableDisplay").innerHTML = "";
+          document.querySelector(".filterGroup").innerHTML = "";
+
+        }
+      });
+
+
+
+    } catch (error) {
+      console.error("Error loading courses: ", error);
+      courseContainer.innerHTML = "<p>Error loading courses.</p>";
+    }
+  }
+
+  
+
+  async function loadTimetable(courseId,groupFilter = "") {
+
+    const sessionsByDay = {
+      Monday: [],
+      Tuesday: [],
+      Wednesday: [],
+      Thursday: [],
+      Friday: [],
+      Saturday: [],
+      Sunday: []
+    };
+
+    try {
+      const courseDocRef = doc(db, "course", courseId);
+      const subjectSnapshot = await getDocs(collection(courseDocRef, "subject"));
+
+      subjectSnapshot.forEach(subDoc => {
+      const subjectData = subDoc.data();
+      // Check that sessions is an array and process it
+      if (subjectData.sessions && Array.isArray(subjectData.sessions)) {
+        subjectData.sessions.forEach(session => {
+          // Assume session.day is a full day name like "Monday"
+          if (sessionsByDay[session.day]) {
+            // If a group filter is active, only add session if its group matches.
+            // (If session.group is not provided, you might choose to always add it.)
+            if (groupFilter && session.group && session.group !== groupFilter) {
+              // Skip this session because it does not belong to the filtered group.
+            } else {
+              sessionsByDay[session.day].push({
+                subjectName: subjectData.name,
+                class: session.class,
+                lecturerID: session.lectureID,
+                startTime: session.startTime,
+                endTime: session.endTime,
+                type: session.type,
+                group: session.group || ""
+              });
+            }
+          }
+        });
+      }
+    });
+
+      // 对每一天的 sessions 按 startTime 从早到晚排序
+      for (const day in sessionsByDay) {
+        sessionsByDay[day].sort((a, b) => a.startTime.localeCompare(b.startTime));
+      }
+
+      // 渲染 timetable 表格
+      renderTimetable(sessionsByDay);
+    } catch (error) {
+      console.error("Error loading timetable: ", error);
+      document.querySelector(".tableDisplay").innerHTML = "<p>Error loading timetable.</p>";
+    }
+  }
+
+  // 3. 根据 sessionsByDay 对象渲染 timetable 表格
+  function renderTimetable(sessionsByDay) {
+    const tableDisplay = document.querySelector(".tableDisplay");
+    let html = "<table style='width: 100%; border-collapse: collapse; table-layout: fixed;'>"; //border-spacing: 0;
+    // 每一行显示一个星期的 session
+    const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+    days.forEach(day => {
+      html += `<tr style="border: 1px solid #ccc;">`;
+      // 第一列显示星期名称
+      html += `<td style="padding: 8px; border: 1px solid #ccc; font-weight: bold; background: #f2f2f2; width: 15%; text-align: center; vertical-align: middle;">${day}</td>`;
+      // 后续列显示当天所有的 sessions（如果有多个 session，则各自占用一个 cell）
+      if (sessionsByDay[day].length > 0) {
+        sessionsByDay[day].forEach(session => {
+          html += `
+          <td style="
+                padding: 10px; 
+                border: 1px solid #ccc; 
+                text-align: center; 
+                vertical-align: top;
+                width: 25%; /* 课程占据剩余空间 */
+                min-height: 80px; /* 设定最小高度，确保单元格大小一致 */
+                word-wrap: break-word; /* 让长文本自动换行 */
+                overflow-wrap: break-word;">
+                   <strong>${session.subjectName}</strong> (${session.type}) <br><br>
+                   <strong> Group: </strong> ${session.group}<br>
+                  <strong> Venue: </strong>${session.class}<br>
+                   <strong> Time: </strong>${session.startTime} - ${session.endTime}<br>
+                   <strong> Lecturer: </strong> ${session.lecturerID}<br>
+                    
+              </td>`;
+        });
+      } else {
+        // 如果没有 session，则填充空 cell
+        html += `<td style="padding: 8px; border: 1px solid #ccc;">-</td>`;
+      }
+      html += `</tr>`;
+    });
+    html += "</table>";
+    tableDisplay.innerHTML = html;
+  }
+
+  // 页面加载时，先加载课程下拉框
+  window.addEventListener("DOMContentLoaded", () => {
+    loadCourses();
+  });
+
+          
+
+
+//ADD TIMETABLE
+
+ // When "Add timetable" button is clicked, show the Add Timetable Form.
+ function showAlert(message, type = "error") {
+  const alertEl = document.getElementById("alert-Timetable");
+  console.log("alertEl:", alertEl); // ✅ Check if element is found
+  
+  if (!alertEl) {
+    console.error("Error: #alert-Timetable element not found!");
+    return; // Stop execution to prevent error
+  }
+
+  alertEl.textContent = message;
+  alertEl.style.color = type === "success" ? "green" : "red";
+  alertEl.style.display = "block";
+  alertEl.style.fontSize = "16px";
+
+  setTimeout(() => {
+    alertEl.style.display = "none";
+  }, 3000);
+}
+
+  // Show the Add Timetable Form when "Add timetable" is clicked
+  async function showAddTimetableForm() {
+    const container = document.querySelector(".tableDisplay");
+    container.innerHTML = `
+      <form id="addTimetableForm">
+        <h2>Add Timetable Entry</h2>
+        <div>
+          <label for="classSelect">Class:</label>
+          <select id="classSelect" required>
+            <option value="">Select Class</option>
+          </select>
+        </div>
+        <div>
+          <label for="courseSelectAdd">Course:</label>
+          <select id="courseSelectAdd" required>
+            <option value="">Select Course</option>
+          </select>
+          <div>
+          <label for="groupSelect">Student Group:</label>
+          <select id="groupSelectAdd" required>
+            <option value="">Select Student Group</option>
+          </select>
+        </div>
+        </div>
+        <div id="newCourseInput" style="display:none;">
+          <label for="newCourseName">New Course:</label>
+          <input type="text" id="newCourseName">
+        </div>
+        <div>
+  <label for="subjectSelect">Subject:</label>
+  <select id="subjectSelect" required>
+    <option value="">Select Subject</option>
+    <!-- Dynamically loaded subject options will go here -->
+    <option value="addNew">Add New Subject</option>
+  </select>
+</div>
+<div id="newSubjectInput" style="display:none;">
+  <div>
+    <label for="newSubjectID">Subject ID:</label>
+    <input type="text" id="newSubjectID" required>
+  </div>
+  <div>
+    <label for="newSubjectName">Subject Name:</label>
+    <input type="text" id="newSubjectName" required>
+  </div>
+</div>
+
+        <div>
+          <label for="lecturerSelect">Lecturer:</label>
+          <select id="lecturerSelect" required>
+            <option value="">Select Lecturer</option>
+          </select>
+        </div>
+        <div>
+          <label for="sessionDay">Day:</label>
+          <select id="sessionDay" required>
+            <option value="">Select Day</option>
+            <option value="Monday">Monday</option>
+            <option value="Tuesday">Tuesday</option>
+            <option value="Wednesday">Wednesday</option>
+            <option value="Thursday">Thursday</option>
+            <option value="Friday">Friday</option>
+            <option value="Saturday">Saturday</option>
+            <option value="Sunday">Sunday</option>
+          </select>
+        </div>
+        <div class="time-input">
+         <span class="time-s">
+          <label for="sessionStartTime">Start Time:</label>
+          <input type="time" id="sessionStartTime" required>
+          </span>
+          <span class="time-e">
+          <label for="sessionEndTime">End Time:</label>
+          <input type="time" id="sessionEndTime" required>
+          </span>
+        </div>
+        <div>
+          <label for="sessionType">Session Type:</label>
+          <select id="sessionType" required>
+            <option value="">Select Session Type</option>
+            <option value="lecture">Lecture</option>
+            <option value="tutorial">Tutorial</option>
+          </select>
+        </div>
+        <div>
+          <label for="excludedStudentsSelect">Excluded Students:</label>
+          <select id="excludedStudentsSelect" multiple>
+          </select>
+        </div>
+        <div>
+          <label for="extraStudentsSelect">Extra Students:</label>
+          <select id="extraStudentsSelect" multiple>
+          </select>
+        </div>
+        <div>
+          <button type="submit">Add</button>
+        </div>
+      </form>
+    `;
+  loadCoursesForAdd();
+  loadLecturersForAdd();
+  loadClasses();
+
+  
+
+
+   // Add change event listener to the course dropdown to show/hide new course input
+   const courseSelect = document.getElementById("courseSelectAdd");
+    courseSelect.addEventListener("change", () => {
+      const newCourseDiv = document.getElementById("newCourseInput");
+      if (courseSelect.value === "addNew") {
+        newCourseDiv.style.display = "block";
+        newCourseDiv.style.marginBottom = "15px";
+        newCourseDiv.style.display= "flex";
+        newCourseDiv.style.alignItems= "center";
+        newCourseDiv.style.justifyContent= "center";
+
+
+      } else {
+        newCourseDiv.style.display = "none";
+      }
+    });
+
+    document.getElementById("courseSelectAdd").addEventListener("change", function() {
+      const courseId = this.value;
+      if (courseId) {
+        loadSubjectsForCourse(courseId);
+        loadStudentGroups(courseId);
+        loadExcludedStudents(courseId);
+        loadExtraStudents(courseId);
+
+
+      } else {
+        // Optionally, clear the subject select if no course is selected
+        document.getElementById("subjectSelect").innerHTML = '<option value="">Select Subject</option>';
+      }
+    });
+
+document.getElementById("subjectSelect").addEventListener("change", function() {
+  const newSubjectInput = document.getElementById("newSubjectInput");
+  
+  if (this.value === "addNew") {
+    // Show inputs for new subject ID and name.
+    newSubjectInput.style.display = "block";
+    document.getElementById("newSubjectID").disabled = false;
+    document.getElementById("newSubjectName").disabled = false;
+  } else {
+    newSubjectInput.style.display = "none";
+    // Optionally, if you want to auto-fill the subject name from the option's data attribute:
+    document.getElementById("newSubjectID").disabled = true;
+    document.getElementById("newSubjectName").disabled = true;
+    const selectedOption = this.options[this.selectedIndex];
+    const subjectName = selectedOption.getAttribute("data-subjectname") || "";
+    // If you have a separate field to show the auto-filled name, you can set it here.
+    // For example, if you want to set it in an input that remains read-only:
+    //document.getElementById("subjectNameDisplay").value = subjectName;
+  }
+});
+
+function getSubjectExpiry() {
+    const now = new Date();
+    now.setFullYear(now.getFullYear() + 2); // 加 2 年
+    now.setMonth(3); // 设定为 4 月（JavaScript 的月份从 0 开始，所以 3 代表 4 月）
+    now.setDate(6); // 设定为 6 日
+    now.setHours(0, 0, 0, 0); // 设定时间为 00:00:00
+
+    // 格式化为 "YYYY年MM月DD日 UTC+8 00:00:00"
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1; // JavaScript 月份是 0-11，所以要 +1
+    const day = now.getDate();
+
+    return `${year}年${month}月${day}日 UTC+8 00:00:00`;
+}
+
+    
+   // Form submission handling
+   document.getElementById("addTimetableForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      let courseId = document.getElementById("courseSelectAdd").value;
+      if (courseId === "addNew") {
+        const newCourseName = document.getElementById("newCourseName").value;
+        if (!newCourseName.trim()) {
+          showAlert("Please enter a new course name.");
+          return;
+        }
+        try {
+          const newCourseRef = doc(db, "course", newCourseName);
+          const newCourseDoc = await getDoc(newCourseRef);
+          if (!newCourseDoc.exists()) {
+            await setDoc(newCourseRef, { subjectExpiry: getSubjectExpiry() });
+          }
+          courseId = newCourseName;
+        } catch (error) {
+          console.error("Error creating new course:", error);
+          showAlert("Error creating new course.");
+          return;
+        }
+      }
+        
+
+
+
+      // Get remaining form values
+      let studentGroup = document.getElementById("groupSelectAdd").value;
+      let classID = document.getElementById("classSelect").value.trim();
+      // let subjectID = document.getElementById("subjectID").value.trim();
+      // let subjectName = document.getElementById("subjectName").value;
+      let lecturerID = document.getElementById("lecturerSelect").value;
+      let sessionDay = document.getElementById("sessionDay").value;
+      let sessionStartTime = document.getElementById("sessionStartTime").value;
+      let sessionEndTime = document.getElementById("sessionEndTime").value;
+      let sessionType = document.getElementById("sessionType").value;
+      const lecturerName = document.getElementById("lecturerSelect").options[document.getElementById("lecturerSelect").selectedIndex].text;
+      const excludedStudentsSelect = document.getElementById("excludedStudentsSelect");
+      const excludedStudents = Array.from(excludedStudentsSelect.selectedOptions).map(option => option.value);
+      const extraStudentsSelect = document.getElementById("extraStudentsSelect");
+      const extraStudents = Array.from(extraStudentsSelect.selectedOptions).map(option => option.value);
+      // sessionStartTime = formatTimeTo24Hour(sessionStartTime);
+      // sessionEndTime = formatTimeTo24Hour(sessionEndTime);
+      sessionStartTime = formatTime(sessionStartTime);
+      sessionEndTime = formatTime(sessionEndTime);
+
+
+      // Get the value from the subject select element
+const subjectSelectValue = document.getElementById("subjectSelect").value.trim();
+let subjectID, subjectName;
+
+if (subjectSelectValue === "addNew") {
+  // When adding a new subject, get subjectID and subjectName from the new inputs
+  subjectID = document.getElementById("newSubjectID").value.trim();
+  subjectName = document.getElementById("newSubjectName").value;
+  if (!subjectID) {
+    showAlert("Please enter a valid Subject ID.");
+    return;
+  }
+  if (!subjectName) {
+    showAlert("Please enter a valid Subject Name.");
+    return;
+  }
+} else {
+  // Otherwise, use the selected subject's value and auto-fill the subject name (if available)
+  subjectID = subjectSelectValue;
+  const selectedOption = document.getElementById("subjectSelect").options[document.getElementById("subjectSelect").selectedIndex];
+  subjectName = selectedOption.getAttribute("data-subjectname") || "";
+}
+
+
+
+      // Check that the new session does not conflict with existing sessions in this course
+      const conflict = await checkSessionConflict(courseId, sessionDay, sessionStartTime, sessionEndTime,studentGroup);
+      if (conflict) {
+        showAlert("The session time conflicts with an existing session in this course.");
+        return;
+      }
+
+
+
+          //ADD DATA TO FIREBASE
+      try {
+          const courseRef = doc(db, "course", courseId);
+          const courseDocSnap = await getDoc(courseRef);
+          if (!courseDocSnap.exists() || !courseDocSnap.data().subjectExpiry) {
+        await setDoc(courseRef, { subjectExpiry: getSubjectExpiry() }, { merge: true });
+    }
+          const subjectDocRef = doc(courseRef, "subject", subjectID);
+          const subjectDocSnap = await getDoc(subjectDocRef);
+
+          const newSession = {
+            lectureID: lecturerID,
+            class: classID,
+            day: sessionDay,
+            startTime: sessionStartTime,
+            endTime: sessionEndTime,
+            type: sessionType,
+            group: studentGroup,
+            extraStudents:extraStudents
+          };
+        
+          if (subjectDocSnap.exists()) {
+            // If the subject document exists, append the new session to the existing sessions array
+            const existingData = subjectDocSnap.data();
+            let sessions = existingData.sessions || [];
+            sessions.push(newSession);
+
+            // Update the document by merging new session array and excludedStudents (and any other updates)
+            await setDoc(subjectDocRef, { sessions: sessions, excludedStudents: excludedStudents }, { merge: true });
+          } else {
+            // If the subject document doesn't exist, create it with the new session
+            const subjectData = {
+              name: subjectName,
+              id: subjectID,
+              sessions: [ newSession ],
+              excludedStudents: excludedStudents
+            };
+            await setDoc(subjectDocRef, subjectData);
+          }
+        
+          showAlert("Timetable entry added successfully!", "success");
+          document.getElementById("addTimetableForm").reset();
+        } catch (error) {
+          console.error("Error adding timetable entry:", error);
+          showAlert("Error adding timetable entry.");
+        }
+    
+        });
+      }
+    
+
+      async function loadStudentGroups(courseId) {
+  const groupSelect = document.getElementById("groupSelectAdd");
+  // Clear any existing options, keep a default prompt
+  groupSelect.innerHTML = '<option value="">Select Student Group</option>';
+  try {
+    // Query students for the given course
+    const q = query(collection(db, "student"), where("course", "==", courseId));
+    const studentSnapshot = await getDocs(q);
+    const groupsSet = new Set();
+    studentSnapshot.forEach(docSnap => {
+      const data = docSnap.data();
+      if (data.group) {
+        groupsSet.add(data.group);
+      }
+    });
+    // Add options for each unique group
+    groupsSet.forEach(group => {
+      const option = document.createElement("option");
+      option.value = group;
+      option.textContent = group;
+      groupSelect.appendChild(option);
+    });
+    // Set default value to "G1" if available
+    if (groupsSet.has("G1")) {
+      groupSelect.value = "G1";
+    } else {
+      // Optionally, if G1 is not in the list and you want to force it as default, you could add it:
+      const defaultOption = document.createElement("option");
+      defaultOption.value = "G1";
+      defaultOption.textContent = "G1";
+      groupSelect.insertBefore(defaultOption, groupSelect.firstChild);
+      groupSelect.value = "G1";
+    }
+  } catch (error) {
+    console.error("Error loading student groups:", error);
+  }
+}
+
+
+
+async function loadExcludedStudents(courseId) {
+  const select = document.getElementById("excludedStudentsSelect");
+  // Clear any existing options
+  select.innerHTML = "";
+  try {
+    // Query the "student" collection for students with course equal to courseId
+    const q = query(collection(db, "student"), where("course", "==", courseId));
+    const studentSnapshot = await getDocs(q);
+    studentSnapshot.forEach(docSnap => {
+      const studentData = docSnap.data();
+      const option = document.createElement("option");
+      // Use the document id or a field (e.g., studentData.ID) if needed
+      option.value = docSnap.id;
+      option.textContent = `${studentData.name} (${docSnap.id})`;
+      select.appendChild(option);
+    });
+  } catch (error) {
+    console.error("Error loading excluded students:", error);
+  }
+}
+
+async function loadExtraStudents(courseId) {
+  const select = document.getElementById("extraStudentsSelect");
+  // Clear any existing options
+  select.innerHTML = "";
+  try {
+    // Query the "student" collection for students with course equal to courseId
+    const q = query(collection(db, "student"), where("course", "==", courseId));
+    const studentSnapshot = await getDocs(q);
+    studentSnapshot.forEach(docSnap => {
+      const studentData = docSnap.data();
+      const option = document.createElement("option");
+      // Use the document id or a field (e.g., studentData.ID) if needed
+      option.value = docSnap.id;
+      option.textContent = `${studentData.name} (${docSnap.id})`;
+      select.appendChild(option);
+    });
+  } catch (error) {
+    console.error("Error loading extra students:", error);
+  }
+}
+
+
+async function loadSubjectsForCourse(courseId) {
+  const subjectSelect = document.getElementById("subjectSelect");
+  // Clear existing options
+  subjectSelect.innerHTML = '<option value="">Select Subject</option>';
+  
+
+  
+  try {
+    // Get the selected course document reference
+    const courseDocRef = doc(db, "course", courseId);
+    // Get the subject subcollection from the course document
+    const subjectCollectionRef = collection(courseDocRef, "subject");
+    const subjectSnapshot = await getDocs(subjectCollectionRef);
+    
+    subjectSnapshot.forEach(docSnap => {
+      const subjectData = docSnap.data();
+      const option = document.createElement("option");
+      option.value = docSnap.id;  // subject document id
+      // Save subject name as a data attribute for auto-fill later
+      option.setAttribute("data-subjectname", subjectData.name);
+      option.textContent = `${docSnap.id} (${subjectData.name})`;
+      subjectSelect.appendChild(option);
+    });
+    
+    // Append the "Add New Subject" option
+    const addNewOption = document.createElement("option");
+    addNewOption.value = "addNew";
+    addNewOption.textContent = "Add New Subject";
+    subjectSelect.appendChild(addNewOption);
+    
+  } catch (error) {
+    console.error("Error loading subjects for course:", error);
+  }
+}
+
+
+
+ // Helper function to load courses into the add timetable form
+ async function loadCoursesForAdd() {
+    const select = document.getElementById("courseSelectAdd");
+    try {
+      const courseSnapshot = await getDocs(collection(db, "course"));
+      courseSnapshot.forEach(docSnap => {
+        const courseId = docSnap.id;
+        const option = document.createElement("option");
+        option.value = courseId;
+        option.textContent = courseId;
+        select.appendChild(option);
+      });
+      // Append the "Add New Course" option
+      const addNewOption = document.createElement("option");
+      addNewOption.value = "addNew";
+      addNewOption.textContent = "Add New Course";
+      select.appendChild(addNewOption);
+    } catch (error) {
+      console.error("Error loading courses:", error);
+    }
+  }
+
+//   function formatTimeTo24Hour(timeStr) {
+//   // Split the time string by colon
+//   const parts = timeStr.split(':');
+//   if(parts.length >= 2) {
+//     // Return only hours and minutes
+//     return parts[0].padStart(2, '0') + ':' + parts[1].padStart(2, '0');
+//   }
+//   return timeStr;
+// }
+
+function formatTime(timeStr) {
+  let [hours, minutes] = timeStr.split(':');
+  hours = parseInt(hours, 10);
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12;
+  if (hours === 0) hours = 12;
+  return `${hours}:${minutes} ${ampm}`;
+}
+
+  async function loadClasses() {
+  const select = document.getElementById("classSelect");
+  try {
+    const classSnapshot = await getDocs(collection(db, "class"));
+    classSnapshot.forEach(docSnap => {
+      const option = document.createElement("option");
+      option.value = docSnap.id;
+      option.textContent = docSnap.id; // You can customize to display additional info if needed
+      select.appendChild(option);
+    });
+  } catch (error) {
+    console.error("Error loading classes:", error);
+  }
+}
+
+
+  // Helper function to load lecturers into the add timetable form
+  async function loadLecturersForAdd() {
+    const select = document.getElementById("lecturerSelect");
+    try {
+      const lecturerSnapshot = await getDocs(collection(db, "lecturer"));
+      lecturerSnapshot.forEach(docSnap => {
+        const lecturerData = docSnap.data();
+        const option = document.createElement("option");
+        option.value = docSnap.id;  // Use document id as lecturerID
+        option.textContent = lecturerData.name + " (" + docSnap.id + ")";
+        select.appendChild(option);
+      });
+    } catch (error) {
+      console.error("Error loading lecturers:", error);
+    }
+  }
+
+  // Helper function to check for session conflicts in the selected course
+  async function checkSessionConflict(courseId, day, startTime, endTime,studentGroup) {
+    try {
+      const courseRef = doc(db, "course", courseId);
+      const subjectSnapshot = await getDocs(collection(courseRef, "subject"));
+      let conflict = false;
+      subjectSnapshot.forEach(subDoc => {
+        const subjectData = subDoc.data();
+        if (subjectData.sessions && Array.isArray(subjectData.sessions)) {
+          subjectData.sessions.forEach(session => {
+            if (session.day === day && session.startTime === startTime && session.endTime === endTime) {
+              conflict = true; 
+            }
+          });
+        }
+      });
+      return conflict;
+    } catch (error) {
+      console.error("Error checking session conflict:", error);
+      return false;
+    }
+  }
+  document.getElementById("addTimetableBtn").addEventListener("click", showAddTimetableForm);
+
+// Helper: Parse a "YYYY-MM-DD" string into a Date object.
+function parseDate(dateStr) {
+  return new Date(dateStr + "T00:00:00");
+}
+
+// Helper: Calculate maximum consecutive days from an array of date strings.
+function getMaxConsecutiveDays(dateStrArray) {
+  if (dateStrArray.length === 0) return 0;
+  const dates = dateStrArray.map(parseDate).sort((a, b) => a - b);
+  let maxStreak = 1, currentStreak = 1;
+  for (let i = 1; i < dates.length; i++) {
+    const diff = (dates[i] - dates[i - 1]) / (1000 * 60 * 60 * 24);
+    if (diff === 1) {
+      currentStreak++;
+    } else {
+      currentStreak = 1;
+    }
+    if (currentStreak > maxStreak) maxStreak = currentStreak;
+  }
+  return maxStreak;
+}
+
+// Placeholder: Function to send an email notification.
+async function sendEmailToStudent(emailAddress, subject, message) {
+  // Construct a mailto URL with proper URL encoding.
+  const mailtoLink = `mailto:${encodeURIComponent(emailAddress)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
+  // Open the user's default mail client by navigating to the mailto URL.
+  window.location.href = mailtoLink;
+  // Return a resolved promise for consistency.
+  return Promise.resolve();
+}
+
+// Get the list of subject IDs from the course's "subject" subcollection in the course collection.
+async function getSubjectsForCourse(courseIDattend) {
+  const courseDocRef = doc(db, "course", courseIDattend);
+  const subjectsSnapshot = await getDocs(collection(courseDocRef, "subject"));
+  let subjects = [];
+  subjectsSnapshot.forEach(docSnap => {
+    subjects.push(docSnap.id);
+  });
+  console.log("Subjects found:", subjects);
+  return subjects;
+}
+
+async function analyzeAttendance(courseIDattend) {
+  console.log("Analyzing attendance for course:", courseIDattend);
+  const studentAbsences = {}; // Format: { studentId: { group, course, dates: [], details: [] } }
+
+  try {
+    // Retrieve subject IDs from the course document's "subject" subcollection.
+    const subjects = await getSubjectsForCourse(courseIDattend);
+
+    // For each subject, retrieve its attendance records from the attendance document.
+    for (const subjectId of subjects) {
+      // Build a reference to the subject subcollection under attendance.
+      // Path: /attendance/{courseIDattend}/{subjectId}/...
+      const subjectCollectionRef = collection(db, "attendance", courseIDattend, subjectId);
+      const recordsSnapshot = await getDocs(subjectCollectionRef);
+      console.log(`Subject ${subjectId} has ${recordsSnapshot.size} attendance records.`);
+
+      // Process each attendance record.
+      for (const recordDoc of recordsSnapshot.docs) {
+        // Record ID format: "2025-02-24_10:00_99998888_lecture"
+        const recordId = recordDoc.id;
+        const parts = recordId.split("_");
+        const dateStr = parts[0]; // e.g., "2025-02-24"
+        // Get the "students" subcollection under this record.
+        const studentsSnapshot = await getDocs(collection(recordDoc.ref, "students"));
+        console.log(`Record ${recordId} has ${studentsSnapshot.size} student records.`);
+        studentsSnapshot.forEach(studentDoc => {
+          const studentId = studentDoc.id;
+          const studentData = studentDoc.data();
+          if (studentData.status === "absent") {
+            if (!studentAbsences[studentId]) {
+              studentAbsences[studentId] = {
+                group: studentData.group || "Unknown",
+                course: courseIDattend,
+                dates: [],
+                details: []
+              };
+            }
+            studentAbsences[studentId].dates.push(dateStr);
+            studentAbsences[studentId].details.push({
+              subject: subjectId, // Use subjectId as subject name.
+              date: dateStr,
+              time: parts[1],
+              lecturerID: parts[2],
+              classType: parts[3]
+            });
+          }
+        });
+      }
+    }
+
+    const alerts = [];
+    for (const studentId in studentAbsences) {
+      const record = studentAbsences[studentId];
+      const uniqueDates = Array.from(new Set(record.dates));
+      const maxConsecutive = getMaxConsecutiveDays(uniqueDates);
+      if (maxConsecutive >= 1) {
+        alerts.push({
+          studentId: studentId,
+          group: record.group,
+          course: record.course,
+          consecutiveDays: maxConsecutive,
+          details: record.details
+        });
+      }
+    }
+    // Sort alerts in descending order.
+    alerts.sort((a, b) => b.consecutiveDays - a.consecutiveDays);
+    window.alertsData = alerts; // Store globally if needed.
+
+// Build the table HTML.
+let tableHTML = `<table id="alertsTable" style="width:100%; border-collapse: collapse;">
+  <thead>
+    <tr>
+      <th>Select</th>
+      <th>ID</th>
+      <th>Group</th>
+      <th>Course</th>
+      <th>Consecutive Absent Days</th>
+      <th>Details</th>
+    </tr>
+  </thead>
+  <tbody>`;
+alerts.forEach(alertItem => {
+  tableHTML += `<tr data-student="${alertItem.studentId}">
+      <td><input type="checkbox" class="alertCheckbox" value="${alertItem.studentId}" /></td>
+      <td>${alertItem.studentId}</td>
+      <td>${alertItem.group}</td>
+      <td>${alertItem.course}</td>
+      <td>${alertItem.consecutiveDays}</td>
+      <td><button style="margin:0; padding:10px;" class="viewDetailsBtn " data-student="${alertItem.studentId}">View Details</button></td>
+    </tr>`;
+});
+const finalHTML = tableHTML + `</tbody></table>
+  <button id="sendAlert-btn" style="margin-top: 10px;">Send Alert</button>`;
+
+console.log("Final HTML:", finalHTML);  // Debug log
+
+const displayContainer = document.querySelector(".displayAnalysis");
+displayContainer.innerHTML = finalHTML;
+
+// Attach event listeners.
+attachTableEventListeners(alerts, finalHTML);
+// console.log("Final HTML:", finalHTML);
+
+  } catch (error) {
+    console.error("Error analyzing attendance: ", error);
+    document.querySelector(".displayAnalysis").innerHTML = "<p>Error analyzing attendance data.</p>";
+  }
+}
+
+// Helper function to attach event listeners to the table elements.
+// Helper function to attach event listeners to the table elements.
+function attachTableEventListeners(alerts, tableHTML) {
+  const displayContainer = document.querySelector(".displayAnalysis");
+  
+  // Attach event listener for "View Details" buttons.
+  document.querySelectorAll(".viewDetailsBtn").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      const studentId = e.target.getAttribute("data-student");
+      const alertItem = alerts.find(a => a.studentId === studentId);
+      if (alertItem) {
+        let detailsHTML = `<div id="detailsView" style=" cursor: pointer; padding: 10px;">
+           <h3 style="padding:10px;">Details for Student ${studentId}</h3> <br><br>
+            <div class="dataShowDetail" style="text-align:center; padding-top:30px; font-size:larger;">`;
+        alertItem.details.forEach(d => {
+          detailsHTML += `<p>
+              <strong>Subject:</strong> ${d.subject}<br>
+              <strong>Date:</strong> ${d.date}<br>
+              <strong>Time:</strong> ${d.time}<br>
+              <strong>LecturerID:</strong> ${d.lecturerID}<br>
+              <strong>Class Type:</strong> ${d.classType}<br>
+            </div>`;
+        });
+        detailsHTML += `</p>
+           <br><br><br><br><br> <p><em>Tap anywhere to go back.</em></p>
+          </div>`;
+        displayContainer.innerHTML = detailsHTML;
+        // When details view is clicked, revert to the table view.
+        document.getElementById("detailsView").addEventListener("click", () => {
+          displayContainer.innerHTML = tableHTML;
+          attachTableEventListeners(alerts, tableHTML);
+        });
+      }
+    });
+  });
+
+
+  // Attach event listener for the "Send Alert" button.
+  document.getElementById("sendAlert-btn").addEventListener("click", async () => {
+    const checkedBoxes = document.querySelectorAll(".alertCheckbox:checked");
+    for (const checkbox of checkedBoxes) {
+      const studentId = checkbox.value;
+      const alertItem = alerts.find(a => a.studentId === studentId);
+      if (alertItem) {
+        const studentDocSnap = await getDoc(doc(db, "student", studentId));
+        if (studentDocSnap.exists()) {
+          const studentInfo = studentDocSnap.data();
+          console.log("Student info:", studentInfo);
+          const emailAddress = studentInfo.email;
+          const emailSubject = `Absence Alert for ${studentId}`;
+          const emailMessage = `Dear Student ${studentId},\n\n` +
+            `Our records indicate that you have been absent for ${alertItem.consecutiveDays} consecutive days in course ${alertItem.course}.\n` +
+            `Group: ${alertItem.group}\n` +
+            `Details:\n` +
+            alertItem.details.map(d => `${d.subject} on ${d.date} at ${d.time} (${d.classType})`).join("\n") +
+            `\n\nPlease contact your instructor if you have any questions.\n\nRegards,\nAttendance Team`;
+          await sendEmailToStudent(emailAddress, emailSubject, emailMessage);
+        }
+      }
+    }
+    alert("Alerts sent.");
+  });
+}
+
+
+// Function to load attendance courses into the select element.
+async function loadAttendanceCourses() {
+  const courseContainer = document.querySelector(".selectCourseAttend");
+  try {
+    // Query the "attendance" collection to get all course document IDs.
+    const attendanceSnapshot = await getDocs(collection(db, "attendance"));
+    
+    // Build a select element.
+    let html = `<select id="attendanceCourseSelect">
+                  <option value="">Choose Course</option>`;
+    attendanceSnapshot.forEach(docSnap => {
+      const courseIDattend = docSnap.id;
+      html += `<option value="${courseIDattend}">${courseIDattend}</option>`;
+    });
+    html += `</select>`;
+    courseContainer.innerHTML = html;
+    
+    // Attach a change event listener to call analyzeAttendance.
+    document.getElementById("attendanceCourseSelect").addEventListener("change", (e) => {
+      const selectedCourse = e.target.value;
+      console.log("Course selected:", selectedCourse);
+      if (selectedCourse) {
+        analyzeAttendance(selectedCourse);
+      } else {
+        // Clear analysis display if no course is selected.
+        document.querySelector(".displayAnalysis").innerHTML = "";
+      }
+    });
+  } catch (error) {
+    console.error("Error loading attendance courses:", error);
+    courseContainer.innerHTML = "<p>Error loading courses.</p>";
+  }
+}
+
+// Load courses when the DOM is ready.
+document.addEventListener("DOMContentLoaded", () => {
+  loadAttendanceCourses();
+});
+
+
+</script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"> 
+<style>
+        * {
+            margin: 0;
+            padding: 0;
+            font-family: 'Poppins', sans-serif;
+            box-sizing: border-box;
+        }
+        a{
+            text-decoration: none;
+        }
+        body{
+            padding: 0;
+            margin: 0;
+            margin-top: 10%;
+            background-color: #ECEAFF;
+
+            
+        }
+        nav{
+            width: 100%;
+            top:0;
+            margin: 0;
+            position: fixed;
+             z-index: 1;
+        }
+    nav h1, nav p, nav ul {
+     margin: 0;
+     padding: 0;
+    }
+
+        .header{
+            /* background-color: #1A1A1A; */
+            /* background-color: rgba(193,191,209, 0.2); */
+            background-color: #fff;
+            /* background-color: black; */
+            display: flex;
+            align-items: center;
+             /* 垂直居中 */
+            padding: 10px 30px;
+            border-bottom: 1px solid rgb(156, 156, 156);
+            /* box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.3); */
+            /* border-radius: 0px 0px 15px 15px;  */
+       }
+       .nav1{
+        justify-content: space-between; 
+
+       }
+
+       .nav2{
+        /* display: flex; */
+        flex-basis: auto;
+        flex-direction: row;
+        /* background-color:  rgba(193,191,209, 0.9); */
+        background-color:#343A40;
+        color: white;
+       }
+       
+
+       .nav2>.nav-btn{
+            font-size: larger;
+            font-weight: bolder;
+            margin: 0px 3% 0px 3%;
+            cursor:pointer;
+       }
+       .nav-btn>p:hover{
+        /* text-shadow: 1px 1px 1px#ffffffcc; */
+        background: linear-gradient(-229deg, rgb(213, 158, 255), rgb(143, 173, 255));
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        /* font-weight:lighter;  */
+        /* border-bottom: 2px solid  #5782f5; */
+      
+        /* box-shadow: 1px 1px 1px #ffff; */
+
+        
+       }
+
+       .nav2>.nav-btn:active{
+            /* border-bottom: #e43f51 block 1px; */
+            cursor: grab;
+
+       }
+
+    
+
+        /* Title Section */
+        .title {
+            /* margin: 2% 2% 0 2%; */
+            font-size: 20px;
+            background: linear-gradient(-229deg, #cf91ff, #5782f5);
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+
+    .welcome {
+        font-size: 16px;
+        color: #ff4b5c; 
+    }
+
+
+
+ /* Logout Button */
+.logout-container {
+    position: absolute;
+    /* top: vb; */
+    right: 20px;
+    width: 100px; 
+    height: 50px; 
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+
+.logout {
+    padding: 10px 15px;
+    background-color: #ff4b5c;
+    color: white;
+    border: none;
+    border-radius: 10px; 
+    cursor: pointer;
+    font-size: 1em;
+    transition: background 0.3s;
+    position: relative;
+    z-index: 1; 
+}
+
+    .logout:hover {
+        background-color: #e43f51;
+    }
+
+/* 进度条样式 */
+    .progress-ring {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+    }
+
+    .progress-ring-rect {
+        stroke-dasharray: 284; /* 矩形周长 (2 * (width + height) - 8 * rx) */
+        stroke-dashoffset: 284; /* 初始状态为 0% */
+        transition: stroke-dashoffset 0.1s linear;
+        /* background-color: #ff1e38; */
+    }
+
+        /* Edit User Space */
+        .AllSpace {
+            margin: 5% auto;
+            width: 90%;
+            min-height: 200px;
+            padding: 20px;
+            /* background: linear-gradient(-229deg, #cf91ff, #5782f5); */
+            /* background-color: rgba(255, 255, 255, 0.5); */
+            background: linear-gradient(-229deg, rgba(207, 145, 255, 0.7), rgba(87, 130, 245, 0.7));
+            backdrop-filter: blur(10px); 
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); 
+        }
+
+        .AllSpace > p {
+            font-weight: bold;
+            font-size: 4vb;
+            margin: 1%;
+        }
+
+        
+        .functionSpace  {
+
+            min-height: 500px;
+
+        }
+        .btnSpace {
+            display: flex; 
+            /* align-content: center; */
+            align-items: center;
+            justify-content: center;
+        }
+
+        .function-Btn{
+            display: inline-flex;
+            width: 15%;
+            align-items: center;
+            justify-content: center;
+        }
+        .function-Btn, input.search-bar{
+            height: 60px;
+            vertical-align: middle;
+            margin: 10px;
+            transition: background 0.3s;
+            background-color: rgba(255, 255, 255, 0.5);
+            backdrop-filter: blur(10px);
+            border-radius: 15px; 
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            
+        }
+
+        .search-bar {
+            text-align: left;
+            min-width: 40%;
+            max-width: 45%;
+            padding-left: 25px;
+            font-size: 1em;
+        }
+        .function-Btn i {
+           color: black;
+           font-size: 2em;
+           transition: color 0.3s;
+           width: auto;
+          }
+
+        .search-bar:hover , .function-Btn:hover {
+            background-color: rgba(255, 255, 255,0.7);
+            border-radius: 15px;
+        }
+
+        
+
+        .function-Btn:active i {
+             background: linear-gradient(-229deg, #cf91ff, #5782f5);
+            background-clip: text;
+             -webkit-text-fill-color: transparent;
+             
+        }
+
+        .function-Btn.clicked i {
+           background: linear-gradient(-229deg, #cf91ff, #5782f5);
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        @media (max-width: 1024px) {
+            body{
+                margin-top: 20%;
+            }
+            .AllSpace {
+                width: 95%;
+            }
+            .function-Btn {
+                width: 16%;
+                height: 60px;
+            }
+            .function-Btn i {
+                font-size: 1.4em;
+            }
+
+            .function-Btn {
+                width: 20%; 
+            }
+        
+            .search-bar {
+                min-width: 50%; 
+                font-size: 0.9em; 
+            }
+        }
+
+        @media screen and (max-width: 768px) {
+            body{
+                margin-top: 20%;
+            }
+
+            .AllSpace {
+                width: 95%;
+            }
+            .functionSpace {
+             flex-wrap: wrap; 
+             justify-content: center;
+             }
+            /* .function-Btn {
+                width: 16%;
+                height: 60px;
+            } */
+            .function-Btn {
+                width: 25%; 
+                height: 50px;
+                font-size: 0.8em;
+            }
+            .function-Btn i {
+                font-size: 1.4em;
+            }
+            .search-bar {
+                width: 80%; 
+                font-size: 0.8em;
+                height: 50px;
+            }
+        }
+    
+
+        @media screen and (max-width: 500px) {
+            body {
+                margin-top: 30%;
+
+            }
+            .title {
+                font-size: 1em;
+            }
+            .AllSpace {
+                width: 100%;
+                margin: 10px auto;
+            }
+            /* .function-Btn {
+                width: 16%;
+                height: 40px;
+            } */
+            .function-Btn {
+                 width: 30%;
+                height: 45px;
+            }
+            
+            .function-Btn i {
+                font-size: 1.3em;
+            }
+            .search-bar {
+                 width: 100%; 
+                 height: 45px;
+            }
+        }
+        .currentOpen{
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          justify-content: center;
+          max-height: 550px; 
+          overflow-y: auto; 
+          padding: 10px;
+        }
+
+
+        
+          table{
+            width: 90%;
+            /* border-collapse: collapse; */
+            border: 1px solid #ddd;
+            border-collapse: separate;
+            border-spacing: 0;            
+            border-radius: 10px;          
+            overflow: hidden;
+            background-color: rgba(255, 255, 255, 0.315);
+            backdrop-filter: blur(10px);
+            border-radius: 15px; 
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            /* margin:20px; */
+            
+        }
+
+         .currentOpen thead, .displayAnalysis thead {
+            background-color: #f2f2f2;
+        } 
+
+         .currentOpen th, .currentOpen td, .displayAnalysis th, .displayAnalysis td  {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }  
+
+        .currentOpen tbody tr:hover ,.displayAnalysis tbody tr:hover{
+            background-color: #ffffff83;
+        }
+
+         form{
+            max-width: 75%;
+            min-width: 70%;
+            margin: 20px auto;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background-color: rgba(255, 255, 255, 0.5);
+            backdrop-filter: blur(10px);
+            border-radius: 15px; 
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+       form>h2{
+
+            margin: 10px;
+
+        }
+        
+        form div, form #newCourseInput {
+          margin-bottom: 15px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        
+        form label {
+          flex: 0 0 120px;
+          margin-right: 10px;
+          font-weight: bold;
+        }
+        
+        form input[type="text"],
+        form input[type="email"],
+        form select, #courseSelect {
+            max-width: 50%;
+          flex: 1;
+          padding: 8px;
+          border: 1px solid #ccc;
+          border-radius: 4px;
+        }
+        
+        form span#idDisplay {
+          flex: 1;
+          padding: 8px;
+          background-color: #eaeaea;
+          border: 1px solid #ccc;
+          border-radius: 4px;
+          height: 34px;
+          max-width: 50%;
+        }
+        
+        form button, #sendAlert-btn {
+            padding: 10px 20px;
+          background-color: #007BFF;
+          color: #fff;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+          font-size: 16px;
+        }
+
+  
+
+        @keyframes buttonHover {
+            0% {
+              background-color: #333;
+            }
+            25%{
+              background-color: #5782f5;
+            }
+            50% {
+              background-color: #cf91ff;
+            }
+        
+            100% {
+              background-color: #333;
+            }
+        }
+        
+        form button:hover {
+            animation: buttonHover 5s ease infinite;
+        }
+        form button:active , #deleteSelectedBtn:active{
+            background-color: #777;
+        }
+
+       
+
+        #deleteSelectedBtn{
+          display: block;
+          margin: 10px auto;
+          text-align: center;
+          padding: 10px 20px;
+          background-color: #ff4b5c;
+          color: #fff;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+          font-size: 16px;
+
+        }
+        #deleteSelectedBtn:hover{
+          background-color: #e43f51;          
+        }
+
+        /* Remove default styling and create custom appearance */
+        .deleteCheckbox {
+          -webkit-appearance: none; /* for Safari/Chrome */
+          -moz-appearance: none;    /* for Firefox */
+          appearance: none;
+          width:20px;
+          height: 20px;
+          border: 2px solid rgba(255, 255, 255, 0.5);
+          border-radius: 3px;
+          cursor: pointer;
+          position: relative;
+        }
+
+        /* Style when checkbox is checked */
+        .deleteCheckbox:checked {
+          background-color: #ff4b5c;
+          border: 2px solid rgba(255, 255, 255, 0.5);;
+        }
+
+        /* Optionally, add a checkmark using a pseudo-element */
+        .deleteCheckbox:checked::after {
+          content: "";
+          position: absolute;
+          left: 5px;
+          top: 0px;
+          width: 5px;
+          height: 10px;
+          border: solid white;
+          border-width: 0 2px 2px 0;
+          transform: rotate(45deg);
+        }
+
+        #alert-Timetable {
+          display: none;
+          /* color: red;  */
+          font-weight: bold;
+          margin-top: 10px;
+        }
+
+        .selectCourse{
+            width:20%;
+        }
+        #courseSelect{
+          display: block;
+           border: none;
+           /* width: 100%; */
+        }    
+
+      /* 让 select 也继承这个样式，如果是 <select> */
+      .selectCourse select, .filterGroup>select#groupSelect , select#attendanceCourseSelect{
+          appearance: none;
+          -webkit-appearance: none;
+          -moz-appearance: none;
+          background: transparent;
+          border: none;
+          outline: none;
+          height: 100%;
+          font-size: 1em;
+          text-align: center;
+          cursor: pointer;
+      }     
+
+      .time-s, .time-e{
+          margin: 0 30px;
+      }
+      .displayAnalysis {
+        min-height: 300px;
+      }      
+      #detailsView{
+        background-color: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(10px);
+            border-radius: 15px; 
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+      }
+      #detailsView:hover{
+        background-color: rgba(255, 255, 255, 0.5);
+            backdrop-filter: blur(10px);
+            border-radius: 15px; 
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+
+
+ 
+        /* 
+
+        
+
+
+.button input:hover {
+    background: linear-gradient(-229deg, #cf91ff, #5782f5);
+}
+
+.button input:active {
+    background-color: #777;
+} */
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="header nav1">
+            <div class="title">
+                <h2>Advanced Attendance System</h2>
+                <h2 class="welcome">Welcome, <span id="username"></span></h2>
+            </div>
+
+            <div class="logout-container">
+                <button class="logout" id="logoutButton">Logout</button>
+                <svg class="progress-ring" width="100" height="50">
+                <rect class="progress-ring-rect" x="7" y="2.7" width="86" height="45.5" rx="13" ry="13" stroke="#ff4b5c" stroke-width="3" fill="transparent" />
+                </svg>
+            </div>
+        </div>
+        <div class="header nav2">
+            
+            <div class="nav-btn"> <p> Home  </p> </div>
+            <div class="nav-btn"> <p> View User  </p> </div>
+            <div class="nav-btn"> <p> Data Analysis </p></div>
+            <div class="nav-btn"> <p> Timetable  </p> </div>
+            <!-- <div class="nav-btn"> <p> Setting  </p> </div> -->
+
+        </div>
+    </nav>
+    
+    <div class="homeSpace AllSpace">
+        <p> Home</p>
+    </div>
+
+    <div class="dataSpace AllSpace">
+        <p> Data Analysis</p>
+        <div class="selectCourseAttend function-Btn"></div>
+        <div class="displayAnalysis">
+
+        </div>
+    </div>
+
+    
+
+    <div class="functionSpace AllSpace">
+        <p class="currentOpen-text">View User</p>
+        <div class="btnSpace">  
+        <span class="changeUser-role function-Btn"><i class="fas fa-user"></i></a></span> 
+        <span class="AddUser function-Btn"><i class="fas fa-user-plus"></i></a></span>
+        <span class="DeleteUser function-Btn"><i class="fas fa-user-minus"></i></a></span>
+        <input type="text" id="searchInput" class="search-bar" placeholder="Search users...">
+        </div>
+        <div class="currentOpen"></div>
+    </div>
+
+    <div class="timeTableSpace AllSpace">
+      <p> Timetable</p>
+      <div class="selectCourse function-Btn"></div> 
+      <div class="filterGroup function-Btn">
+        <select id="groupSelect" class="filterGroupSelect">
+          <option value="">All Groups</option>
+        </select>
+      </div>  
+      <button class="function-Btn" id="addTimetableBtn">
+        <i class="fas fa-calendar-plus"></i> Add Timetable
+      </button>
+      <div class="tableDisplay"></div>
+      <div id="alert-Timetable" style="display: none;"></div>
+    </div>
+    
+</body>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+
+    const homeBtn = document.querySelector(".nav-btn:nth-child(1)");
+    const viewUserBtn = document.querySelector(".nav-btn:nth-child(2)"); // View User 按钮
+    const dataAnalysisBtn = document.querySelector(".nav-btn:nth-child(3)"); // Data Analysis 按钮
+    const timeTableBtn = document.querySelector(".nav-btn:nth-child(4)")
+
+    const dataSpace = document.querySelector(".dataSpace"); 
+    const functionSpace = document.querySelector(".functionSpace");
+    const homeSpace = document.querySelector(".homeSpace");
+    const timeTableSpace = document.querySelector(".timeTableSpace");
+
+    // 初始状态：显示 Data Analysis，隐藏 functionSpace
+    homeSpace.style.display = "block";
+    dataSpace.style.display = "block";
+    functionSpace.style.display = "block";
+    timeTableSpace.style.display= "block";
+
+
+    // 点击 "View User" 按钮时
+    viewUserBtn.addEventListener("click", function () {
+        dataSpace.style.display = "none";  // 隐藏数据分析
+        homeSpace.style.display = "none";
+        functionSpace.style.display = "block"; // 显示用户管理功能
+        timeTableSpace.style.display= "none";
+
+    });
+
+    // 点击 "Data Analysis" 按钮时
+    dataAnalysisBtn.addEventListener("click", function () {
+        homeSpace.style.display="none";
+        dataSpace.style.display = "block";  // 显示数据分析
+        functionSpace.style.display = "none"; // 隐藏用户管理功能
+        timeTableSpace.style.display= "none";
+    });
+
+    homeBtn.addEventListener("click",function(){
+        homeSpace.style.display="block";
+        functionSpace.style.display = "block"; 
+        dataSpace.style.display = "block";
+        timeTableSpace.style.display= "block";
+    });
+
+    timeTableBtn.addEventListener("click",function(){
+        homeSpace.style.display="none";
+        functionSpace.style.display = "none"; 
+        dataSpace.style.display = "none";
+        timeTableSpace.style.display= "block";
+    });
+
+});
+
+</script>
+</html>

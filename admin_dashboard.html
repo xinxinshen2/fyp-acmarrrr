@@ -1161,7 +1161,20 @@ document.getElementById("subjectSelect").addEventListener("change", function() {
   }
 });
 
+function getSubjectExpiry() {
+    const now = new Date();
+    now.setFullYear(now.getFullYear() + 2); // 加 2 年
+    now.setMonth(3); // 设定为 4 月（JavaScript 的月份从 0 开始，所以 3 代表 4 月）
+    now.setDate(6); // 设定为 6 日
+    now.setHours(0, 0, 0, 0); // 设定时间为 00:00:00
 
+    // 格式化为 "YYYY年MM月DD日 UTC+8 00:00:00"
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1; // JavaScript 月份是 0-11，所以要 +1
+    const day = now.getDate();
+
+    return `${year}年${month}月${day}日 UTC+8 00:00:00`;
+}
 
     
    // Form submission handling
@@ -1169,7 +1182,6 @@ document.getElementById("subjectSelect").addEventListener("change", function() {
       e.preventDefault();
 
       let courseId = document.getElementById("courseSelectAdd").value;
-      // If "Add New Course" is selected, get the new course name and create a new course document if needed
       if (courseId === "addNew") {
         const newCourseName = document.getElementById("newCourseName").value;
         if (!newCourseName.trim()) {
@@ -1180,8 +1192,7 @@ document.getElementById("subjectSelect").addEventListener("change", function() {
           const newCourseRef = doc(db, "course", newCourseName);
           const newCourseDoc = await getDoc(newCourseRef);
           if (!newCourseDoc.exists()) {
-            // Create a new course document (you can add additional fields as needed)
-            await setDoc(newCourseRef, {});
+            await setDoc(newCourseRef, { subjectExpiry: getSubjectExpiry() });
           }
           courseId = newCourseName;
         } catch (error) {
@@ -1252,6 +1263,10 @@ if (subjectSelectValue === "addNew") {
           //ADD DATA TO FIREBASE
       try {
           const courseRef = doc(db, "course", courseId);
+          const courseDocSnap = await getDoc(courseRef);
+          if (!courseDocSnap.exists() || !courseDocSnap.data().subjectExpiry) {
+        await setDoc(courseRef, { subjectExpiry: getSubjectExpiry() }, { merge: true });
+    }
           const subjectDocRef = doc(courseRef, "subject", subjectID);
           const subjectDocSnap = await getDoc(subjectDocRef);
 
