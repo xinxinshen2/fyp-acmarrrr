@@ -369,6 +369,31 @@
         .pulse {
             animation: pulse 1.5s infinite;
         }
+
+        /* 批量操作按钮样式 */
+        .batch-button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            color: white;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .batch-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+        }
+
+        .batch-button.present-all {
+            background: linear-gradient(to right, #43a047, #66bb6a);
+        }
+
+        .batch-button.absent-all {
+            background: linear-gradient(to right, #e53935, #ef5350);
+        }
     </style>
 </head>
 <body>
@@ -435,6 +460,16 @@
                 <span class="button-text">Load Students</span>
                 <span class="loading-dots" style="display: none"></span>
             </button>
+            
+            <!-- 添加批量标记按钮 -->
+            <div class="batch-actions" style="display: flex; justify-content: center; margin-top: 15px; gap: 10px;">
+                <button class="batch-button present-all" onclick="markAllUnmarked('present')" style="display: none;">
+                    <i class="fas fa-check-double"></i> Mark All Present
+                </button>
+                <button class="batch-button absent-all" onclick="markAllUnmarked('absent')" style="display: none;">
+                    <i class="fas fa-times-circle"></i> Mark All Absent
+                </button>
+            </div>
         </div>
         <div class="student-list" id="studentList">
             <!-- Student list will be populated dynamically -->
@@ -843,6 +878,10 @@
             console.log("Loading students for courseId:", courseId);
             const studentList = document.getElementById('studentList');
             studentList.innerHTML = '';
+            
+            // 隐藏批量操作按钮
+            document.querySelector('.batch-button.present-all').style.display = 'none';
+            document.querySelector('.batch-button.absent-all').style.display = 'none';
 
             const lectureID = sessionStorage.getItem('lectureID');
             if (!lectureID) {
@@ -1087,6 +1126,10 @@
                         <p>Please check group settings or add students to this course.</p>
                     </div>
                 `;
+            } else {
+                // 如果找到了学生，显示批量操作按钮
+                document.querySelector('.batch-button.present-all').style.display = 'block';
+                document.querySelector('.batch-button.absent-all').style.display = 'block';
             }
         }
 
@@ -1551,6 +1594,157 @@
                 month: 'short', 
                 day: 'numeric' 
             });
+        }
+
+        // 添加批量标记函数
+        async function markAllUnmarked(status) {
+            const confirmMessage = status === 'present' 
+                ? "Are you sure you want to mark all unmarked students as PRESENT?" 
+                : "Are you sure you want to mark all unmarked students as ABSENT?";
+            
+            if (!confirm(confirmMessage)) {
+                return;
+            }
+            
+            const selectedValue = document.getElementById('subject').value;
+            if (!selectedValue) {
+                alert("Please select a subject first");
+                return;
+            }
+
+            const [courseId, subjectId] = selectedValue.split('+');
+            const sessionTimeSelect = document.getElementById('sessionTime');
+            const selectedSessionValue = sessionTimeSelect.value;
+            
+            if (!selectedSessionValue || selectedSessionValue === 'custom') {
+                alert("Please select a valid session");
+                return;
+            }
+
+            const selectedSessionParts = selectedSessionValue.split('|');
+            if (selectedSessionParts.length < 5) {
+                console.error('Invalid session format:', selectedSessionValue);
+                return;
+            }
+            
+            const [
+                sessionDate, 
+                sessionDay, 
+                sessionStartTime, 
+                sessionType, 
+                sessionGroup
+            ] = selectedSessionParts;
+
+            const lectureID = sessionStorage.getItem('lectureID');
+            const sessionId = `${sessionDate}_${sessionStartTime.replace(':', '.')}_${lectureID}_${sessionType}_${sessionGroup}`;
+            
+            // 显示加载指示器
+            const batchBtn = status === 'present' 
+                ? document.querySelector('.batch-button.present-all')
+                : document.querySelector('.batch-button.absent-all');
+            
+            const originalText = batchBtn.innerHTML;
+            batchBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Processing...`;
+            batchBtn.disabled = true;
+            
+            try {
+                // 获取所有未标记的学生元素
+                const unmarkedStudents = [];
+                const studentButtons = document.querySelectorAll('.student');
+                
+                studentButtons.forEach(studentEl => {
+                    const studentId = studentEl.querySelector('.student-id').textContent;
+                    const hasStatus = studentEl.querySelector('.status-indicator') !== null;
+                    const hasVisibleButtons = studentEl.querySelector('.attendance-buttons button:not([style*="display: none"])') !== null;
+                    
+                    // 如果学生没有状态标记且有可见的操作按钮，加入到未标记列表
+                    if (!hasStatus && hasVisibleButtons) {
+                        unmarkedStudents.push(studentId);
+                    }
+                });
+                
+                console.log(`Found ${unmarkedStudents.length} unmarked students to set as ${status}`);
+                
+                if (unmarkedStudents.length === 0) {
+                    alert("No unmarked students found.");
+                    return;
+                }
+                
+                // 批量更新学生状态
+                let batch = db.batch();
+                let processedCount = 0;
+                
+                for (const studentId of unmarkedStudents) {
+                    const attendanceRef = db.collection("attendance")
+                        .doc(courseId)
+                        .collection(subjectId)
+                        .doc(sessionId)
+                        .collection("students")
+                        .doc(studentId);
+                    
+                    // 检查是否有未处理的缺席申请
+                    const attendanceDoc = await attendanceRef.get();
+                    let attendanceData = {
+                        status: status,
+                        method: "manual",
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                        group: sessionGroup
+                    };
+                    
+                    // 处理未处理的缺席申请
+                    if (attendanceDoc.exists && attendanceDoc.data().status === "pending_absence") {
+                        if (status === "absent") {
+                            attendanceData.status = "approved_absence";
+                            attendanceData.method = "absence_request_approved";
+                            attendanceData.reason = attendanceDoc.data().reason || "Approved absence request";
+                        } else {
+                            attendanceData.status = "rejected_absence";
+                            attendanceData.method = "absence_request_rejected";
+                        }
+                    }
+                    
+                    batch.set(attendanceRef, attendanceData);
+                    processedCount++;
+                    
+                    // 如果达到批量大小限制，提交并创建新批量
+                    if (processedCount % 500 === 0) {
+                        await batch.commit();
+                        batch = db.batch();
+                    }
+                }
+                
+                // 提交剩余的批量更新
+                await batch.commit();
+                
+                // 更新会话统计数据
+                const sessionRef = db.collection("attendance")
+                    .doc(courseId)
+                    .collection(subjectId)
+                    .doc(sessionId);
+                
+                if (status === "present") {
+                    await sessionRef.update({
+                        presentStudents: firebase.firestore.FieldValue.increment(unmarkedStudents.length),
+                        absentStudents: firebase.firestore.FieldValue.increment(-unmarkedStudents.length)
+                    });
+                } else {
+                    await sessionRef.update({
+                        presentStudents: firebase.firestore.FieldValue.increment(-unmarkedStudents.length),
+                        absentStudents: firebase.firestore.FieldValue.increment(unmarkedStudents.length)
+                    });
+                }
+                
+                // 刷新学生列表以显示更新后的状态
+                alert(`Successfully marked ${unmarkedStudents.length} students as ${status.toUpperCase()}.`);
+                await confirmSelection();
+            } catch (error) {
+                console.error("Error marking all students:", error);
+                alert("An error occurred while marking students. Please try again.");
+            } finally {
+                // 恢复按钮状态
+                batchBtn.innerHTML = originalText;
+                batchBtn.disabled = false;
+            }
         }
     </script>
 </body>
