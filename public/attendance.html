@@ -561,6 +561,15 @@
                 return;
             }
 
+            // Check if we should auto-select a session
+            const autoSelectSession = sessionStorage.getItem('autoSelectSession') === 'true';
+            const selectedCourse = sessionStorage.getItem('selectedCourse');
+            const selectedSubject = sessionStorage.getItem('selectedSubject');
+            const selectedDate = sessionStorage.getItem('selectedDate');
+            const selectedTime = sessionStorage.getItem('selectedTime');
+            const selectedType = sessionStorage.getItem('selectedType');
+            const selectedGroup = sessionStorage.getItem('selectedGroup');
+
             const now = new Date();
             const coursesRef = db.collection("course");
             
@@ -601,17 +610,178 @@
                             option.value = `${courseId}+${subjectId}`;
                             option.textContent = `${courseId}+${subjectData.name}${groupSuffix}`;
                             subjectSelect.appendChild(option);
+
+                            // If this is the subject we should auto-select
+                            if (autoSelectSession && courseId === selectedCourse && subjectId === selectedSubject) {
+                                option.selected = true;
+                            }
                         }
                     });
                     if (subjectSelect.value) {
-                        displaySchedule();
+                        const initializeSession = async () => {
+                            await displaySchedule();
+                            
+                            // After displaying schedule, auto-select the session if needed
+                            if (autoSelectSession) {
+                                const sessionTimeSelect = document.getElementById('sessionTime');
+                                const options = Array.from(sessionTimeSelect.options);
+                                
+                                console.log('Auto-select session parameters:', {
+                                    autoSelectSession,
+                                    selectedCourse,
+                                    selectedSubject,
+                                    selectedDate,
+                                    selectedTime,
+                                    selectedType,
+                                    selectedGroup
+                                });
+
+                                console.log('Available options:', options.map(opt => {
+                                    const [date, day, time, type, group] = opt.value.split('|');
+                                    return {
+                                        value: opt.value,
+                                        date,
+                                        day,
+                                        time,
+                                        type,
+                                        group
+                                    };
+                                }));
+
+                                // If no exact match is found by date, check for a match on the day of week
+                                const dayOfWeekToFind = new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'long' });
+                                
+                                console.log('Looking for day of week:', dayOfWeekToFind);
+                                
+                                // First try exact date match
+                                let matchingOption = options.find(option => {
+                                    const [date, day, time, type, group] = option.value.split('|');
+                                    console.log('Comparing values (exact date):', {
+                                        date: { option: date, target: selectedDate, match: date === selectedDate },
+                                        time: { option: time, target: selectedTime, match: time === selectedTime },
+                                        type: { option: type, target: selectedType, match: type === selectedType },
+                                        group: { option: group, target: selectedGroup, match: group === selectedGroup }
+                                    });
+                                    return date === selectedDate && 
+                                           time === selectedTime && 
+                                           type === selectedType && 
+                                           group === selectedGroup;
+                                });
+                                
+                                // If no exact match, try day of week match
+                                if (!matchingOption) {
+                                    console.log('No exact date match found, trying day of week match');
+                                    matchingOption = options.find(option => {
+                                        const [date, day, time, type, group] = option.value.split('|');
+                                        console.log('Comparing values (day of week):', {
+                                            day: { option: day, target: dayOfWeekToFind, match: day === dayOfWeekToFind },
+                                            time: { option: time, target: selectedTime, match: time === selectedTime },
+                                            type: { option: type, target: selectedType, match: type === selectedType },
+                                            group: { option: group, target: selectedGroup, match: group === selectedGroup }
+                                        });
+                                        return day === dayOfWeekToFind && 
+                                               time === selectedTime && 
+                                               type === selectedType && 
+                                               group === selectedGroup;
+                                    });
+                                }
+
+                                // If still no match, try just time, type and group
+                                if (!matchingOption) {
+                                    console.log('No day match found, trying just time, type and group match');
+                                    matchingOption = options.find(option => {
+                                        const [date, day, time, type, group] = option.value.split('|');
+                                        console.log('Comparing values (minimal match):', {
+                                            time: { option: time, target: selectedTime, match: time === selectedTime },
+                                            type: { option: type, target: selectedType, match: type === selectedType },
+                                            group: { option: group, target: selectedGroup, match: group === selectedGroup }
+                                        });
+                                        return time === selectedTime && 
+                                               type === selectedType && 
+                                               group === selectedGroup;
+                                    });
+                                }
+
+                                console.log('Found matching option:', matchingOption);
+
+                                if (matchingOption) {
+                                    console.log('Setting session time to:', matchingOption.value);
+                                    // If it's not an exact date match, set the calendar to the historical date
+                                    // to make sure we're loading the right attendance data
+                                    document.getElementById('calendarDate').value = selectedDate;
+                                    
+                                    // In this case, we need to modify the option value to use the historical date
+                                    const [optDate, optDay, optTime, optType, optGroup] = matchingOption.value.split('|');
+                                    if (optDate !== selectedDate) {
+                                        console.log('Creating custom historical option with date:', selectedDate);
+                                        // Create a historical option with the correct date
+                                        const historicalValue = `${selectedDate}|${optDay}|${optTime}|${optType}|${optGroup}`;
+                                        
+                                        // Add this option to the select
+                                        const historicalOption = document.createElement('option');
+                                        historicalOption.value = historicalValue;
+                                        historicalOption.textContent = `${optDay} ${optTime} - ? (${formatDate(selectedDate)}) [${optType}] (Historical)`;
+                                        sessionTimeSelect.appendChild(historicalOption);
+                                        
+                                        // Select this option
+                                        sessionTimeSelect.value = historicalValue;
+                                    } else {
+                                        sessionTimeSelect.value = matchingOption.value;
+                                    }
+                                    
+                                    // Clear the auto-select flags
+                                    sessionStorage.removeItem('autoSelectSession');
+                                    sessionStorage.removeItem('selectedCourse');
+                                    sessionStorage.removeItem('selectedSubject');
+                                    sessionStorage.removeItem('selectedDate');
+                                    sessionStorage.removeItem('selectedTime');
+                                    sessionStorage.removeItem('selectedType');
+                                    sessionStorage.removeItem('selectedGroup');
+                                    
+                                    // Load the students for this session
+                                    confirmSelection();
+                                } else {
+                                    console.log('No matching session found in options');
+                                    
+                                    // Last resort - create a custom option with exact historical details
+                                    console.log('Creating custom historical option as last resort');
+                                    const historicalValue = `${selectedDate}|${dayOfWeekToFind}|${selectedTime}|${selectedType}|${selectedGroup}`;
+                                    
+                                    const historicalOption = document.createElement('option');
+                                    historicalOption.value = historicalValue;
+                                    historicalOption.textContent = `${dayOfWeekToFind} ${selectedTime} - ? (${formatDate(selectedDate)}) [${selectedType}] (Historical)`;
+                                    sessionTimeSelect.appendChild(historicalOption);
+                                    
+                                    // Select this option
+                                    sessionTimeSelect.value = historicalValue;
+                                    
+                                    // Set calendar date
+                                    document.getElementById('calendarDate').value = selectedDate;
+                                    
+                                    // Clear the auto-select flags
+                                    sessionStorage.removeItem('autoSelectSession');
+                                    sessionStorage.removeItem('selectedCourse');
+                                    sessionStorage.removeItem('selectedSubject');
+                                    sessionStorage.removeItem('selectedDate');
+                                    sessionStorage.removeItem('selectedTime');
+                                    sessionStorage.removeItem('selectedType');
+                                    sessionStorage.removeItem('selectedGroup');
+                                    
+                                    // Load the students for this session
+                                    confirmSelection();
+                                }
+                            }
+                        };
+                        initializeSession();
                     }
                 }).catch(error => {
                     console.error("Error getting subjects:", error);
                 });
             });
 
-            subjectSelect.addEventListener('change', displaySchedule);
+            subjectSelect.addEventListener('change', async () => {
+                await displaySchedule();
+            });
         }
 
         function getDateOfThisWeek(dayOfWeek, baseDate) {
@@ -656,9 +826,32 @@
 
                         const selectedDate = document.getElementById('calendarDate').value;
                         const baseDate = selectedDate ? new Date(selectedDate) : new Date();
+                        
+                        // Check if we're looking for a specific historical session
+                        const autoSelectSession = sessionStorage.getItem('autoSelectSession') === 'true';
+                        const selectedHistoricalDate = sessionStorage.getItem('selectedDate');
+                        
+                        console.log('Using base date for schedule:', {
+                            baseDate: baseDate.toISOString().split('T')[0],
+                            selectedDate,
+                            autoSelectSession,
+                            selectedHistoricalDate
+                        });
 
                         filteredSessions.forEach((session, index) => {
-                            const sessionDate = getDateOfThisWeek(session.day, baseDate);
+                            // Normal behavior - get date of this week
+                            let sessionDate = getDateOfThisWeek(session.day, baseDate);
+                            
+                            // For historical attendance, use the exact historical date if it's for that day of week
+                            if (autoSelectSession && selectedHistoricalDate) {
+                                const historicalDate = new Date(selectedHistoricalDate);
+                                const historicalDay = historicalDate.toLocaleDateString('en-US', { weekday: 'long' });
+                                if (session.day === historicalDay) {
+                                    // Add an option for the historical date
+                                    sessionDate = selectedHistoricalDate;
+                                }
+                            }
+                            
                             scheduleHTML += `
                                 <li style="margin-bottom:8px; padding-left:10px; border-left:2px solid #5782f5;">
                                     <div><strong>${session.type}</strong>: ${session.day}</div>
@@ -666,8 +859,32 @@
                                     <div>Date: ${formatDate(sessionDate)}</div>
                                 </li>`;
                             
-                            const optionValue = `${sessionDate}|${session.day}|${session.startTime}|${session.type}|${session.group || 'all'}`;
+                            // Convert time format from "HH.mm" to "HH:mm" for consistency
+                            const formattedStartTime = session.startTime.replace('.', ':');
+                            
+                            // Check if this is the historical session we're looking for
+                            const isHistoricalMatch = autoSelectSession && 
+                                                     selectedHistoricalDate === sessionDate && 
+                                                     session.day === new Date(selectedHistoricalDate).toLocaleDateString('en-US', { weekday: 'long' });
+                            
+                            console.log('Processing session:', {
+                                date: sessionDate,
+                                day: session.day,
+                                originalTime: session.startTime,
+                                formattedTime: formattedStartTime,
+                                type: session.type,
+                                group: session.group || 'all',
+                                isHistoricalMatch,
+                                compareWith: selectedHistoricalDate
+                            });
+                            
+                            const optionValue = `${sessionDate}|${session.day}|${formattedStartTime}|${session.type}|${session.group || 'all'}`;
                             const optionText = `${session.day} ${session.startTime} - ${session.endTime} (${formatDate(sessionDate)}) [${session.type}]`;
+                            
+                            console.log('Creating session option:', {
+                                optionValue,
+                                parts: optionValue.split('|')
+                            });
                             
                             const option = document.createElement('option');
                             option.value = optionValue;

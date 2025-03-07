@@ -468,6 +468,47 @@
             filter: brightness(1.1);
             transform: translateY(-2px);
         }
+
+        .unprocessed-alert {
+            background-color: #fff3e0;
+            border-left: 4px solid #ff9800;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .unprocessed-alert:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .unprocessed-alert h4 {
+            color: #f57c00;
+            margin-bottom: 8px;
+        }
+
+        .unprocessed-alert p {
+            color: #666;
+            font-size: 0.9em;
+            margin: 5px 0;
+        }
+
+        .view-attendance-btn {
+            background: #ff9800;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: all 0.2s;
+        }
+
+        .view-attendance-btn:hover {
+            background: #f57c00;
+            transform: translateY(-2px);
+        }
     </style>
 
     <script type="module">
@@ -754,6 +795,7 @@
             loadLecturerName();
             loadAbsenceStatistics();
             loadAttendanceRate();
+            checkUnprocessedAttendance();
 
             // Check if we should show timetable
             const showTimetable = sessionStorage.getItem('showTimetable');
@@ -1374,6 +1416,120 @@
             alert("Error: " + error.message);
         }
     }
+
+    // Add new function to check unprocessed attendance
+    async function checkUnprocessedAttendance() {
+        const lectureID = sessionStorage.getItem('lectureID');
+        if (!lectureID) return;
+
+        try {
+            const twoWeeksAgo = new Date();
+            twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+            
+            const coursesSnapshot = await getDocs(collection(db, "course"));
+            let unprocessedSessions = [];
+
+            for (const courseDoc of coursesSnapshot.docs) {
+                const courseId = courseDoc.id;
+                const subjectsSnapshot = await getDocs(collection(db, "course", courseId, "subject"));
+
+                for (const subjectDoc of subjectsSnapshot.docs) {
+                    const subjectId = subjectDoc.id;
+                    const subjectData = subjectDoc.data();
+
+                    // Get attendance sessions
+                    const attendanceRef = collection(db, "attendance", courseId, subjectId);
+                    const sessionsSnapshot = await getDocs(attendanceRef);
+
+                    for (const sessionDoc of sessionsSnapshot.docs) {
+                        const sessionData = sessionDoc.data();
+                        const [sessionDate, startTime, sessionLecturerId, sessionType, group] = sessionDoc.id.split('_');
+
+                        // Check if this session belongs to the current lecturer
+                        if (sessionLecturerId === lectureID) {
+                            const sessionDateObj = new Date(sessionDate);
+                            
+                            // Check if session is older than 2 weeks
+                            if (sessionDateObj < twoWeeksAgo) {
+                                // Get students collection for this session
+                                const studentsRef = collection(sessionDoc.ref, "students");
+                                const studentsSnapshot = await getDocs(studentsRef);
+                                
+                                // Calculate unprocessed count
+                                const totalStudents = sessionData.totalStudents || 0;
+                                const processedCount = studentsSnapshot.size;
+                                
+                                if (processedCount < totalStudents) {
+                                    unprocessedSessions.push({
+                                        courseId,
+                                        subjectId,
+                                        sessionDate,
+                                        startTime,
+                                        sessionType: sessionType || 'lecture',
+                                        group: group || 'all',
+                                        unprocessedCount: totalStudents - processedCount,
+                                        totalStudents
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Update UI with unprocessed sessions
+            const notificationCard = document.getElementById('notificationCard');
+            const listContainer = document.getElementById('unprocessedAttendanceList');
+
+            if (unprocessedSessions.length > 0) {
+                notificationCard.style.display = 'block';
+                let html = '';
+
+                for (const session of unprocessedSessions) {
+                    const formattedDate = new Date(session.sessionDate).toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                    });
+
+                    html += `
+                        <div class="unprocessed-alert">
+                            <h4>${session.courseId} - ${session.subjectId}</h4>
+                            <p><strong>Date:</strong> ${formattedDate}</p>
+                            <p><strong>Time:</strong> ${session.startTime}</p>
+                            <p><strong>Unprocessed:</strong> ${session.unprocessedCount} out of ${session.totalStudents} students</p>
+                            <button class="view-attendance-btn" onclick="viewAttendance('${session.courseId}', '${session.subjectId}', '${session.sessionDate}', '${session.startTime}', '${session.sessionType}', '${session.group}')">
+                                View Attendance
+                            </button>
+                        </div>
+                    `;
+                }
+
+                listContainer.innerHTML = html;
+            } else {
+                notificationCard.style.display = 'none';
+            }
+
+        } catch (error) {
+            console.error("Error checking unprocessed attendance:", error);
+        }
+    }
+
+    // Update function to handle viewing attendance with session details
+    window.viewAttendance = function(courseId, subjectId, sessionDate, startTime, sessionType, group) {
+        // Store the session info in sessionStorage
+        sessionStorage.setItem('selectedCourse', courseId);
+        sessionStorage.setItem('selectedSubject', subjectId);
+        sessionStorage.setItem('selectedDate', sessionDate);
+        sessionStorage.setItem('selectedTime', startTime);
+        sessionStorage.setItem('selectedType', sessionType);
+        sessionStorage.setItem('selectedGroup', group);
+        sessionStorage.setItem('autoSelectSession', 'true');
+        
+        // Redirect to attendance page
+        window.location.href = 'attendance.html';
+    };
     </script>
 </head>
 <body>
@@ -1429,6 +1585,14 @@
                         <h3>Rejected Leaves</h3>
                         <p><span id="rejectedLeavesCount">0</span></p>
                     </div>
+                </div>
+            </div>
+
+            <!-- Add new notification card -->
+            <div class="card" id="notificationCard" style="display: none;">
+                <h2><i class="fas fa-exclamation-triangle" style="color: #ff9800;"></i> Attendance Alerts</h2>
+                <div id="unprocessedAttendanceList" style="margin-top: 15px;">
+                    <!-- Will be populated dynamically -->
                 </div>
             </div>
         </div>
