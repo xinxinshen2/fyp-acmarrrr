@@ -173,18 +173,18 @@
         }
 
         .present {
-            background-color: #e8f5e9;
-            color: #2e7d32;
+            background-color: transparent;
+            color: inherit;
         }
 
         .absent {
-            background-color: #ffebee;
-            color: #c62828;
+            background-color: transparent;
+            color: inherit;
         }
 
         .approved-absence {
-            background-color: #e3f2fd;
-            color: #1565c0;
+            background-color: transparent;
+            color: inherit;
         }
 
         /* Empty state */
@@ -966,21 +966,6 @@
                 columnStyles: { 
                     0: { cellWidth: 10 },
                     7: { cellWidth: 30 }
-                },
-                didDrawCell: function(data) {
-                    // Style the status cell
-                    if (data.column.index === 5 && data.cell.section === 'body') {
-                        const statusText = data.cell.raw.innerText;
-                        
-                        // Add status color
-                        if (statusText === 'Present') {
-                            doc.setFillColor(232, 245, 233); // Light green
-                        } else if (statusText === 'Absent' || statusText === 'Rejected Absence') {
-                            doc.setFillColor(255, 235, 238); // Light red
-                        } else if (statusText === 'Approved Absence' || statusText === 'Pending Absence') {
-                            doc.setFillColor(227, 242, 253); // Light blue
-                        }
-                    }
                 }
             });
             

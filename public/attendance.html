@@ -640,16 +640,40 @@
                                            group === selectedGroup;
                                 });
 
-                                // 2. 如果失败，直接使用最后的应急方案
-                                if (!matchingOption) {
+                                // 2. 如果找到匹配选项，直接选择
+                                if (matchingOption) {
+                                    sessionTimeSelect.value = matchingOption.value;
+                                    
+                                    // 清除标志
+                                    sessionStorage.removeItem('autoSelectSession');
+                                    sessionStorage.removeItem('selectedCourse');
+                                    sessionStorage.removeItem('selectedSubject');
+                                    sessionStorage.removeItem('selectedDate');
+                                    sessionStorage.removeItem('selectedTime');
+                                    sessionStorage.removeItem('selectedType');
+                                    sessionStorage.removeItem('selectedGroup');
+                                    
+                                    // 加载学生
+                                    confirmSelection();
+                                }
+                                // 3. 如果未找到匹配选项，创建一个历史选项
+                                else {
                                     const dayOfWeekToFind = new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'long' });
-                                    // 创建历史会话选项
+                                    // 创建历史会话选项，确保格式正确
                                     const historicalValue = `${selectedDate}|${dayOfWeekToFind}|${selectedTime}|${selectedType}|${selectedGroup}`;
                                     
-                                    const historicalOption = document.createElement('option');
-                                    historicalOption.value = historicalValue;
-                                    historicalOption.textContent = `${dayOfWeekToFind} ${selectedTime} (${formatDate(selectedDate)}) [${selectedType}]`;
-                                    sessionTimeSelect.appendChild(historicalOption);
+                                    // 检查是否已存在相同值的选项
+                                    const existingOption = options.find(opt => opt.value === historicalValue);
+                                    
+                                    if (!existingOption) {
+                                        const historicalOption = document.createElement('option');
+                                        historicalOption.value = historicalValue;
+                                        historicalOption.textContent = `${dayOfWeekToFind} ${selectedTime} (${formatDate(selectedDate)}) [${selectedType}]`;
+                                        if (selectedGroup && selectedGroup !== 'all') {
+                                            historicalOption.textContent += ` {${selectedGroup}}`;
+                                        }
+                                        sessionTimeSelect.appendChild(historicalOption);
+                                    }
                                     
                                     // 选择该选项
                                     sessionTimeSelect.value = historicalValue;
@@ -872,14 +896,34 @@
                 sessionGroup
             });
 
+            // 添加额外的日志，帮助调试
+            console.log('Selected session details:', {
+                date: sessionDate,
+                day: sessionDay,
+                time: sessionStartTime,
+                type: sessionType,
+                group: sessionGroup
+            });
+
             const currentSession = sessions.find(s => 
                 s.lectureID === lectureID &&
                 s.day === sessionDay &&
-                s.startTime === sessionStartTime &&
+                (s.startTime === sessionStartTime || s.startTime === sessionStartTime.replace(':', '.')) &&
                 s.type === sessionType
             );
             
             console.log('Found session based on selection:', currentSession !== undefined);
+            if (!currentSession) {
+                console.log('No exact match found. Using parameters from selection.');
+            }
+
+            // 构建会话ID，确保格式一致性
+            // 确保startTime格式一致 - 在数据库中可能是使用点(.)而不是冒号(:)
+            const formattedStartTime = sessionStartTime.replace(':', '.');
+            
+            // 构建正确格式的sessionId以匹配数据库中的文档ID
+            const sessionId = `${sessionDate}_${formattedStartTime}_${lectureID}_${sessionType}_${sessionGroup}`;
+            console.log('Generated session ID:', sessionId);
 
             const excludedStudents = subjectDoc.data().excludedStudents || [];
             const extraStudents = currentSession?.extraStudents || [];
@@ -889,7 +933,7 @@
             const studentsSnapshot = await studentsRef.get();
             
             let studentNumber = 1;
-            const sessionId = `${sessionDate}_${sessionStartTime}_${lectureID}_${sessionType}_${sessionGroup}`;
+            let foundStudents = false; // 添加标志来跟踪是否找到学生
 
             // Initialize session document
             const sessionRef = db.collection("attendance")
@@ -958,6 +1002,7 @@
                 });
 
                 if (shouldDisplay) {
+                    foundStudents = true; // 找到可显示的学生
                     console.log(`Displaying ${isInExtra ? 'EXTRA ' : ''}student ${studentDoc.id}`);
 
                     const attendanceRef = db.collection("attendance")
@@ -1032,12 +1077,14 @@
                 }
             });
 
-            if (!currentSession) {
-                console.log("No students found for this course.");
+            // 修改这里的逻辑：只有在没有找到学生并且没有找到匹配会话时才显示错误消息
+            if (!foundStudents) {
+                console.log("No students found for this course/session.");
                 studentList.innerHTML = `
                     <div class="empty-state">
                         <i class="fas fa-user-slash"></i>
-                        <p>No students found for this course.</p>
+                        <p>No students found for this course/session.</p>
+                        <p>Please check group settings or add students to this course.</p>
                     </div>
                 `;
             }
