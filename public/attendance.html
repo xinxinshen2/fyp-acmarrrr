@@ -540,9 +540,10 @@
             // Current page (Mark Attendance) - no action needed for navButtons[1]
             
             navButtons[2].addEventListener('click', () => {
-                window.location.href = 'lecturer_dashboard.html';
-                // Store a flag to show timetable when page loads
+                // Set flag to show timetable when page loads
                 sessionStorage.setItem('showTimetable', 'true');
+                // Redirect to lecturer dashboard
+                window.location.href = 'lecturer_dashboard.html';
             });
             
             navButtons[3].addEventListener('click', () => {

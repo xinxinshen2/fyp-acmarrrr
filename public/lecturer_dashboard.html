@@ -753,7 +753,22 @@
         window.onload = function() {
             loadLecturerName();
             loadAbsenceStatistics();
-            loadAttendanceRate(); // 新增调用
+            loadAttendanceRate();
+
+            // Check if we should show timetable
+            const showTimetable = sessionStorage.getItem('showTimetable');
+            if (showTimetable === 'true') {
+                // Clear the flag
+                sessionStorage.removeItem('showTimetable');
+                
+                // Hide cards and show timetable
+                document.querySelector(".dashboard-cards").style.display = "none";
+                document.querySelector(".timeTableSpace").style.display = "block";
+                document.querySelector(".absenceRequestsSpace").style.display = "none";
+                
+                // Load the timetable
+                loadTimetable();
+            }
         };
 
         window.logout = function() {
