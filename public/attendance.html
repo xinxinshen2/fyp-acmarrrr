@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Student Attendance</title>
+    <link rel="stylesheet" href="navigation.css">
     <style>
         * {
             margin: 0;
@@ -23,6 +24,7 @@
             font-family: 'Poppins', sans-serif;
             margin: 0;
             padding: 20px;
+            margin-top: 120px; /* Added to prevent nav overlap */
         }
         .container {
             flex: 1;
@@ -158,7 +160,7 @@
             padding: 20px;
             margin-right: 20px;
             position: sticky;
-            top: 20px;
+            top: 140px; /* Adjusted to account for the navigation bar */
         }
         .calendar {
             position: relative;
@@ -186,9 +188,39 @@
         .daily-subjects {
             margin-top: 10px;
         }
+        
+        /* Highlight the active navigation button */
+        .nav2 .nav-btn:nth-child(2) p {
+            background: linear-gradient(-229deg, rgb(213, 158, 255), rgb(143, 173, 255));
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
     </style>
 </head>
 <body>
+    <!-- Added Navigation Bar -->
+    <nav>
+        <div class="header nav1">
+            <div class="title">
+                <h2>Advanced Attendance System</h2>
+                <h2 class="welcome">Welcome, <span id="lecturerName"></span></h2>
+            </div>
+
+            <div class="logout-container">
+                <button class="logout" id="logoutButton">Logout</button>
+                <svg class="progress-ring" width="100" height="50">
+                <rect class="progress-ring-rect" x="7" y="2.7" width="86" height="45.5" rx="13" ry="13" stroke="#ff4b5c" stroke-width="3" fill="transparent" />
+                </svg>
+            </div>
+        </div>
+        <div class="header nav2">
+            <div class="nav-btn"><p>Home</p></div>
+            <div class="nav-btn"><p>Mark Attendance</p></div>
+            <div class="nav-btn"><p>Timetable</p></div>
+            <div class="nav-btn"><p>Mobile Attendance(测试)</p></div>
+        </div>
+    </nav>
+    
     <!-- 添加侧边栏 -->
     <div class="sidebar">
         <div class="calendar">
@@ -244,7 +276,98 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
+        // Load Lecturer Name
+        async function loadLecturerName() {
+            const lectureID = sessionStorage.getItem('lectureID');
+            if (!lectureID) {
+                console.error("Lecture ID not found in session.");
+                window.location.href = 'login.html'; // Redirect to login if lectureID is not found
+                return;
+            }
+
+            const lecturerRef = db.collection("lecturer").doc(lectureID);
+            const lecturerDoc = await lecturerRef.get();
+
+            if (lecturerDoc.exists) {
+                const lecturerData = lecturerDoc.data();
+                document.getElementById('lecturerName').textContent = lecturerData.name;
+            } else {
+                console.error("No such document!");
+            }
+        }
+
+        // Logout function
+        window.logout = function() {
+            firebase.auth().signOut().then(() => {
+                window.location.href = 'login.html';
+            }).catch((error) => {
+                console.error("Logout error:", error);
+            });
+        };
+
+        // Long Press Logic with Progress Bar
+        const logoutButton = document.getElementById("logoutButton");
+        const progressRect = document.querySelector(".progress-ring-rect");
+        let pressTimer;
+        let progressInterval;
+
+        const startProgress = () => {
+            let time = 0;
+            const totalTime = 3000; // 3 seconds
+            const circumference = 284; // 矩形周长 (2 * (width + height) - 8 * rx)
+
+            progressInterval = setInterval(() => {
+                time += 10; // Update every 10ms
+                const progress = (time / totalTime) * circumference;
+                progressRect.style.strokeDashoffset = circumference - progress;
+
+                if (time >= totalTime) {
+                    clearInterval(progressInterval);
+                    logout(); // Call logout after 3 seconds
+                }
+            }, 10);
+        };
+
+        const resetProgress = () => {
+            clearInterval(progressInterval);
+            progressRect.style.strokeDashoffset = 284; // Reset progress
+        };
+
+        // Mouse Events
+        logoutButton.addEventListener("mousedown", startProgress);
+        logoutButton.addEventListener("mouseup", resetProgress);
+        logoutButton.addEventListener("mouseleave", resetProgress);
+
+        // Touch Events
+        logoutButton.addEventListener("touchstart", startProgress);
+        logoutButton.addEventListener("touchend", resetProgress);
+
+        // Navigation Button Functionality
+        document.addEventListener("DOMContentLoaded", function () {
+            const navButtons = document.querySelectorAll(".nav2 .nav-btn");
+            
+            // Define page navigation
+            navButtons[0].addEventListener('click', () => {
+                window.location.href = 'lecturer_dashboard.html';
+            });
+            
+            // Current page (Mark Attendance) - no action needed for navButtons[1]
+            
+            navButtons[2].addEventListener('click', () => {
+                window.location.href = 'lecturer_dashboard.html';
+                // Store a flag to show timetable when page loads
+                sessionStorage.setItem('showTimetable', 'true');
+            });
+            
+            navButtons[3].addEventListener('click', () => {
+                window.location.href = 'mobile_attendance.html';
+            });
+        });
+
         async function loadSubjects() {
+            // Call loadLecturerName to display the lecturer name
+            await loadLecturerName();
+            
             const lectureID = sessionStorage.getItem('lectureID');
             if (!lectureID) {
                 alert("Lecture ID not found in session.");
@@ -1040,10 +1163,13 @@
             }
         });
 
-        window.addEventListener('load', () => {
+        window.onload = function() {
+            loadSubjects();
+            
+            // Initialize daily subjects for the current date
             const today = new Date().toISOString().split('T')[0];
             loadDailySubjects(today);
-        });
+        };
 
         async function loadSubjectForDate(courseId, subjectId, date) {
             const subjectRef = db.collection("course").doc(courseId).collection("subject").doc(subjectId);
@@ -1071,8 +1197,6 @@
                 confirmSelection();
             }
         }
-
-        window.onload = loadSubjects;
     </script>
 </body>
 </html>
