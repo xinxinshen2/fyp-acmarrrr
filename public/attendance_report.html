@@ -1,0 +1,1126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="dumbbell.png" type="image/icon type">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <title>Attendance Report</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            background-color: #f0f2f5;
+            color: #333;
+            padding-top: 20px;
+        }
+
+        .content {
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background-color: #fff;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            margin-bottom: 20px;
+            color: #4f46e5;
+            font-weight: 600;
+            font-size: 1.6rem;
+            position: relative;
+            padding-bottom: 10px;
+        }
+
+        h2::after {
+            content: "";
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 60px;
+            height: 3px;
+            background: linear-gradient(-229deg, #cf91ff, #5782f5);
+        }
+
+        .filters {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .filter-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+            color: #4a5568;
+            font-weight: 500;
+        }
+
+        select, input[type="date"] {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            background-color: #f9fafc;
+            color: #4a5568;
+            transition: all 0.3s;
+        }
+
+        select:focus, input[type="date"]:focus {
+            border-color: #5782f5;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        .button-container {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .generate-btn {
+            background: linear-gradient(-229deg, #cf91ff, #5782f5);
+            color: white;
+            box-shadow: 0 4px 15px rgba(79, 70, 229, 0.2);
+        }
+
+        .export-btn {
+            background-color: #38a169;
+            color: white;
+            box-shadow: 0 4px 15px rgba(56, 161, 105, 0.2);
+        }
+
+        .print-btn {
+            background-color: #3182ce;
+            color: white;
+            box-shadow: 0 4px 15px rgba(49, 130, 206, 0.2);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .report-container {
+            overflow-x: auto;
+            margin-top: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: white;
+        }
+
+        thead {
+            background-color: #f8fafc;
+            position: sticky;
+            top: 0;
+        }
+
+        th, td {
+            padding: 12px 20px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        th {
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        tr:hover {
+            background-color: #f8fafc;
+        }
+
+        /* Status indicators */
+        .status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .present {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .absent {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+
+        .approved-absence {
+            background-color: #e3f2fd;
+            color: #1565c0;
+        }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #a0aec0;
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            background: linear-gradient(-229deg, #cf91ff, #5782f5);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Print styles */
+        @media print {
+            body {
+                margin-top: 0;
+                background-color: white;
+            }
+
+            .card:first-child, .button-container {
+                display: none !important;
+            }
+
+            .report-container, table {
+                box-shadow: none;
+            }
+
+            h2.report-title {
+                text-align: center;
+                font-size: 1.4rem;
+                margin-bottom: 20px;
+            }
+
+            .report-info {
+                margin-bottom: 15px;
+                text-align: center;
+                font-size: 0.9rem;
+            }
+
+            /* Reset styles for printing */
+            th, td {
+                padding: 8px 12px;
+            }
+        }
+
+        /* Header for printed report */
+        .print-header {
+            display: none;
+        }
+
+        @media print {
+            .print-header {
+                display: block;
+                text-align: center;
+                margin-bottom: 30px;
+            }
+
+            .print-header h1 {
+                font-size: 1.8rem;
+                margin-bottom: 10px;
+            }
+
+            .print-header p {
+                font-size: 1rem;
+                color: #4a5568;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="content">
+        <div class="card">
+            <h2>Generate Attendance Report</h2>
+            <div class="filters">
+                <div class="filter-group">
+                    <label for="courseSelect"><i class="fas fa-book"></i> Course</label>
+                    <select id="courseSelect">
+                        <option value="" disabled selected>Select Course</option>
+                        <!-- Will be populated dynamically -->
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="subjectSelect"><i class="fas fa-bookmark"></i> Subject</label>
+                    <select id="subjectSelect" disabled>
+                        <option value="" disabled selected>Select Subject</option>
+                        <!-- Will be populated dynamically -->
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="startDate"><i class="fas fa-calendar"></i> From Date</label>
+                    <input type="date" id="startDate">
+                </div>
+                <div class="filter-group">
+                    <label for="endDate"><i class="fas fa-calendar-alt"></i> To Date</label>
+                    <input type="date" id="endDate">
+                </div>
+            </div>
+            <div class="button-container">
+                <button class="generate-btn" onclick="generateReport()">
+                    <i class="fas fa-sync-alt"></i> Generate Report
+                </button>
+                <button class="export-btn" onclick="exportToPDF()" disabled id="exportBtn">
+                    <i class="fas fa-file-pdf"></i> Export to PDF
+                </button>
+                <button class="print-btn" onclick="printReport()" disabled id="printBtn">
+                    <i class="fas fa-print"></i> Print
+                </button>
+                <button class="generate-btn" onclick="generateTestReport()" style="background-color: #ff9800;">
+                    <i class="fas fa-vial"></i> Generate Test Data
+                </button>
+                <button class="generate-btn" onclick="showDebugInfo()" style="background-color: #607d8b;">
+                    <i class="fas fa-bug"></i> Show Debug Info
+                </button>
+            </div>
+        </div>
+
+        <div class="card" id="reportCard" style="display: none;">
+            <div class="print-header">
+                <h1>Advanced Attendance System</h1>
+                <p>Attendance Report</p>
+            </div>
+            
+            <h2 class="report-title">Attendance Report</h2>
+            <div class="report-info" id="reportInfo"></div>
+            
+            <div class="report-container">
+                <table id="reportTable">
+                    <thead>
+                        <tr>
+                            <th>No.</th>
+                            <th>Student ID</th>
+                            <th>Student Name</th>
+                            <th>Date</th>
+                            <th>Session</th>
+                            <th>Status</th>
+                            <th>Attendance Method</th>
+                            <th>Absence Reason</th>
+                        </tr>
+                    </thead>
+                    <tbody id="reportBody">
+                        <!-- Will be populated dynamically -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-auth-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.20/jspdf.plugin.autotable.min.js"></script>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "REMOVED",
+            authDomain: "advanceas-d8db4.firebaseapp.com",
+            projectId: "advanceas-d8db4",
+            storageBucket: "advanceas-d8db4.firebasestorage.app",
+            messagingSenderId: "878892786344",
+            appId: "1:878892786344:web:33bb5a97d99daf049d189d",
+            measurementId: "G-PLRRKT6RWW"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        
+        // Enable debugging for Firestore
+        firebase.firestore.setLogLevel('debug');
+
+        // Load Lecturer Name
+        async function loadLecturerName() {
+            const lectureID = sessionStorage.getItem('lectureID');
+            if (!lectureID) {
+                console.error("Lecture ID not found in session.");
+                window.location.href = 'login.html';
+                return;
+            }
+
+            try {
+                const lecturerRef = db.collection("lecturer").doc(lectureID);
+                const lecturerDoc = await lecturerRef.get();
+
+                if (lecturerDoc.exists) {
+                    const lecturerData = lecturerDoc.data();
+                    console.log("Lecturer name:", lecturerData.name);
+                    return lecturerData.name;
+                } else {
+                    console.error("No such document!");
+                    return "Unknown";
+                }
+            } catch (error) {
+                console.error("Error loading lecturer name:", error);
+                return "Unknown";
+            }
+        }
+
+        // Initialize page
+        window.onload = async function() {
+            // Check if user is logged in
+            const user = firebase.auth().currentUser;
+            if (!user) {
+                // Listen for auth state change in case the user isn't loaded yet
+                firebase.auth().onAuthStateChanged(async (user) => {
+                    if (user) {
+                        console.log("User is logged in:", user.email);
+                        await initializePage();
+                    } else {
+                        console.error("User is not logged in. Redirecting to login page.");
+                        window.location.href = 'login.html';
+                    }
+                });
+            } else {
+                console.log("User is already logged in:", user.email);
+                await initializePage();
+            }
+        };
+        
+        // Separate function to initialize the page
+        async function initializePage() {
+            console.log("Initializing page...");
+            
+            // Check for lectureID
+            const lectureID = sessionStorage.getItem('lectureID');
+            if (!lectureID) {
+                console.error("LectureID not found in session storage. This will cause issues.");
+                // Optional: You could try to get it from Firestore based on the logged-in user's email
+                // For now, we'll just alert the user
+                alert("Session information missing. Please log in again.");
+                window.location.href = 'login.html';
+                return;
+            }
+            
+            console.log("LectureID from session:", lectureID);
+            
+            await loadLecturerName();
+            await loadCourses();
+            
+            // Set default dates (last 30 days)
+            const today = new Date();
+            const lastMonth = new Date();
+            lastMonth.setDate(today.getDate() - 30);
+            
+            document.getElementById('endDate').value = today.toISOString().split('T')[0];
+            document.getElementById('startDate').value = lastMonth.toISOString().split('T')[0];
+            
+            console.log("Page initialization complete.");
+        }
+
+        // Load courses for the current lecturer
+        async function loadCourses() {
+            const lectureID = sessionStorage.getItem('lectureID');
+            if (!lectureID) return;
+            
+            const courseSelect = document.getElementById('courseSelect');
+            courseSelect.innerHTML = '<option value="" disabled selected>Select Course</option>';
+            
+            try {
+                const now = new Date();
+                const coursesRef = db.collection("course").where("subjectExpiry", ">", now);
+                const coursesSnapshot = await coursesRef.get();
+                
+                // Track if we've found any courses for this lecturer
+                let foundCourses = false;
+                
+                // Process each course
+                for (const courseDoc of coursesSnapshot.docs) {
+                    const courseId = courseDoc.id;
+                    const courseData = courseDoc.data();
+                    
+                    if (courseData.subjectExpiry && courseData.subjectExpiry.toDate() < now) {
+                        continue; // Skip expired courses
+                    }
+                    
+                    // Check if this lecturer teaches any subjects in this course
+                    const subjectsRef = db.collection("course").doc(courseId).collection("subject");
+                    const subjectsSnapshot = await subjectsRef.get();
+                    
+                    let hasSubjectsForLecturer = false;
+                    
+                    for (const subjectDoc of subjectsSnapshot.docs) {
+                        const subjectData = subjectDoc.data();
+                        const hasMatchingSession = subjectData.sessions?.some(session => 
+                            session.lectureID === lectureID
+                        );
+                        
+                        if (hasMatchingSession) {
+                            hasSubjectsForLecturer = true;
+                            break;
+                        }
+                    }
+                    
+                    if (hasSubjectsForLecturer) {
+                        const option = document.createElement('option');
+                        option.value = courseId;
+                        option.textContent = courseId;
+                        courseSelect.appendChild(option);
+                        foundCourses = true;
+                    }
+                }
+                
+                if (!foundCourses) {
+                    courseSelect.innerHTML = '<option value="" disabled selected>No courses available</option>';
+                }
+            } catch (error) {
+                console.error("Error loading courses:", error);
+                courseSelect.innerHTML = '<option value="" disabled selected>Error loading courses</option>';
+            }
+        }
+
+        // Event listener for course selection
+        document.getElementById('courseSelect').addEventListener('change', async function() {
+            const courseId = this.value;
+            const subjectSelect = document.getElementById('subjectSelect');
+            
+            // Reset subject select
+            subjectSelect.innerHTML = '<option value="" disabled selected>Select Subject</option>';
+            subjectSelect.disabled = true;
+            
+            if (!courseId) return;
+            
+            try {
+                const lectureID = sessionStorage.getItem('lectureID');
+                const subjectsRef = db.collection("course").doc(courseId).collection("subject");
+                const subjectsSnapshot = await subjectsRef.get();
+                
+                let foundSubjects = false;
+                
+                for (const subjectDoc of subjectsSnapshot.docs) {
+                    const subjectData = subjectDoc.data();
+                    const hasMatchingSession = subjectData.sessions?.some(session => 
+                        session.lectureID === lectureID
+                    );
+                    
+                    if (hasMatchingSession) {
+                        const option = document.createElement('option');
+                        option.value = subjectDoc.id;
+                        option.textContent = `${subjectDoc.id} - ${subjectData.name || ''}`;
+                        subjectSelect.appendChild(option);
+                        foundSubjects = true;
+                    }
+                }
+                
+                if (foundSubjects) {
+                    subjectSelect.disabled = false;
+                } else {
+                    subjectSelect.innerHTML = '<option value="" disabled selected>No subjects available</option>';
+                }
+            } catch (error) {
+                console.error("Error loading subjects:", error);
+                subjectSelect.innerHTML = '<option value="" disabled selected>Error loading subjects</option>';
+            }
+        });
+
+        // Generate the attendance report
+        async function generateReport() {
+            const courseId = document.getElementById('courseSelect').value;
+            const subjectId = document.getElementById('subjectSelect').value;
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            
+            if (!courseId || !subjectId || !startDate || !endDate) {
+                alert("Please select all required fields");
+                return;
+            }
+            
+            // Show loading state
+            const generateBtn = document.querySelector('.generate-btn');
+            const originalText = generateBtn.innerHTML;
+            generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+            generateBtn.disabled = true;
+            
+            try {
+                const reportData = await fetchAttendanceData(courseId, subjectId, startDate, endDate);
+                displayReport(reportData, courseId, subjectId, startDate, endDate);
+                
+                // Enable export/print buttons
+                document.getElementById('exportBtn').disabled = false;
+                document.getElementById('printBtn').disabled = false;
+            } catch (error) {
+                console.error("Error generating report:", error);
+                alert("Error generating report. Please try again.");
+            } finally {
+                // Reset button
+                generateBtn.innerHTML = originalText;
+                generateBtn.disabled = false;
+            }
+        }
+
+        // Fetch attendance data from Firebase
+        async function fetchAttendanceData(courseId, subjectId, startDate, endDate) {
+            try {
+                const lectureID = sessionStorage.getItem('lectureID');
+                if (!lectureID) {
+                    console.error("Lecturer ID not found in session");
+                    return [];
+                }
+                
+                console.log(`Fetching attendance data for course: ${courseId}, subject: ${subjectId}`);
+                console.log(`Date range: ${startDate} to ${endDate}`);
+                console.log(`Lecturer ID: ${lectureID}`);
+                
+                const startDateObj = new Date(startDate);
+                const endDateObj = new Date(endDate);
+                endDateObj.setDate(endDateObj.getDate() + 1); // Include the end date
+                
+                // Format dates for comparison (YYYY-MM-DD)
+                const formatDateString = (date) => {
+                    const year = date.getFullYear();
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const day = String(date.getDate()).padStart(2, '0');
+                    return `${year}-${month}-${day}`;
+                };
+                
+                // Get all session documents
+                const sessionDocs = [];
+                const sessionsRef = db.collection("attendance").doc(courseId).collection(subjectId);
+                
+                console.log(`Querying path: attendance/${courseId}/${subjectId}`);
+                
+                const sessionsSnapshot = await sessionsRef.get();
+                console.log(`Found ${sessionsSnapshot.size} total sessions`);
+                
+                // Filter sessions by date range and lecturer ID
+                for (const sessionDoc of sessionsSnapshot.docs) {
+                    const sessionId = sessionDoc.id;
+                    console.log(`Processing session: ${sessionId}`);
+                    
+                    // 修改会话ID解析逻辑以匹配正确的格式
+                    // 预期格式: YYYY-MM-DD_HH:MM_lectureID_type[_group]
+                    const sessionParts = sessionId.split('_');
+                    
+                    // Check if this is a valid session ID format - need at least date, time, and lecturer ID
+                    if (sessionParts.length < 3) {
+                        console.log(`Invalid session ID format (too few parts): ${sessionId}`);
+                        continue;
+                    }
+                    
+                    const sessionDate = sessionParts[0];
+                    const sessionTime = sessionParts[1];
+                    // 尝试在ID的中间部分寻找讲师ID
+                    let lecturerId = null;
+                    
+                    // 遍历所有部分，查找是否有一个与当前登录的lectureID匹配
+                    for (let i = 2; i < sessionParts.length; i++) {
+                        if (sessionParts[i] === lectureID) {
+                            lecturerId = sessionParts[i];
+                            break;
+                        }
+                    }
+                    
+                    // 如果没找到匹配的讲师ID，试图检查这个会话是否包含讲师ID
+                    if (!lecturerId) {
+                        // 直接查询该会话文档，看是否包含lectureID字段
+                        const sessionData = sessionDoc.data();
+                        if (sessionData && sessionData.lectureID === lectureID) {
+                            lecturerId = lectureID;
+                        }
+                    }
+                    
+                    console.log(`Session date: ${sessionDate}, time: ${sessionTime}, found lecturer: ${lecturerId}`);
+                    
+                    // Skip if not the current lecturer's session
+                    if (lecturerId !== lectureID) {
+                        console.log(`Skipping - not current lecturer's session (expected ${lectureID}, found ${lecturerId || 'none'})`);
+                        continue;
+                    }
+                    
+                    // Try different date formats for comparison
+                    let sessionDateObj;
+                    try {
+                        // First attempt: Use the date directly (YYYY-MM-DD)
+                        sessionDateObj = new Date(sessionDate);
+                        
+                        // If invalid, try to parse from parts (if format is like YYYYMMDD)
+                        if (isNaN(sessionDateObj.getTime()) && sessionDate.length === 8) {
+                            const year = sessionDate.substring(0, 4);
+                            const month = sessionDate.substring(4, 6);
+                            const day = sessionDate.substring(6, 8);
+                            sessionDateObj = new Date(`${year}-${month}-${day}`);
+                        }
+                        
+                        if (isNaN(sessionDateObj.getTime())) {
+                            console.log(`Unable to parse date: ${sessionDate}, skipping`);
+                            continue;
+                        }
+                    } catch (error) {
+                        console.error(`Error parsing date: ${sessionDate}`, error);
+                        continue;
+                    }
+                    
+                    // Get formatted dates for comparison
+                    const formattedSessionDate = formatDateString(sessionDateObj);
+                    const formattedStartDate = formatDateString(startDateObj);
+                    const formattedEndDate = formatDateString(endDateObj);
+                    
+                    console.log(`Comparing dates: Session=${formattedSessionDate}, Start=${formattedStartDate}, End=${formattedEndDate}`);
+                    
+                    // Check if in date range using formatted strings for more reliable comparison
+                    if (formattedSessionDate >= formattedStartDate && formattedSessionDate <= formattedEndDate) {
+                        console.log(`Session in date range - Adding to results`);
+                        
+                        // 提取会话类型和组（如果存在）
+                        let sessionType = "Unknown";
+                        let sessionGroup = "all";
+                        
+                        // 尝试找到会话类型 (通常在讲师ID之后)
+                        const lectureIdIndex = sessionParts.indexOf(lecturerId);
+                        if (lectureIdIndex >= 0 && lectureIdIndex + 1 < sessionParts.length) {
+                            sessionType = sessionParts[lectureIdIndex + 1];
+                        }
+                        
+                        // 尝试找到组 (如果存在)
+                        if (lectureIdIndex >= 0 && lectureIdIndex + 2 < sessionParts.length) {
+                            sessionGroup = sessionParts[lectureIdIndex + 2];
+                        }
+                        
+                        sessionDocs.push({
+                            id: sessionId,
+                            date: sessionDate,
+                            data: sessionDoc.data(),
+                            startTime: sessionTime,
+                            type: sessionType,
+                            group: sessionGroup
+                        });
+                    } else {
+                        console.log(`Session outside date range, skipping`);
+                    }
+                }
+                
+                console.log(`Found ${sessionDocs.length} sessions in date range for current lecturer`);
+                
+                // Sort sessions by date and time
+                sessionDocs.sort((a, b) => {
+                    if (a.date !== b.date) return a.date.localeCompare(b.date);
+                    return a.startTime.localeCompare(b.startTime);
+                });
+                
+                // Get student data for each session
+                const attendanceData = [];
+                
+                // Get student name map for efficiency
+                const studentNameMap = await getStudentNames(courseId);
+                console.log(`Loaded ${Object.keys(studentNameMap).length} student names`);
+                
+                for (const session of sessionDocs) {
+                    console.log(`Getting students for session: ${session.id}`);
+                    
+                    const studentsRef = db.collection("attendance")
+                        .doc(courseId)
+                        .collection(subjectId)
+                        .doc(session.id)
+                        .collection("students");
+                    
+                    const studentsSnapshot = await studentsRef.get();
+                    console.log(`Found ${studentsSnapshot.size} students for session ${session.id}`);
+                    
+                    for (const studentDoc of studentsSnapshot.docs) {
+                        const studentId = studentDoc.id;
+                        const studentData = studentDoc.data();
+                        
+                        attendanceData.push({
+                            studentId: studentId,
+                            studentName: studentNameMap[studentId] || "Unknown",
+                            date: session.date,
+                            sessionType: session.type,
+                            startTime: session.startTime,
+                            status: studentData.status,
+                            method: studentData.method || "manual",
+                            reason: studentData.reason || "NR"
+                        });
+                    }
+                }
+                
+                // Sort by student ID, then date
+                attendanceData.sort((a, b) => {
+                    if (a.studentId !== b.studentId) return a.studentId.localeCompare(b.studentId);
+                    return a.date.localeCompare(b.date);
+                });
+                
+                console.log(`Returning ${attendanceData.length} total attendance records`);
+                return attendanceData;
+            } catch (error) {
+                console.error("Error fetching attendance data:", error);
+                throw error;
+            }
+        }
+
+        // Helper function to get all student names for a course
+        async function getStudentNames(courseId) {
+            const studentsRef = db.collection("student");
+            const studentsSnapshot = await studentsRef.where("course", "==", courseId).get();
+            
+            const studentMap = {};
+            studentsSnapshot.forEach(doc => {
+                studentMap[doc.id] = doc.data().name || "Unknown";
+            });
+            
+            return studentMap;
+        }
+
+        // Display the report in the table
+        function displayReport(reportData, courseId, subjectId, startDate, endDate) {
+            const reportCard = document.getElementById('reportCard');
+            const reportBody = document.getElementById('reportBody');
+            const reportInfo = document.getElementById('reportInfo');
+            
+            // Format dates for display
+            const formattedStartDate = formatDate(startDate);
+            const formattedEndDate = formatDate(endDate);
+            
+            // Display report metadata
+            reportInfo.innerHTML = `
+                <p><strong>Course:</strong> ${courseId} | <strong>Subject:</strong> ${subjectId}</p>
+                <p><strong>Period:</strong> ${formattedStartDate} to ${formattedEndDate}</p>
+            `;
+            
+            // Clear existing table data
+            reportBody.innerHTML = '';
+            
+            console.log(`Displaying report with ${reportData.length} records`);
+            
+            if (reportData.length === 0) {
+                reportBody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="empty-state">
+                            <i class="fas fa-info-circle"></i>
+                            <p>No attendance records found for the selected period.</p>
+                            <p>Please check console for debugging information.</p>
+                        </td>
+                    </tr>
+                `;
+                
+                console.log("No records found. Possible causes:");
+                console.log("1. No sessions exist for this course/subject combination");
+                console.log("2. No sessions exist within the selected date range");
+                console.log("3. Session ID format doesn't match expected pattern");
+                console.log("4. The lecturer ID doesn't match any sessions");
+                console.log(`Current lecturer ID: ${sessionStorage.getItem('lectureID')}`);
+                
+                // Show how to test in the console for a simple query
+                console.log("\nTo test in console, try:");
+                console.log(`db.collection("attendance").doc("${courseId}").collection("${subjectId}").get().then(snap => console.log(snap.size))`);
+            } else {
+                // Add rows to the table
+                reportData.forEach((record, index) => {
+                    const row = document.createElement('tr');
+                    
+                    // Format the status display
+                    let statusDisplay = '';
+                    let statusClass = '';
+                    
+                    switch(record.status) {
+                        case 'present':
+                            statusDisplay = 'Present';
+                            statusClass = 'present';
+                            break;
+                        case 'absent':
+                            statusDisplay = 'Absent';
+                            statusClass = 'absent';
+                            break;
+                        case 'approved_absence':
+                            statusDisplay = 'Approved Absence';
+                            statusClass = 'approved-absence';
+                            break;
+                        case 'rejected_absence':
+                            statusDisplay = 'Rejected Absence';
+                            statusClass = 'absent';
+                            break;
+                        case 'pending_absence':
+                            statusDisplay = 'Pending Absence';
+                            statusClass = 'approved-absence';
+                            break;
+                        default:
+                            statusDisplay = 'Unknown';
+                    }
+                    
+                    // Format the method display
+                    let methodDisplay = '';
+                    switch(record.method) {
+                        case 'manual':
+                            methodDisplay = 'Manual';
+                            break;
+                        case 'absence_request_approved':
+                            methodDisplay = 'Absence Approved';
+                            break;
+                        case 'absence_request_rejected':
+                            methodDisplay = 'Absence Rejected';
+                            break;
+                        default:
+                            methodDisplay = record.method || 'N/A';
+                    }
+                    
+                    // Format the session display
+                    const sessionDisplay = `${record.startTime} (${record.sessionType})`;
+                    
+                    // Format the date display
+                    const formattedDate = formatDate(record.date);
+                    
+                    row.innerHTML = `
+                        <td>${index + 1}</td>
+                        <td>${record.studentId}</td>
+                        <td>${record.studentName}</td>
+                        <td>${formattedDate}</td>
+                        <td>${sessionDisplay}</td>
+                        <td><span class="status ${statusClass}">${statusDisplay}</span></td>
+                        <td>${methodDisplay}</td>
+                        <td>${record.reason}</td>
+                    `;
+                    
+                    reportBody.appendChild(row);
+                });
+            }
+            
+            // Show the report card
+            reportCard.style.display = 'block';
+        }
+
+        // Helper function to format dates nicely
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', { 
+                weekday: 'short', 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric' 
+            });
+        }
+
+        // Export report as PDF
+        function exportToPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // Get report information
+            const courseId = document.getElementById('courseSelect').value;
+            const subjectId = document.getElementById('subjectSelect').value;
+            const startDate = formatDate(document.getElementById('startDate').value);
+            const endDate = formatDate(document.getElementById('endDate').value);
+            const lecturerName = document.getElementById('lecturerName').textContent;
+            
+            // Add report title
+            doc.setFontSize(18);
+            doc.text('Advanced Attendance System', 105, 15, { align: 'center' });
+            
+            doc.setFontSize(14);
+            doc.text('Attendance Report', 105, 25, { align: 'center' });
+            
+            // Add report metadata
+            doc.setFontSize(10);
+            doc.text(`Course: ${courseId} | Subject: ${subjectId}`, 105, 35, { align: 'center' });
+            doc.text(`Period: ${startDate} to ${endDate}`, 105, 42, { align: 'center' });
+            doc.text(`Generated by: ${lecturerName}`, 105, 49, { align: 'center' });
+            doc.text(`Date generated: ${formatDate(new Date().toISOString().split('T')[0])}`, 105, 56, { align: 'center' });
+            
+            // Get table data
+            const table = document.getElementById('reportTable');
+            
+            // Use jspdf-autotable to create the table
+            doc.autoTable({
+                html: '#reportTable',
+                startY: 65,
+                styles: { fontSize: 8 },
+                columnStyles: { 
+                    0: { cellWidth: 10 },
+                    7: { cellWidth: 30 }
+                },
+                didDrawCell: function(data) {
+                    // Style the status cell
+                    if (data.column.index === 5 && data.cell.section === 'body') {
+                        const statusText = data.cell.raw.innerText;
+                        
+                        // Add status color
+                        if (statusText === 'Present') {
+                            doc.setFillColor(232, 245, 233); // Light green
+                        } else if (statusText === 'Absent' || statusText === 'Rejected Absence') {
+                            doc.setFillColor(255, 235, 238); // Light red
+                        } else if (statusText === 'Approved Absence' || statusText === 'Pending Absence') {
+                            doc.setFillColor(227, 242, 253); // Light blue
+                        }
+                    }
+                }
+            });
+            
+            // Save the PDF
+            doc.save(`Attendance_Report_${courseId}_${subjectId}.pdf`);
+        }
+
+        // Print report
+        function printReport() {
+            window.print();
+        }
+
+        // Generate a test report with mock data
+        function generateTestReport() {
+            const courseId = document.getElementById('courseSelect').value || "TEST-COURSE";
+            const subjectId = document.getElementById('subjectSelect').value || "TEST-SUBJECT";
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            
+            // Create test data
+            const testData = [
+                {
+                    studentId: "TP123456",
+                    studentName: "Test Student 1",
+                    date: "2025-03-01",
+                    sessionType: "Lecture",
+                    startTime: "10:00",
+                    status: "present",
+                    method: "manual",
+                    reason: "NR"
+                },
+                {
+                    studentId: "TP123456",
+                    studentName: "Test Student 1",
+                    date: "2025-03-05",
+                    sessionType: "Tutorial",
+                    startTime: "14:00",
+                    status: "absent",
+                    method: "manual",
+                    reason: "NR"
+                },
+                {
+                    studentId: "TP654321",
+                    studentName: "Test Student 2",
+                    date: "2025-03-01",
+                    sessionType: "Lecture",
+                    startTime: "10:00",
+                    status: "approved_absence",
+                    method: "absence_request_approved",
+                    reason: "Medical appointment"
+                },
+                {
+                    studentId: "TP654321",
+                    studentName: "Test Student 2",
+                    date: "2025-03-05",
+                    sessionType: "Tutorial",
+                    startTime: "14:00",
+                    status: "pending_absence",
+                    method: "manual",
+                    reason: "Pending approval"
+                }
+            ];
+            
+            // Display the test report
+            displayReport(testData, courseId, subjectId, startDate, endDate);
+            
+            // Enable export/print buttons
+            document.getElementById('exportBtn').disabled = false;
+            document.getElementById('printBtn').disabled = false;
+            
+            console.log("Generated test report with mock data");
+        }
+        
+        // Show debug information to help troubleshoot attendance data retrieval
+        function showDebugInfo() {
+            const courseId = document.getElementById('courseSelect').value;
+            const subjectId = document.getElementById('subjectSelect').value;
+            const lectureID = sessionStorage.getItem('lectureID');
+            
+            if (!courseId || !subjectId) {
+                alert("Please select a course and subject first");
+                return;
+            }
+            
+            const debugInfo = {
+                "期望的数据库路径": `attendance/${courseId}/${subjectId}/{日期_时间_${lectureID}_类型}/students/{学生ID}`,
+                "您可以尝试": [
+                    `检查 attendance/${courseId}/${subjectId} 集合中的文档`,
+                    `确保文档ID包含讲师ID "${lectureID}"`,
+                    `检查文档下是否有 students 子集合`
+                ],
+                "当前讲师ID": lectureID,
+                "测试路径样例": `attendance/${courseId}/${subjectId}/2025-03-01_09:30_${lectureID}_lecture/students/23087224`
+            };
+            
+            // 创建一个模态框来显示调试信息
+            const modal = document.createElement('div');
+            modal.style.position = 'fixed';
+            modal.style.top = '0';
+            modal.style.left = '0';
+            modal.style.width = '100%';
+            modal.style.height = '100%';
+            modal.style.backgroundColor = 'rgba(0,0,0,0.5)';
+            modal.style.zIndex = '9999';
+            modal.style.display = 'flex';
+            modal.style.justifyContent = 'center';
+            modal.style.alignItems = 'center';
+            
+            const content = document.createElement('div');
+            content.style.backgroundColor = 'white';
+            content.style.padding = '20px';
+            content.style.borderRadius = '10px';
+            content.style.maxWidth = '80%';
+            content.style.maxHeight = '80%';
+            content.style.overflow = 'auto';
+            
+            let html = '<h3 style="color:#4f46e5">调试信息</h3>';
+            html += '<p>以下是系统期望的数据结构路径及帮助信息：</p>';
+            
+            for (const [key, value] of Object.entries(debugInfo)) {
+                html += `<p><strong>${key}:</strong> `;
+                if (Array.isArray(value)) {
+                    html += '<ul>';
+                    value.forEach(item => {
+                        html += `<li>${item}</li>`;
+                    });
+                    html += '</ul>';
+                } else {
+                    html += `${value}`;
+                }
+                html += '</p>';
+            }
+            
+            html += '<p>您可以在控制台中执行以下命令来查询数据：</p>';
+            html += `<pre style="background:#f5f5f5;padding:10px;border-radius:5px;overflow:auto">db.collection("attendance").doc("${courseId}").collection("${subjectId}").get().then(snap => {
+    console.log("找到 " + snap.size + " 个会话");
+    snap.docs.forEach(doc => console.log(doc.id));
+})</pre>`;
+            
+            html += '<button id="closeDebugModal" style="background:#4f46e5;color:white;border:none;padding:10px 15px;border-radius:5px;margin-top:15px;cursor:pointer">关闭</button>';
+            
+            content.innerHTML = html;
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+            
+            document.getElementById('closeDebugModal').addEventListener('click', () => {
+                document.body.removeChild(modal);
+            });
+        }
+    </script>
+</body>
+</html> 

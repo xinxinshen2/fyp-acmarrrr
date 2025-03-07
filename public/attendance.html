@@ -392,6 +392,7 @@
             <div class="nav-btn"><p>Mark Attendance</p></div>
             <div class="nav-btn"><p>Timetable</p></div>
             <div class="nav-btn"><p>Mobile Attendance</p></div>
+            <div class="nav-btn"><p>Reports</p></div>
         </div>
     </nav>
     
@@ -532,22 +533,26 @@
         document.addEventListener("DOMContentLoaded", function () {
             const navButtons = document.querySelectorAll(".nav2 .nav-btn");
             
-            // Define page navigation
             navButtons[0].addEventListener('click', () => {
                 window.location.href = 'lecturer_dashboard.html';
             });
             
-            // Current page (Mark Attendance) - no action needed for navButtons[1]
+            navButtons[1].addEventListener('click', () => {
+                // Current page (Mark Attendance) - no action needed for navButtons[1]
+            });
             
             navButtons[2].addEventListener('click', () => {
-                // Set flag to show timetable when page loads
                 sessionStorage.setItem('showTimetable', 'true');
-                // Redirect to lecturer dashboard
                 window.location.href = 'lecturer_dashboard.html';
             });
             
             navButtons[3].addEventListener('click', () => {
                 window.location.href = 'mobile_attendance.html';
+            });
+            
+            // Reports button
+            navButtons[4].addEventListener('click', () => {
+                window.location.href = 'attendance_report.html';
             });
         });
 
