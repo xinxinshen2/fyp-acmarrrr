@@ -10,18 +10,370 @@
     <script src="https://apis.google.com/js/api.js"></script>
     <style>
         .affected-courses-container {
-            max-height: 200px;
+            max-height:300px;
             overflow-y: auto;
             border: 1px solid #ddd;
-            border-radius: 4px;
-            padding: 10px;
+            border-radius: 8px;
+            padding: 15px;
             margin-bottom: 15px;
+            background-color: #f9f9f9;
+        }
+        
+        /* Main content spacing to account for fixed navbar */
+        .homeSpace, .historySpace, .dataSpace, .functionSpace, .absenceFormSpace {
+            margin-top: 120px;
+            padding: 20px;
+            min-height: calc(100vh - 160px);
+        }
+        
+        /* Home page notification styles */
+        .notification-container {
+            margin-bottom: 30px;
+            position: relative;
+        }
+        
+        .notification-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .notification-header h3 {
+            margin: 0;
+            color: #333;
+        }
+        
+        .dismiss-all-btn {
+            background-color: #f5f5f5;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9em;
+            color: #666;
+            transition: all 0.2s;
+        }
+        
+        .dismiss-all-btn:hover {
+            background-color: #e0e0e0;
+            color: #333;
+        }
+        
+        .notification {
+            background-color: #f0f7ff;
+            border-left: 4px solid #4f46e5;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 6px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            animation: fadeIn 0.5s ease-in-out;
+            transition: opacity 0.3s, transform 0.3s;
+        }
+        
+        .notification.approved {
+            background-color: #f0fff4;
+            border-left-color: #48bb78;
+        }
+        
+        .notification.rejected {
+            background-color: #fff5f5;
+            border-left-color: #f56565;
+        }
+        
+        .notification-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .notification-date {
+            font-size: 0.85em;
+            color: #666;
+        }
+        
+        .notification-content {
+            margin-top: 8px;
+            font-size: 0.95em;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* History page styles */
+        .history-container {
+            padding: 20px;
+            max-width: 1400px;  /* 增加最大宽度 */
+            margin: 0 auto;
+            width: 95%;  /* 添加宽度百分比 */
+        }
+        
+        .history-filters {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .filter-btn {
+            background-color: rgba(255, 255, 255, 0.9);
+            border: 2px solid #e0e0e0;
+            padding: 12px 25px;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1em;
+            font-weight: 600;
+            color: #666;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .filter-btn:hover {
+            background-color: #f8f8f8;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .filter-btn.active {
+            background: linear-gradient(-229deg, #cf91ff, #5782f5);
+            color: white;
+            border-color: transparent;
+        }
+        
+        .absence-request {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            border-left: 4px solid #4f46e5;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+        
+        .absence-request:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+        }
+        
+        .absence-request.approved {
+            border-left-color: #48bb78;
+            background: linear-gradient(to right, rgba(72, 187, 120, 0.05), rgba(255, 255, 255, 0.95));
+        }
+        
+        .absence-request.rejected {
+            border-left-color: #f56565;
+            background: linear-gradient(to right, rgba(245, 101, 101, 0.05), rgba(255, 255, 255, 0.95));
+        }
+        
+        .absence-request.pending {
+            border-left-color: #ed8936;
+            background: linear-gradient(to right, rgba(237, 137, 54, 0.05), rgba(255, 255, 255, 0.95));
+        }
+        
+        .request-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+        }
+        
+        .request-title {
+            font-weight: bold;
+            font-size: 1.3em;
+            color: #2d3748;
+            margin-bottom: 5px;
+        }
+        
+        .request-dates {
+            color: #718096;
+            font-size: 1em;
+            margin-top: 5px;
+            font-weight: 500;
+        }
+        
+        .request-status {
+            display: inline-flex;
+            align-items: center;
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-size: 0.9em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
+        }
+        
+        .request-status.approved {
+            background: linear-gradient(45deg, #48bb78, #68d391);
+            color: white;
+        }
+        
+        .request-status.rejected {
+            background: linear-gradient(45deg, #f56565, #fc8181);
+            color: white;
+        }
+        
+        .request-status.pending {
+            background: linear-gradient(45deg, #ed8936, #f6ad55);
+            color: white;
+        }
+        
+        .request-status.partially {
+            background: linear-gradient(45deg, #4299e1, #63b3ed);
+            color: white;
+        }
+        
+        .request-details {
+            margin-bottom: 25px;
+            padding: 20px;
+            background: #f8fafc;
+            border-radius: 12px;
+            width: 100%;
+        }
+        
+        .request-details p {
+            margin: 15px 0;  /* 增加间距 */
+            color: #4a5568;
+            font-size: 1.1em;  /* 增加字体大小 */
+            line-height: 1.6;
+        }
+        
+        .request-details strong {
+            color: #2d3748;
+            font-weight: 600;
+        }
+        
+        .sessions-list {
+            background-color: #f8fafc;
+            border-radius: 12px;
+            padding: 25px;
+            margin-top: 20px;
+            width: 100%;
+        }
+        
+        .sessions-list h4 {
+            color: #2d3748;
+            font-size: 1.1em;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+        
+        .session-item {
+            background: white;
+            display: flex;
+            align-items: center;
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin-bottom: 12px;
+            transition: all 0.2s ease;
+            width: 100%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+        
+        .session-item:hover {
+            background: rgba(255, 255, 255, 1);
+            transform: translateX(5px);
+        }
+        
+        .session-status {
+            width: 10px;  /* 稍微增加大小 */
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 20px;  /* 增加右边距 */
+            position: relative;  /* 添加定位 */
+        }
+        
+        .session-status::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: inherit;
+            border-radius: 50%;
+            opacity: 0.3;
+            transform: translate(-25%, -25%);
+            z-index: -1;
+        }
+        
+        .session-status.approved {
+            background: #48bb78;
+            box-shadow: 0 0 10px rgba(72, 187, 120, 0.3);
+        }
+        
+        .session-status.rejected {
+            background: #f56565;
+            box-shadow: 0 0 10px rgba(245, 101, 101, 0.3);
+        }
+        
+        .session-status.pending {
+            background: #ed8936;
+            box-shadow: 0 0 10px rgba(237, 137, 54, 0.3);
+        }
+        
+        .session-result {
+            margin-left: auto;
+            padding: 6px 16px;  /* 增加内边距 */
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            min-width: 100px;  /* 添加最小宽度 */
+            text-align: center;  /* 文字居中 */
+        }
+        
+        .session-result.approved {
+            background: #f0fff4;
+            color: #48bb78;
+        }
+        
+        .session-result.rejected {
+            background: #fff5f5;
+            color: #f56565;
+        }
+        
+        .session-result.pending {
+            background: #fffbeb;
+            color: #ed8936;
+        }
+
+        .historySpace {
+            background: none;
+        }
+
+        .historySpace h2 {
+            text-align: center;
+            color: #2d3748;
+            margin-bottom: 35px;
+            font-size: 2em;
+            font-weight: 700;
+            position: relative;
+            padding-bottom: 15px;
+        }
+
+        .historySpace h2::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 3px;
+            background: linear-gradient(-229deg, #cf91ff, #5782f5);
+            border-radius: 2px;
         }
         
         .instruction {
             color: #666;
             text-align: center;
             font-style: italic;
+            padding: 20px 0;
         }
         
         .instruction.error {
@@ -29,21 +381,427 @@
         }
         
         .affected-course {
-            margin-bottom: 15px;
+            margin-bottom: 20px;
+            background-color: white;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         }
         
         .affected-course h4 {
-            margin: 0 0 5px 0;
-            color: #333;
+            margin: 0 0 10px 0;
+            color: #4f46e5;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #eee;
+            font-size: 16px;
         }
         
         .affected-course ul {
             list-style-type: none;
-            padding-left: 10px;
+            padding-left: 0;
+            margin: 0;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 10px;
         }
         
         .affected-course li {
-            margin: 5px 0;
+            padding: 10px;
+            border-radius: 6px;
+            background-color: #f5f7ff;
+            display: flex;
+            align-items: flex-start;
+            transition: all 0.2s ease;
+            height: 100%;
+        }
+        
+        .affected-course li:hover {
+            background-color: #eef1ff;
+            transform: translateY(-2px);
+            box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+        }
+        
+        .checkbox-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding-top: 2px;
+        }
+        
+        .affected-course input[type="checkbox"] {
+            margin-right: 10px;
+            transform: scale(1.2);
+            accent-color: #4f46e5;
+            cursor: pointer;
+        }
+        
+        .session-info {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 20px;  /* 增加元素间距 */
+            font-size: 1.05em;  /* 增加字体大小 */
+        }
+        
+        .session-info .subject-name {
+            font-weight: 600;
+            color: #2d3748;
+            min-width: 200px;  /* 添加最小宽度 */
+        }
+        
+        .session-info .time-info {
+            color: #4a5568;
+            min-width: 150px;  /* 添加最小宽度 */
+        }
+        
+        .session-info .type-info {
+            color: #718096;
+            background: rgba(203, 213, 224, 0.3);
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 0.9em;
+        }
+        
+        .session-date {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+            font-size: 0.95em;
+        }
+        
+        .session-details {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 6px;
+            color: #666;
+            font-size: 0.85em;
+        }
+        
+        .session-time {
+            background-color: #f0f0f0;
+            padding: 2px 8px;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+        
+        .session-type {
+            background-color: #e0e7ff;
+            color: #4f46e5;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            text-transform: capitalize;
+            white-space: nowrap;
+        }
+        
+        /* Page headings */
+        .homeSpace h2, .historySpace h2, .dataSpace h2, 
+        .functionSpace h2, .absenceFormSpace h2 {
+            margin-top: 0;
+            margin-bottom: 25px;
+            font-size: 1.8em;
+            color: #333;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 15px;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .affected-course ul {
+                grid-template-columns: 1fr;
+            }
+            
+            .homeSpace, .historySpace, .dataSpace, .functionSpace, .absenceFormSpace {
+                margin-top: 160px;
+            }
+        }
+        
+        /* Styled Form */
+        .styled-form {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        
+        .styled-form .form-group {
+            margin-bottom: 25px;
+        }
+        
+        .styled-form label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+            font-size: 1.05em;
+        }
+        
+        .styled-form input[type="text"],
+        .styled-form textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: all 0.2s;
+        }
+        
+        .styled-form input[type="date"] {
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+            width: 100%;
+            transition: all 0.2s;
+        }
+        
+        .styled-form input:focus,
+        .styled-form textarea:focus {
+            outline: none;
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
+        }
+        
+        .styled-form .date-range .input-row {
+            display: flex;
+            gap: 20px;
+        }
+        
+        .styled-form .date-range .form-field {
+            flex: 1;
+        }
+        
+        .styled-form .file-upload {
+            background-color: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px dashed #ccc;
+        }
+        
+        .styled-form .file-input-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .styled-form .file-input-info {
+            font-size: 0.85em;
+            color: #666;
+        }
+        
+        .styled-form .file-input-info p {
+            margin: 3px 0;
+        }
+        
+        .styled-form #submitFormBtn {
+            background-color: #4f46e5;
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+        }
+        
+        .styled-form #submitFormBtn:hover {
+            background-color: #4338ca;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+        }
+        
+        .styled-form .submit-group {
+            margin-top: 35px;
+        }
+        
+        /* Add styles for dismiss button */
+        .notification-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .dismiss-btn {
+            background: none;
+            border: none;
+            color: #666;
+            cursor: pointer;
+            padding: 4px 8px;
+            font-size: 14px;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+        
+        .dismiss-btn:hover {
+            background-color: rgba(0,0,0,0.1);
+            color: #333;
+        }
+        
+        /* Add styles for subject details in notifications */
+        .subject-details {
+            margin-top: 10px;
+        }
+        
+        .subject-item {
+            background-color: rgba(255, 255, 255, 0.7);
+            border-radius: 6px;
+            padding: 10px;
+            margin-bottom: 8px;
+        }
+        
+        .subject-name {
+            font-weight: 600;
+            color: #333;
+            margin: 0 0 5px 0;
+        }
+        
+        .session-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .session-list li {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            padding: 4px 0;
+            font-size: 0.9em;
+            color: #555;
+        }
+        
+        .session-date {
+            min-width: 100px;
+        }
+        
+        .session-time {
+            min-width: 120px;
+            color: #666;
+        }
+        
+        .session-type {
+            background-color: #f0f0f0;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        
+        .notification.approved .subject-item {
+            border-left: 3px solid #48bb78;
+        }
+        
+        .notification.rejected .subject-item {
+            border-left: 3px solid #f56565;
+        }
+        
+        /* Add styles for session location */
+        .session-location {
+            background-color: #e5e7eb;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            color: #4b5563;
+        }
+
+        /* Add timetable styles */
+        .timeTableSpace {
+            width: 90%;
+            margin: 120px auto 20px auto;
+            padding: 20px;
+            background: linear-gradient(-229deg, rgba(207, 145, 255, 0.7), rgba(87, 130, 245, 0.7));
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            min-height: auto;  /* 改为auto */
+            display: none;
+        }
+
+        .timetable-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 20px;
+        }
+
+        .timetable-table th,
+        .timetable-table td {
+            padding: 15px;
+            border: 1px solid rgba(221, 221, 221, 0.3);
+            vertical-align: top;
+            min-width: 200px;
+        }
+
+        .timetable-table td {
+            height: auto;  /* 改为auto而不是固定高度 */
+            padding: 15px;
+            vertical-align: top;
+            min-width: 200px;
+        }
+
+        .tableDisplay {
+            overflow-x: auto;
+            margin-top: 20px;
+            padding-bottom: 10px;  /* 减少底部padding */
+        }
+
+        .day-header {
+            color: #2d2d2d;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .session-card {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+        }
+
+        .session-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .session-title {
+            color: #5782f5;
+            font-size: 0.95em;
+            margin-bottom: 5px;
+        }
+
+        .session-detail {
+            font-size: 0.85em;
+            color: #666;
+            margin: 3px 0;
+        }
+
+        .session-type {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.75em;
+            background: #cf91ff;
+            color: white;
+            margin-left: 5px;
+        }
+
+        .timeTableSpace h2 {
+            color: #fff;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
+            margin-bottom: 25px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .extra-course {
+            border-left: 3px solid #48bb78;
         }
     </style>
 </head>
@@ -68,15 +826,45 @@
         <div class="header nav2">
             <div class="nav-btn"> <p> Home  </p> </div>
             <div class="nav-btn"> <p> Absence Form  </p> </div>
+            <div class="nav-btn"> <p> History  </p> </div>
             <div class="nav-btn"> <p> Data Analysis </p> </div>
             <div class="nav-btn"> <p> Timetable  </p> </div>
-            <div class="nav-btn"> <p> Setting  </p> </div>
         </div>
     </nav>
 
     <!-- Main Content -->
     <div class="homeSpace">
+        <h2>Dashboard</h2>
+        <div class="notification-container" id="notificationContainer">
+            <div class="notification-header">
+                <h3>Recent Notifications</h3>
+                <button class="dismiss-all-btn" onclick="dismissAllNotifications()">Dismiss All</button>
+            </div>
+            <div id="notificationsList">
+                <!-- Notifications will be loaded here -->
+                <p class="loading">Loading notifications...</p>
+            </div>
+        </div>
         
+        <div class="dashboard-summary">
+            <div class="card">
+                <h3>Attendance Summary</h3>
+                <p>Your attendance information will be displayed here.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="historySpace" style="display: none;">
+        <h2>Absence Request History</h2>
+        <div class="history-filters">
+            <button class="filter-btn active" data-filter="all">All</button>
+            <button class="filter-btn" data-filter="pending">Pending</button>
+            <button class="filter-btn" data-filter="approved">Approved</button>
+            <button class="filter-btn" data-filter="rejected">Rejected</button>
+        </div>
+        <div id="absenceHistory" class="history-container">
+            <p class="loading">Loading your absence history...</p>
+        </div>
     </div>
 
     <div class="dataSpace" style="display: none;">
@@ -90,15 +878,15 @@
     <div class="absenceFormSpace" style="display: none;">
         <h2>Absence Request Form</h2>
         <p>Please fill out this form to request an absence from school.</p>
-        <form id="absenceForm">
+        <form id="absenceForm" class="styled-form">
 
-            <div class="form-group">
+            <div class="form-group date-range">
                 <div class="input-row">
-                    <div>
+                    <div class="form-field">
                         <label for="startDate">Start Date of Absence</label>
                         <input type="date" id="startDate" required>
                     </div>
-                    <div>
+                    <div class="form-field">
                         <label for="endDate">End Date of Absence</label>
                         <input type="date" id="endDate" required>
                     </div>
@@ -122,16 +910,28 @@
                 <textarea id="comments" rows="4" placeholder="Optional"></textarea>
             </div>
 
-         
-            
-            <div class="form-group">
-                <input type="file" id="fileInput" accept=".pdf,.doc,.docx,.jpg,.png">
+            <div class="form-group file-upload">
+                <label for="fileInput">Supporting Document</label>
+                <div class="file-input-container">
+                    <input type="file" id="fileInput" accept=".pdf,.doc,.docx,.jpg,.png">
+                    <div class="file-input-info">
+                        <p>Accepted formats: PDF, DOC, DOCX, JPG, PNG</p>
+                        <p>Maximum file size: 10MB</p>
+                    </div>
+                </div>
             </div>
         
-            <div class="form-group">
-                <button id="submitFormBtn" type="submit">提交</button>
+            <div class="form-group submit-group">
+                <button id="submitFormBtn" type="submit">Submit Request</button>
             </div>
         </form>
+    </div>
+
+    <div class="timeTableSpace" style="display: none;">
+        <h2>Timetable</h2>
+        <div class="tableDisplay">
+            <!-- Timetable content will be dynamically inserted here -->
+        </div>
     </div>
 
     <!-- Firebase & JavaScript -->
@@ -157,144 +957,184 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
+        document.getElementById("absenceForm").addEventListener("submit", async (event) => {
+            event.preventDefault();  // 阻止页面刷新
 
-
-
-
-
-document.getElementById("absenceForm").addEventListener("submit", async (event) => {
-    event.preventDefault();  // 阻止页面刷新
-
-    let fileLink = "";
-    const fileInput = document.getElementById("fileInput");
-    if (fileInput.files.length > 0) {
-        fileLink = await window.uploadFile();
-    }
-
-    const startDate = document.getElementById("startDate").value;
-    const endDate = document.getElementById("endDate").value;
-    const reason = document.getElementById("reason").value.trim();
-    const comments = document.getElementById("comments").value.trim();
-
-    // 获取学生信息
-    const studentID = sessionStorage.getItem('studentID');
-    const studentRef = doc(db, "student", studentID);
-    const studentDoc = await getDoc(studentRef);
-    if (!studentDoc.exists()) {
-        alert("学生数据未找到");
-        return;
-    }
-
-    const studentData = studentDoc.data();
-    const courseCode = studentData.course;
-    const group = studentData.group; 
-    const fullName = studentData.name;
-    const email = studentData.email;
-
-    if (!courseCode || !group) {
-        console.error("缺少课程或分组信息", { courseCode, group });
-        alert("学生数据不完整");
-        return;
-    }
-
-    // 获取选中的缺席课程
-    const missedSessions = [];
-    const checkboxes = document.querySelectorAll('input[name="missedSession"]:checked');
-    checkboxes.forEach(checkbox => {
-        const [courseCode, subjectId, date, startTime, type] = checkbox.value.split('|');
-        missedSessions.push({
-            courseCode,
-            subjectId,
-            date,
-            startTime,
-            type,
-            // 构建与attendance系统兼容的sessionId
-            sessionId: `${date}_${startTime}_${type}_${group}`
-        });
-    });
-
-    // 构造要保存的数据对象
-    const formData = {
-        studentId: studentID,
-        name: fullName,
-        email: email,
-        startDate: startDate,
-        endDate: endDate,
-        reason: reason,
-        comments: comments,
-        file: fileLink,
-        status: "pending",
-        submittedAt: new Date(),
-        missedSessions: missedSessions
-    };
-
-    // 指定要更新的 Firestore 文档路径：absence/DIIT2308/G1/23083140
-    const pathString = `absence/${courseCode}/${group}/${studentID}`;
-    const absenceDocRef = doc(db, pathString);
-
-    try {
-        // 先获取当前文档数据
-        const docSnap = await getDoc(absenceDocRef);
-        if (docSnap.exists()) {
-            // 如果文档存在，读取已有的 Form 数组（如果不存在则初始化为空数组）
-            let currentForms = docSnap.data().Form || [];
-            // 将新的表单数据追加到数组末尾
-            currentForms.push(formData);
-            // 更新文档，保留其他字段（merge: true）
-            await setDoc(absenceDocRef, { Form: currentForms }, { merge: true });
-        } else {
-            // 文档不存在，则创建新文档并写入 Form 数组
-            await setDoc(absenceDocRef, { Form: [formData] });
-        }
-        
-        // 为每个受影响的课程创建通知
-        for (const session of missedSessions) {
-            // 获取该课程的教师ID
-            const subjectRef = doc(db, "course", session.courseCode, "subject", session.subjectId);
-            const subjectDoc = await getDoc(subjectRef);
-            
-            if (subjectDoc.exists()) {
-                const subjectData = subjectDoc.data();
-                const sessions = subjectData.sessions || [];
-                
-                // 找到匹配的session
-                const matchingSession = sessions.find(s => 
-                    s.startTime === session.startTime && 
-                    s.type === session.type
-                );
-                
-                if (matchingSession && matchingSession.lectureID) {
-                    // 创建教师通知
-                    const notificationRef = doc(db, "notifications", matchingSession.lectureID);
-                    await setDoc(notificationRef, {
-                        absenceRequests: arrayUnion({
-                            studentId: studentID,
-                            studentName: fullName,
-                            courseCode: session.courseCode,
-                            subjectId: session.subjectId,
-                            date: session.date,
-                            sessionId: session.sessionId,
-                            reason: reason,
-                            status: "pending",
-                            submittedAt: new Date()
-                        })
-                    }, { merge: true });
+            let fileLink = "";
+            const fileInput = document.getElementById("fileInput");
+            if (fileInput.files.length > 0) {
+                fileLink = await window.uploadFile();
+                // 如果上传失败，fileLink将是空字符串
+                if (!fileLink) {
+                    console.log("文件上传失败或被取消");
+                    // 可以选择在这里中断表单提交，或者继续但不包含文件链接
+                    // return; // 取消提交
                 }
             }
-        }
-        
-        alert("缺席申请已提交成功！");
-        // 重置表单
-        document.getElementById("absenceForm").reset();
-        document.getElementById("affectedCourses").innerHTML = "<p class='instruction'>Please select dates to see affected courses</p>";
-        
-    } catch (error) {
-        console.error("保存数据出错：", error);
-        alert("保存数据出错：" + error.message);
-    }
-});
 
+            const startDate = document.getElementById("startDate").value;
+            const endDate = document.getElementById("endDate").value;
+            const reason = document.getElementById("reason").value.trim();
+            const comments = document.getElementById("comments").value.trim();
 
+            // 获取学生信息
+            const studentID = sessionStorage.getItem('studentID');
+            const studentRef = doc(db, "student", studentID);
+            const studentDoc = await getDoc(studentRef);
+            if (!studentDoc.exists()) {
+                alert("学生数据未找到");
+                return;
+            }
+
+            const studentData = studentDoc.data();
+            const courseCode = studentData.course;
+            const group = studentData.group; 
+            const fullName = studentData.name;
+            const email = studentData.email;
+
+            if (!courseCode || !group) {
+                console.error("缺少课程或分组信息", { courseCode, group });
+                alert("学生数据不完整");
+                return;
+            }
+
+            // 获取选中的缺席课程
+            const missedSessions = [];
+            const checkboxes = document.querySelectorAll('input[name="missedSession"]:checked');
+            checkboxes.forEach(checkbox => {
+                const [courseCode, subjectId, date, startTime, type] = checkbox.value.split('|');
+                const subjectName = checkbox.getAttribute('data-subject-name') || '';
+                const endTime = checkbox.getAttribute('data-end-time') || '';
+                
+                missedSessions.push({
+                    courseCode,
+                    subjectId,
+                    subjectName,  // 添加科目名称
+                    date,
+                    startTime,
+                    endTime,      // 添加结束时间
+                    type,
+                    // 构建与attendance系统兼容的sessionId
+                    sessionId: `${date}_${startTime}_${type}_${group}`,
+                    // 为每个会话添加初始状态
+                    status: "pending"
+                });
+            });
+
+            // 构造要保存的数据对象
+            const formData = {
+                formId: Date.now().toString(), // Generate a unique ID
+                studentId: studentID,
+                name: fullName,
+                startDate: startDate,
+                endDate: endDate,
+                reason: reason,
+                comments: comments,
+                status: "pending",
+                submittedAt: new Date(),
+                missedSessions: missedSessions,
+                notificationDismissed: false // Add notification status
+            };
+            
+            // 只有当文件链接存在时才添加到formData中
+            if (fileLink) {
+                formData.file = fileLink;
+            }
+
+            // 指定要更新的 Firestore 文档路径：absence/DIIT2308/G1/23083140
+            const pathString = `absence/${courseCode}/${group}/${studentID}`;
+            const absenceDocRef = doc(db, pathString);
+
+            try {
+                // 先获取当前文档数据
+                const docSnap = await getDoc(absenceDocRef);
+                if (docSnap.exists()) {
+                    // 如果文档存在，读取已有的 Form 数组（如果不存在则初始化为空数组）
+                    let currentForms = docSnap.data().Form || [];
+                    // 将新的表单数据追加到数组末尾
+                    currentForms.push(formData);
+                    // 更新文档，保留其他字段（merge: true）
+                    await setDoc(absenceDocRef, { Form: currentForms }, { merge: true });
+                } else {
+                    // 文档不存在，则创建新文档并写入 Form 数组
+                    await setDoc(absenceDocRef, { Form: [formData] });
+                }
+                
+                // 为每个受影响的课程创建通知
+                for (const session of missedSessions) {
+                    // 获取该课程的教师ID
+                    const subjectRef = doc(db, "course", session.courseCode, "subject", session.subjectId);
+                    const subjectDoc = await getDoc(subjectRef);
+                    
+                    if (subjectDoc.exists()) {
+                        const subjectData = subjectDoc.data();
+                        const sessions = subjectData.sessions || [];
+                        
+                        // 找到匹配的session
+                        const matchingSession = sessions.find(s => 
+                            s.startTime === session.startTime && 
+                            s.type === session.type
+                        );
+                        
+                        if (matchingSession && matchingSession.lectureID) {
+                            // 创建教师通知
+                            const notificationRef = doc(db, "notifications", matchingSession.lectureID);
+                            
+                            // 创建通知对象
+                            const notificationData = {
+                                studentId: studentID,
+                                studentName: fullName,
+                                courseCode: session.courseCode,
+                                subjectId: session.subjectId,
+                                subjectName: session.subjectName,  // 添加科目名称
+                                date: session.date,
+                                startTime: session.startTime,
+                                endTime: session.endTime,          // 添加结束时间
+                                sessionId: session.sessionId,
+                                reason: reason,
+                                status: "pending",  // 初始状态为pending
+                                submittedAt: new Date()
+                            };
+                            
+                            // 只有当文件链接存在时才添加到通知中
+                            if (fileLink) {
+                                notificationData.file = fileLink;
+                            }
+                            
+                            // 添加通知
+                            await setDoc(notificationRef, {
+                                absenceRequests: arrayUnion(notificationData)
+                            }, { merge: true });
+                            
+                            // 检查是否已经存在该session的考勤记录
+                            const attendanceRef = doc(db, "attendance", session.courseCode, session.subjectId, session.sessionId, "students", studentID);
+                            const attendanceDoc = await getDoc(attendanceRef);
+                            
+                            // 如果考勤记录不存在，则创建一个标记为"pending_absence"的记录
+                            // 这样可以防止与其他考勤方式冲突
+                            if (!attendanceDoc.exists()) {
+                                await setDoc(attendanceRef, {
+                                    status: "pending_absence",
+                                    reason: reason,
+                                    timestamp: new Date(),
+                                    method: "absence_request",
+                                    group: group
+                                });
+                            }
+                        }
+                    }
+                }
+                
+                alert("缺席申请已提交成功！");
+                // 重置表单
+                document.getElementById("absenceForm").reset();
+                document.getElementById("affectedCourses").innerHTML = "<p class='instruction'>Please select dates to see affected courses</p>";
+                
+            } catch (error) {
+                console.error("保存数据出错：", error);
+                alert("保存数据出错：" + error.message);
+            }
+        });
 
         async function loadStudentName() {
             const studentID = sessionStorage.getItem('studentID');
@@ -317,6 +1157,7 @@ document.getElementById("absenceForm").addEventListener("submit", async (event) 
 
         window.onload = function() {
             loadStudentName();
+            loadNotifications(); // Load notifications when page first loads
         };
 
         // Logout function
@@ -370,39 +1211,68 @@ document.getElementById("absenceForm").addEventListener("submit", async (event) 
 
         // Navigation Handling
         document.addEventListener("DOMContentLoaded", function () {
-            const homeBtn = document.querySelector(".nav-btn:nth-child(1)");
-            const absenceFormBtn = document.querySelector(".nav-btn:nth-child(2)");
-            const dataAnalysisBtn = document.querySelector(".nav-btn:nth-child(3)");
+            const navButtons = document.querySelectorAll(".nav2 .nav-btn");
+            const spaces = {
+                home: document.querySelector(".homeSpace"),
+                absenceForm: document.querySelector(".absenceFormSpace"),
+                history: document.querySelector(".historySpace"),
+                data: document.querySelector(".dataSpace"),
+                timetable: document.querySelector(".timeTableSpace")
+            };
 
-            const homeSpace = document.querySelector(".homeSpace");
-            const dataSpace = document.querySelector(".dataSpace");
-            const functionSpace = document.querySelector(".functionSpace");
-            const absenceFormSpace = document.querySelector(".absenceFormSpace");
-
-            homeSpace.style.display = "block";
-            dataSpace.style.display = "none";
-            functionSpace.style.display = "none";
-            absenceFormSpace.style.display = "block";
-
-            absenceFormBtn.addEventListener("click", function () {
-                homeSpace.style.display = "none";
-                dataSpace.style.display = "none";
-                functionSpace.style.display = "none";
-                absenceFormSpace.style.display = "block";
+            // Hide all spaces initially except home
+            Object.values(spaces).forEach(space => {
+                if (space !== spaces.home) {
+                    space.style.display = "none";
+                }
             });
 
-            dataAnalysisBtn.addEventListener("click", function () {
-                homeSpace.style.display = "none";
-                dataSpace.style.display = "block";
-                functionSpace.style.display = "none";
-                absenceFormSpace.style.display = "none";
+            // Add click handlers for navigation
+            navButtons.forEach((btn, index) => {
+                btn.addEventListener("click", function() {
+                    // Hide all spaces
+                    Object.values(spaces).forEach(space => {
+                        space.style.display = "none";
+                    });
+
+                    // Show selected space
+                    switch(index) {
+                        case 0:
+                            spaces.home.style.display = "block";
+                            break;
+                        case 1:
+                            spaces.absenceForm.style.display = "block";
+                            break;
+                        case 2:
+                            spaces.history.style.display = "block";
+                            loadAbsenceHistory();
+                            break;
+                        case 3:
+                            spaces.data.style.display = "block";
+                            break;
+                        case 4:
+                            spaces.timetable.style.display = "block";
+                            loadTimetable();
+                            break;
+                    }
+
+                    // Scroll to top when switching sections
+                    window.scrollTo(0, 0);
+                });
             });
 
-            homeBtn.addEventListener("click", function () {
-                homeSpace.style.display = "block";
-                functionSpace.style.display = "none";
-                dataSpace.style.display = "none";
-                absenceFormSpace.style.display = "none";
+            // Set up filter buttons for history page
+            const filterButtons = document.querySelectorAll('.filter-btn');
+            filterButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    // Remove active class from all buttons
+                    filterButtons.forEach(btn => btn.classList.remove('active'));
+                    // Add active class to clicked button
+                    this.classList.add('active');
+                    // Apply filter
+                    const filter = this.getAttribute('data-filter');
+                    filterAbsenceHistory(filter);
+                });
             });
         });
 
@@ -582,68 +1452,103 @@ async function updateAffectedCourses() {
         }
         
         const studentData = studentDoc.data();
-        const courseCode = studentData.course;
-        const group = studentData.group;
+        const studentCourse = studentData.course;
+        const studentGroup = studentData.group;
         
         // Get all days between start and end date
         const days = getDaysBetweenDates(startDate, endDate);
         
-        // Get course subjects
-        const courseRef = doc(db, "course", courseCode);
-        const subjectsCollection = collection(db, "course", courseCode, "subject");
-        const subjectsSnapshot = await getDocs(subjectsCollection);
+        // Get all courses (including those where student might be an extra student)
+        const coursesCollection = collection(db, "course");
+        const coursesSnapshot = await getDocs(coursesCollection);
         
         let affectedCoursesHTML = "";
         let hasAffectedCourses = false;
         
-        subjectsSnapshot.forEach(subjectDoc => {
-            const subjectData = subjectDoc.data();
-            const sessions = subjectData.sessions || [];
+        // Process each course
+        for (const courseDoc of coursesSnapshot.docs) {
+            const courseCode = courseDoc.id;
             
-            // Filter sessions for student's group
-            const relevantSessions = sessions.filter(session => 
-                session.group === group || session.group === 'all'
-            );
+            // Get all subjects for this course
+            const subjectsCollection = collection(db, "course", courseCode, "subject");
+            const subjectsSnapshot = await getDocs(subjectsCollection);
             
-            // Check if any session falls within the selected date range
-            const affectedSessions = relevantSessions.filter(session => {
-                const sessionDay = session.day;
-                return days.some(day => 
-                    day.toLocaleDateString('en-US', { weekday: 'long' }) === sessionDay
-                );
-            });
-            
-            if (affectedSessions.length > 0) {
-                hasAffectedCourses = true;
+            for (const subjectDoc of subjectsSnapshot.docs) {
+                const subjectData = subjectDoc.data();
+                const sessions = subjectData.sessions || [];
                 
-                affectedCoursesHTML += `
-                    <div class="affected-course">
-                        <h4>${subjectData.name}</h4>
-                        <ul>
-                `;
-                
-                affectedSessions.forEach(session => {
-                    // Find which dates this session occurs on
-                    const sessionDates = days.filter(day => 
-                        day.toLocaleDateString('en-US', { weekday: 'long' }) === session.day
-                    ).map(day => day.toISOString().split('T')[0]);
+                // Filter sessions based on student's group and extra/excluded status
+                const relevantSessions = sessions.filter(session => {
+                    // Check if student is excluded
+                    if (subjectData.excludedStudents && subjectData.excludedStudents.includes(studentID)) {
+                        return false;
+                    }
                     
-                    sessionDates.forEach(date => {
-                        affectedCoursesHTML += `
-                            <li>
-                                <input type="checkbox" name="missedSession" value="${courseCode}|${subjectDoc.id}|${date}|${session.startTime}|${session.type}" checked>
-                                ${date} (${session.day}): ${session.startTime}-${session.endTime} (${session.type})
-                            </li>
-                        `;
-                    });
+                    // Check if this is student's course
+                    if (courseCode === studentCourse) {
+                        // Include if session is for student's group or all groups
+                        return session.group === studentGroup || session.group === 'all';
+                    } else {
+                        // For other courses, check if student is in extraStudents
+                        return session.extraStudents && session.extraStudents.includes(studentID);
+                    }
                 });
                 
-                affectedCoursesHTML += `
-                        </ul>
-                    </div>
-                `;
+                // Check if any session falls within the selected date range
+                const affectedSessions = relevantSessions.filter(session => {
+                    const sessionDay = session.day;
+                    return days.some(day => 
+                        day.toLocaleDateString('en-US', { weekday: 'long' }) === sessionDay
+                    );
+                });
+                
+                if (affectedSessions.length > 0) {
+                    hasAffectedCourses = true;
+                    
+                    affectedCoursesHTML += `
+                        <div class="affected-course">
+                            <h4>${subjectData.name} (${courseCode})</h4>
+                            <ul>
+                    `;
+                    
+                    affectedSessions.forEach(session => {
+                        // Find which dates this session occurs on
+                        const sessionDates = days.filter(day => 
+                            day.toLocaleDateString('en-US', { weekday: 'long' }) === session.day
+                        ).map(day => day.toISOString().split('T')[0]);
+                        
+                        sessionDates.forEach(date => {
+                            affectedCoursesHTML += `
+                                <li>
+                                    <div class="checkbox-wrapper">
+                                        <input type="checkbox" name="missedSession" 
+                                               value="${courseCode}|${subjectDoc.id}|${date}|${session.startTime}|${session.type}" 
+                                               data-subject-name="${subjectData.name}"
+                                               data-start-time="${session.startTime}"
+                                               data-end-time="${session.endTime}"
+                                               data-lecturer-id="${session.lectureID || ''}"
+                                               checked>
+                                    </div>
+                                    <div class="session-info">
+                                        <div class="session-date">${date} (${session.day})</div>
+                                        <div class="session-details">
+                                            <span class="session-time">${session.startTime}-${session.endTime}</span>
+                                            <span class="session-type">${session.type}</span>
+                                            <span class="session-location">${session.class}</span>
+                                        </div>
+                                    </div>
+                                </li>
+                            `;
+                        });
+                    });
+                    
+                    affectedCoursesHTML += `
+                            </ul>
+                        </div>
+                    `;
+                }
             }
-        });
+        }
         
         if (hasAffectedCourses) {
             affectedCoursesContainer.innerHTML = affectedCoursesHTML;
@@ -702,6 +1607,687 @@ document.getElementById("absenceForm").addEventListener("submit", async (event) 
     
     // ... rest of existing code ...
 });
+
+        // Load notifications for the home page
+        async function loadNotifications() {
+            const notificationsList = document.getElementById('notificationsList');
+            notificationsList.innerHTML = '<p class="loading">Loading notifications...</p>';
+            
+            try {
+                const studentID = sessionStorage.getItem('studentID');
+                if (!studentID) {
+                    notificationsList.innerHTML = '<p class="error">Student ID not found</p>';
+                    return;
+                }
+                
+                const studentData = await getStudentData(studentID);
+                if (!studentData) {
+                    notificationsList.innerHTML = '<p class="error">Could not load student data</p>';
+                    return;
+                }
+                
+                const courseCode = studentData.course;
+                const group = studentData.group;
+                
+                // Get the student's absence requests
+                const absenceRef = doc(db, "absence", courseCode, group, studentID);
+                const absenceDoc = await getDoc(absenceRef);
+                
+                if (!absenceDoc.exists() || !absenceDoc.data().Form || absenceDoc.data().Form.length === 0) {
+                    notificationsList.innerHTML = '<p>No notifications at this time.</p>';
+                    return;
+                }
+                
+                const forms = absenceDoc.data().Form;
+                
+                // Find recently approved or rejected requests (within the last 7 days)
+                const recentDate = new Date();
+                recentDate.setDate(recentDate.getDate() - 7); // Last 7 days
+                
+                let hasNotifications = false;
+                let notificationsHTML = '';
+                
+                forms.forEach(form => {
+                    // Skip if notification has been dismissed
+                    if (form.notificationDismissed) {
+                        return;
+                    }
+                    
+                    // Check if any sessions were recently approved or rejected
+                    const recentlyProcessedSessions = form.missedSessions.filter(session => {
+                        if (!session.approvedAt) return false;
+                        
+                        const processedDate = session.approvedAt.toDate ? 
+                            session.approvedAt.toDate() : new Date(session.approvedAt);
+                            
+                        return processedDate > recentDate && 
+                               (session.status === 'approved' || session.status === 'rejected');
+                    });
+                    
+                    if (recentlyProcessedSessions.length > 0) {
+                        hasNotifications = true;
+                        
+                        // Group by status
+                        const approved = recentlyProcessedSessions.filter(s => s.status === 'approved');
+                        const rejected = recentlyProcessedSessions.filter(s => s.status === 'rejected');
+                        
+                        // Create notification for approved sessions
+                        if (approved.length > 0) {
+                            // Group approved sessions by subject
+                            const approvedBySubject = {};
+                            approved.forEach(session => {
+                                if (!approvedBySubject[session.subjectId]) {
+                                    approvedBySubject[session.subjectId] = [];
+                                }
+                                approvedBySubject[session.subjectId].push(session);
+                            });
+
+                            const latestApproval = approved.reduce((latest, current) => {
+                                const currentDate = current.approvedAt.toDate ? 
+                                    current.approvedAt.toDate() : new Date(current.approvedAt);
+                                const latestDate = latest.approvedAt.toDate ? 
+                                    latest.approvedAt.toDate() : new Date(latest.approvedAt);
+                                return currentDate > latestDate ? current : latest;
+                            });
+                            
+                            const approvedDate = latestApproval.approvedAt.toDate ? 
+                                latestApproval.approvedAt.toDate() : new Date(latestApproval.approvedAt);
+                                
+                            notificationsHTML += `
+                                <div class="notification approved" data-id="${form.submittedAt.seconds || ''}" data-form-id="${form.formId || ''}">
+                                    <div class="notification-title">
+                                        <span>Absence Request Approved</span>
+                                        <div class="notification-controls">
+                                            <span class="notification-date">${approvedDate.toLocaleDateString()}</span>
+                                            <button class="dismiss-btn" onclick="dismissNotification(this)">✕</button>
+                                        </div>
+                                    </div>
+                                    <div class="notification-content">
+                                        <p><strong>Reason:</strong> ${form.reason}</p>
+                                        <div class="subject-details">
+                                            ${Object.entries(approvedBySubject).map(([subjectId, sessions]) => `
+                                                <div class="subject-item">
+                                                    <p class="subject-name">${sessions[0].subjectName}</p>
+                                                    <ul class="session-list">
+                                                        ${sessions.map(session => `
+                                                            <li>
+                                                                <span class="session-date">${session.date}</span>
+                                                                <span class="session-time">${session.startTime} - ${session.endTime}</span>
+                                                                <span class="session-type">${session.type}</span>
+                                                            </li>
+                                                        `).join('')}
+                                                    </ul>
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                        
+                        // Create notification for rejected sessions
+                        if (rejected.length > 0) {
+                            // Group rejected sessions by subject
+                            const rejectedBySubject = {};
+                            rejected.forEach(session => {
+                                if (!rejectedBySubject[session.subjectId]) {
+                                    rejectedBySubject[session.subjectId] = [];
+                                }
+                                rejectedBySubject[session.subjectId].push(session);
+                            });
+
+                            const latestRejection = rejected.reduce((latest, current) => {
+                                const currentDate = current.approvedAt.toDate ? 
+                                    current.approvedAt.toDate() : new Date(current.approvedAt);
+                                const latestDate = latest.approvedAt.toDate ? 
+                                    latest.approvedAt.toDate() : new Date(latest.approvedAt);
+                                return currentDate > latestDate ? current : latest;
+                            });
+                            
+                            const rejectedDate = latestRejection.approvedAt.toDate ? 
+                                latestRejection.approvedAt.toDate() : new Date(latestRejection.approvedAt);
+                                
+                            notificationsHTML += `
+                                <div class="notification rejected" data-id="${form.submittedAt.seconds || ''}" data-form-id="${form.formId || ''}">
+                                    <div class="notification-title">
+                                        <span>Absence Request Rejected</span>
+                                        <div class="notification-controls">
+                                            <span class="notification-date">${rejectedDate.toLocaleDateString()}</span>
+                                            <button class="dismiss-btn" onclick="dismissNotification(this)">✕</button>
+                                        </div>
+                                    </div>
+                                    <div class="notification-content">
+                                        <p><strong>Reason:</strong> ${form.reason}</p>
+                                        <div class="subject-details">
+                                            ${Object.entries(rejectedBySubject).map(([subjectId, sessions]) => `
+                                                <div class="subject-item">
+                                                    <p class="subject-name">${sessions[0].subjectName}</p>
+                                                    <ul class="session-list">
+                                                        ${sessions.map(session => `
+                                                            <li>
+                                                                <span class="session-date">${session.date}</span>
+                                                                <span class="session-time">${session.startTime} - ${session.endTime}</span>
+                                                                <span class="session-type">${session.type}</span>
+                                                            </li>
+                                                        `).join('')}
+                                                    </ul>
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    }
+                });
+                
+                if (hasNotifications) {
+                    notificationsList.innerHTML = notificationsHTML;
+                    document.querySelector('.dismiss-all-btn').style.display = 'block';
+                } else {
+                    notificationsList.innerHTML = '<p>No new notifications at this time.</p>';
+                    document.querySelector('.dismiss-all-btn').style.display = 'none';
+                }
+                
+            } catch (error) {
+                console.error("Error loading notifications:", error);
+                notificationsList.innerHTML = `<p class="error">Error loading notifications: ${error.message}</p>`;
+                document.querySelector('.dismiss-all-btn').style.display = 'none';
+            }
+        }
+        
+        // Helper function to get student data
+        async function getStudentData(studentID) {
+            try {
+                const studentRef = doc(db, "student", studentID);
+                const studentDoc = await getDoc(studentRef);
+                
+                if (studentDoc.exists()) {
+                    return studentDoc.data();
+                }
+                return null;
+            } catch (error) {
+                console.error("Error getting student data:", error);
+                return null;
+            }
+        }
+        
+        // Dismiss single notification
+        window.dismissNotification = async function(button) {
+            const notification = button.closest('.notification');
+            const formId = notification.getAttribute('data-form-id');
+            
+            try {
+                const studentID = sessionStorage.getItem('studentID');
+                const studentData = await getStudentData(studentID);
+                
+                if (!studentData) {
+                    console.error('Could not load student data');
+                    return;
+                }
+                
+                const courseCode = studentData.course;
+                const group = studentData.group;
+                
+                // Update the form in Firestore to mark notification as dismissed
+                const absenceRef = doc(db, "absence", courseCode, group, studentID);
+                const absenceDoc = await getDoc(absenceRef);
+                
+                if (absenceDoc.exists()) {
+                    const forms = absenceDoc.data().Form;
+                    const updatedForms = forms.map(form => {
+                        if (form.formId === formId) {
+                            return {
+                                ...form,
+                                notificationDismissed: true
+                            };
+                        }
+                        return form;
+                    });
+                    
+                    await updateDoc(absenceRef, {
+                        Form: updatedForms
+                    });
+                    
+                    // Animate and remove the notification
+                    notification.style.opacity = '0';
+                    notification.style.transform = 'translateY(10px)';
+                    
+                    setTimeout(() => {
+                        notification.remove();
+                        
+                        // Check if there are any remaining notifications
+                        const remainingNotifications = document.querySelectorAll('.notification');
+                        if (remainingNotifications.length === 0) {
+                            const notificationsList = document.getElementById('notificationsList');
+                            notificationsList.innerHTML = '<p>No notifications at this time.</p>';
+                            document.querySelector('.dismiss-all-btn').style.display = 'none';
+                        }
+                    }, 300);
+                }
+            } catch (error) {
+                console.error('Error dismissing notification:', error);
+                alert('Failed to dismiss notification. Please try again.');
+            }
+        };
+        
+        // Update dismiss all notifications function
+        window.dismissAllNotifications = async function() {
+            try {
+                const studentID = sessionStorage.getItem('studentID');
+                const studentData = await getStudentData(studentID);
+                
+                if (!studentData) {
+                    console.error('Could not load student data');
+                    return;
+                }
+                
+                const courseCode = studentData.course;
+                const group = studentData.group;
+                
+                // Update all forms in Firestore to mark notifications as dismissed
+                const absenceRef = doc(db, "absence", courseCode, group, studentID);
+                const absenceDoc = await getDoc(absenceRef);
+                
+                if (absenceDoc.exists()) {
+                    const forms = absenceDoc.data().Form;
+                    const updatedForms = forms.map(form => ({
+                        ...form,
+                        notificationDismissed: true
+                    }));
+                    
+                    await updateDoc(absenceRef, {
+                        Form: updatedForms
+                    });
+                    
+                    // Animate and remove all notifications
+                    const notifications = document.querySelectorAll('.notification');
+                    notifications.forEach(notification => {
+                        notification.style.opacity = '0';
+                        notification.style.transform = 'translateY(10px)';
+                    });
+                    
+                    setTimeout(() => {
+                        const notificationsList = document.getElementById('notificationsList');
+                        notificationsList.innerHTML = '<p>No notifications at this time.</p>';
+                        document.querySelector('.dismiss-all-btn').style.display = 'none';
+                    }, 300);
+                }
+            } catch (error) {
+                console.error('Error dismissing all notifications:', error);
+                alert('Failed to dismiss notifications. Please try again.');
+            }
+        };
+        
+        // Load absence history
+        async function loadAbsenceHistory() {
+            const historyContainer = document.getElementById('absenceHistory');
+            historyContainer.innerHTML = '<p class="loading">Loading your absence history...</p>';
+            
+            try {
+                const studentID = sessionStorage.getItem('studentID');
+                if (!studentID) {
+                    historyContainer.innerHTML = '<p class="error">Student ID not found</p>';
+                    return;
+                }
+                
+                const studentData = await getStudentData(studentID);
+                if (!studentData) {
+                    historyContainer.innerHTML = '<p class="error">Could not load student data</p>';
+                    return;
+                }
+                
+                const courseCode = studentData.course;
+                const group = studentData.group;
+                
+                // Get the student's absence requests
+                const absenceRef = doc(db, "absence", courseCode, group, studentID);
+                const absenceDoc = await getDoc(absenceRef);
+                
+                if (!absenceDoc.exists() || !absenceDoc.data().Form || absenceDoc.data().Form.length === 0) {
+                    historyContainer.innerHTML = '<p class="no-history">You have not submitted any absence requests yet.</p>';
+                    return;
+                }
+                
+                // Sort forms by submission date (newest first)
+                const forms = [...absenceDoc.data().Form].sort((a, b) => {
+                    const dateA = a.submittedAt.toDate ? a.submittedAt.toDate() : new Date(a.submittedAt);
+                    const dateB = b.submittedAt.toDate ? b.submittedAt.toDate() : new Date(b.submittedAt);
+                    return dateB - dateA;
+                });
+                
+                // For each form, check the actual attendance records to ensure status is up-to-date
+                for (const form of forms) {
+                    for (const session of form.missedSessions) {
+                        try {
+                            // Check the attendance record for this session
+                            const attendanceRef = doc(db, "attendance", session.courseCode, session.subjectId, session.sessionId, "students", studentID);
+                            const attendanceDoc = await getDoc(attendanceRef);
+                            
+                            if (attendanceDoc.exists()) {
+                                const attendanceData = attendanceDoc.data();
+                                // Update the session status based on the attendance record
+                                if (attendanceData.status === "approved_absence") {
+                                    session.status = "approved";
+                                    session.approvedAt = attendanceData.timestamp;
+                                } else if (attendanceData.status === "rejected_absence") {
+                                    session.status = "rejected";
+                                    session.approvedAt = attendanceData.timestamp;
+                                }
+                            }
+                        } catch (error) {
+                            console.error("Error checking attendance record:", error);
+                        }
+                    }
+                }
+                
+                // Store forms in a global variable for filtering
+                window.absenceForms = forms;
+                
+                // Display all forms initially
+                displayAbsenceForms(forms);
+                
+            } catch (error) {
+                console.error("Error loading absence history:", error);
+                historyContainer.innerHTML = `<p class="error">Error loading history: ${error.message}</p>`;
+            }
+        }
+        
+        // Display absence forms
+        function displayAbsenceForms(forms) {
+            const historyContainer = document.getElementById('absenceHistory');
+            
+            if (forms.length === 0) {
+                historyContainer.innerHTML = '<p class="no-history">No matching absence requests found.</p>';
+                return;
+            }
+            
+            let historyHTML = '';
+            
+            forms.forEach(form => {
+                // Determine overall status of the request
+                let overallStatus = 'pending';
+                const statuses = form.missedSessions.map(s => s.status);
+                
+                if (statuses.every(s => s === 'approved')) {
+                    overallStatus = 'approved';
+                } else if (statuses.every(s => s === 'rejected')) {
+                    overallStatus = 'rejected';
+                } else if (statuses.some(s => s === 'approved' || s === 'rejected')) {
+                    overallStatus = 'partially processed';
+                }
+                
+                // Format dates
+                const submittedDate = form.submittedAt.toDate ? 
+                    form.submittedAt.toDate().toLocaleDateString() : 
+                    new Date(form.submittedAt).toLocaleDateString();
+                
+                historyHTML += `
+                    <div class="absence-request ${overallStatus}">
+                        <div class="request-header">
+                            <div>
+                                <div class="request-title">Absence Request</div>
+                                <div class="request-dates">
+                                    ${form.startDate} to ${form.endDate}
+                                </div>
+                            </div>
+                            <span class="request-status ${overallStatus}">${overallStatus}</span>
+                        </div>
+                        <div class="request-details">
+                            <p><strong>Submitted:</strong> ${submittedDate}</p>
+                            <p><strong>Reason:</strong> ${form.reason}</p>
+                            ${form.comments ? `<p><strong>Comments:</strong> ${form.comments}</p>` : ''}
+                            ${form.file ? `<p><strong>Supporting Document:</strong> <a href="${form.file}" target="_blank">View Document</a></p>` : ''}
+                        </div>
+                        <div class="sessions-list">
+                            <h4>Affected Sessions:</h4>
+                `;
+                
+                form.missedSessions.forEach(session => {
+                    const sessionStatus = session.status || 'pending';
+                    
+                    historyHTML += `
+                        <div class="session-item ${sessionStatus}">
+                            <span class="session-status"></span>
+                            <strong>${session.date}:</strong> 
+                            ${session.subjectName || session.subjectId} 
+                            (${session.startTime || 'N/A'} - ${session.endTime || 'N/A'})
+                            <span class="session-type">${session.type}</span>
+                            <span class="session-result">${sessionStatus}</span>
+                        </div>
+                    `;
+                });
+                
+                historyHTML += `
+                        </div>
+                    </div>
+                `;
+            });
+            
+            historyContainer.innerHTML = historyHTML;
+        }
+        
+        // Filter absence history
+        function filterAbsenceHistory(filter) {
+            if (!window.absenceForms) return;
+            
+            let filteredForms;
+            
+            if (filter === 'all') {
+                filteredForms = window.absenceForms;
+            } else {
+                filteredForms = window.absenceForms.filter(form => {
+                    const statuses = form.missedSessions.map(s => s.status || 'pending');
+                    
+                    if (filter === 'pending') {
+                        return statuses.some(s => s === 'pending');
+                    } else if (filter === 'approved') {
+                        return statuses.some(s => s === 'approved');
+                    } else if (filter === 'rejected') {
+                        return statuses.some(s => s === 'rejected');
+                    }
+                    
+                    return true;
+                });
+            }
+            
+            displayAbsenceForms(filteredForms);
+        }
+
+        // Add timetable loading function
+        async function loadTimetable() {
+            const studentID = sessionStorage.getItem('studentID');
+            if (!studentID) {
+                console.error("No student ID found");
+                return;
+            }
+
+            const sessionsByDay = {
+                Monday: [], Tuesday: [], Wednesday: [],
+                Thursday: [], Friday: [], Saturday: [], Sunday: []
+            };
+
+            try {
+                // Get student data
+                const studentRef = doc(db, "student", studentID);
+                const studentDoc = await getDoc(studentRef);
+                
+                if (!studentDoc.exists()) {
+                    console.error("Student data not found");
+                    return;
+                }
+
+                const studentData = studentDoc.data();
+                const studentCourse = studentData.course;
+                const studentGroup = studentData.group;
+
+                // Get all courses
+                const coursesSnapshot = await getDocs(collection(db, "course"));
+                let hasData = false;
+
+                // Process each course
+                for (const courseDoc of coursesSnapshot.docs) {
+                    const courseCode = courseDoc.id;
+                    const courseData = courseDoc.data();
+                    
+                    // Check course expiry
+                    const expiryDate = courseData.subjectExpiry?.toDate();
+                    if (expiryDate && expiryDate < new Date()) {
+                        continue;
+                    }
+
+                    // Get subjects for this course
+                    const subjectsSnapshot = await getDocs(collection(db, "course", courseCode, "subject"));
+                    
+                    for (const subjectDoc of subjectsSnapshot.docs) {
+                        const subjectData = subjectDoc.data();
+                        const sessions = subjectData.sessions || [];
+                        
+                        // Check if student is excluded from this subject
+                        const isExcluded = subjectData.excludedStudents && 
+                                         subjectData.excludedStudents.includes(studentID);
+
+                        // Process sessions based on whether it's student's course or extra course
+                        sessions.forEach(session => {
+                            const isRelevantSession = courseCode === studentCourse ?
+                                // For student's course: check if not excluded and session matches group
+                                (!isExcluded && (session.group === studentGroup || session.group === 'all')) :
+                                // For other courses: check if student is in extraStudents
+                                (session.extraStudents && session.extraStudents.includes(studentID));
+
+                            if (isRelevantSession) {
+                                hasData = true;
+                                if (sessionsByDay[session.day]) {
+                                    sessionsByDay[session.day].push({
+                                        course: courseCode,
+                                        ...session,
+                                        subjectName: subjectData.name,
+                                        class: session.class || 'TBA',
+                                        type: session.type || 'lecture',
+                                        isExtra: courseCode !== studentCourse
+                                    });
+                                }
+                            }
+                        });
+                    }
+                }
+
+                if (!hasData) {
+                    document.querySelector(".tableDisplay").innerHTML = 
+                        "<p style='color: white; text-align: center;'>No timetable entries found.</p>";
+                    return;
+                }
+
+                // Sort sessions by time for each day
+                for (const day in sessionsByDay) {
+                    sessionsByDay[day].sort((a, b) => 
+                        a.startTime.localeCompare(b.startTime)
+                    );
+                }
+
+                renderTimetable(sessionsByDay);
+
+            } catch (error) {
+                console.error("Error loading timetable:", error);
+                document.querySelector(".tableDisplay").innerHTML = 
+                    "<p style='color: white; text-align: center;'>Error loading timetable. Please try again later.</p>";
+            }
+        }
+
+        function renderTimetable(sessionsByDay) {
+            const container = document.querySelector('.tableDisplay');
+            const daysOrder = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+            
+            let html = `<table class="timetable-table">`;
+            
+            // Table header
+            html += `<tr>`;
+            daysOrder.forEach(day => {
+                html += `<th>${day}</th>`;
+            });
+            html += `</tr>`;
+            
+            // Content row
+            html += `<tr>`;
+            daysOrder.forEach(day => {
+                const sessions = sessionsByDay[day] || [];
+                html += `<td>`;
+                if (sessions.length === 0) {
+                    html += `<div class="session-card" style="opacity:0.5;">-</div>`;
+                } else {
+                    sessions.forEach(session => {
+                        html += `
+                        <div class="session-card ${session.isExtra ? 'extra-course' : ''}">
+                            <div class="session-title">
+                                ${session.subjectName}
+                                <span class="session-type">${session.type}</span>
+                            </div>
+                            <div class="session-detail">Course: ${session.course}</div>
+                            <div class="session-detail">Venue: ${session.class}</div>
+                            <div class="session-detail">Time: ${session.startTime} - ${session.endTime}</div>
+                            ${session.isExtra ? '<div class="session-detail" style="color: #48bb78;">Extra Course</div>' : ''}
+                        </div>`;
+                    });
+                }
+                html += `</td>`;
+            });
+            html += `</tr></table>`;
+            
+            container.innerHTML = html;
+        }
+
+        // Update navigation event listeners
+        document.addEventListener("DOMContentLoaded", function () {
+            const navButtons = document.querySelectorAll(".nav2 .nav-btn");
+            const spaces = {
+                home: document.querySelector(".homeSpace"),
+                absenceForm: document.querySelector(".absenceFormSpace"),
+                history: document.querySelector(".historySpace"),
+                data: document.querySelector(".dataSpace"),
+                timetable: document.querySelector(".timeTableSpace")
+            };
+
+            // Hide all spaces initially except home
+            Object.values(spaces).forEach(space => {
+                if (space !== spaces.home) {
+                    space.style.display = "none";
+                }
+            });
+
+            // Add click handlers for navigation
+            navButtons.forEach((btn, index) => {
+                btn.addEventListener("click", function() {
+                    // Hide all spaces
+                    Object.values(spaces).forEach(space => {
+                        space.style.display = "none";
+                    });
+
+                    // Show selected space
+                    switch(index) {
+                        case 0:
+                            spaces.home.style.display = "block";
+                            break;
+                        case 1:
+                            spaces.absenceForm.style.display = "block";
+                            break;
+                        case 2:
+                            spaces.history.style.display = "block";
+                            loadAbsenceHistory();
+                            break;
+                        case 3:
+                            spaces.data.style.display = "block";
+                            break;
+                        case 4:
+                            spaces.timetable.style.display = "block";
+                            loadTimetable();
+                            break;
+                    }
+
+                    // Scroll to top when switching sections
+                    window.scrollTo(0, 0);
+                });
+            });
+        });
     </script>
 
 </body>
