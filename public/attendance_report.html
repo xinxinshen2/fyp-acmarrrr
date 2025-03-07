@@ -752,6 +752,12 @@
                         const studentId = studentDoc.id;
                         const studentData = studentDoc.data();
                         
+                        // 对于出席状态的学生，将reason设置为"-"
+                        let reason = studentData.reason || "NR";
+                        if (studentData.status === "present") {
+                            reason = "-";
+                        }
+                        
                         attendanceData.push({
                             studentId: studentId,
                             studentName: studentNameMap[studentId] || "Unknown",
@@ -760,7 +766,7 @@
                             startTime: session.startTime,
                             status: studentData.status,
                             method: studentData.method || "manual",
-                            reason: studentData.reason || "NR"
+                            reason: reason
                         });
                     }
                 }
@@ -890,6 +896,9 @@
                     // Format the date display
                     const formattedDate = formatDate(record.date);
                     
+                    // 为出席状态显示"-"而不是"NR"
+                    const reasonDisplay = record.status === 'present' ? '-' : record.reason;
+                    
                     row.innerHTML = `
                         <td>${index + 1}</td>
                         <td>${record.studentId}</td>
@@ -898,7 +907,7 @@
                         <td>${sessionDisplay}</td>
                         <td><span class="status ${statusClass}">${statusDisplay}</span></td>
                         <td>${methodDisplay}</td>
-                        <td>${record.reason}</td>
+                        <td>${reasonDisplay}</td>
                     `;
                     
                     reportBody.appendChild(row);
@@ -1001,7 +1010,7 @@
                     startTime: "10:00",
                     status: "present",
                     method: "manual",
-                    reason: "NR"
+                    reason: "-"  // 出席状态使用"-"
                 },
                 {
                     studentId: "TP123456",
