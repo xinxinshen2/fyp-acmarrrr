@@ -524,7 +524,9 @@
             updateDoc, 
             setDoc,  // 添加setDoc导入
             arrayUnion, 
-            arrayRemove 
+            arrayRemove,
+            query,
+            where
         } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -728,64 +730,122 @@
         async function loadAttendanceRate() {
             const lectureID = sessionStorage.getItem('lectureID');
             if (!lectureID) {
-                console.error("No lecturer ID found");
+                console.error("没有找到讲师ID");
                 return;
             }
 
             try {
+                console.log("开始加载出勤率数据，讲师ID:", lectureID);
                 const oneMonthAgo = new Date();
                 oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
 
                 let totalPresent = 0;
+                let totalAbsent = 0;
                 let totalStudents = 0;
                 
-                // 获取所有课程
+                // 1. 获取所有课程
                 const coursesSnapshot = await getDocs(collection(db, "course"));
+                console.log(`找到 ${coursesSnapshot.size} 个课程`);
                 
                 for (const courseDoc of coursesSnapshot.docs) {
                     const courseId = courseDoc.id;
+                    console.log(`正在处理课程: ${courseId}`);
                     
-                    // 获取课程下的所有科目
+                    // 2. 获取该课程下的所有科目
                     const subjectsSnapshot = await getDocs(collection(db, "course", courseId, "subject"));
+                    console.log(`课程 ${courseId} 有 ${subjectsSnapshot.size} 个科目`);
                     
                     for (const subjectDoc of subjectsSnapshot.docs) {
                         const subjectId = subjectDoc.id;
+                        console.log(`正在处理科目: ${courseId}/${subjectId}`);
                         
-                        // 获取该科目下的所有attendance会话
-                        const sessionsSnapshot = await getDocs(
-                            collection(db, "attendance", courseId, subjectId)
-                        );
-
+                        // 3. 直接获取attendance集合下的所有会话
+                        const attendanceRef = collection(db, "attendance", courseId, subjectId);
+                        const sessionsSnapshot = await getDocs(attendanceRef);
+                        console.log(`找到 ${sessionsSnapshot.size} 个出勤记录: ${courseId}/${subjectId}`);
+                        
+                        // 4. 遍历每个会话文档
                         for (const sessionDoc of sessionsSnapshot.docs) {
+                            const sessionId = sessionDoc.id;
                             const sessionData = sessionDoc.data();
                             
-                            // 解析会话信息
-                            const [sessionDate, startTime, sessionLecturerId, sessionType, group] = 
-                                sessionDoc.id.split('_');
-                            
-                            // 检查是否属于当前讲师且是最近一个月内的课程
-                            if (sessionLecturerId === lectureID) {
-                                const sessionDateObj = new Date(sessionDate);
-                                if (sessionDateObj >= oneMonthAgo) {
-                                    totalPresent += sessionData.presentStudents || 0;
-                                    totalStudents += sessionData.totalStudents || 0;
-                                }
+                            // 解析会话ID (格式: YYYY-MM-DD_HH:mm_lectureID_type_group)
+                            const sessionParts = sessionId.split('_');
+                            if (sessionParts.length < 3) {
+                                console.log(`跳过无效的会话ID格式: ${sessionId}`);
+                                continue;
                             }
+                            
+                            // 检查会话是否属于当前讲师
+                            const sessionLecturerId = sessionParts[2]; // 第三部分是讲师ID
+                            if (sessionLecturerId !== lectureID) {
+                                console.log(`跳过非当前讲师的会话: ${sessionId}`);
+                                continue;
+                            }
+                            
+                            // 检查日期
+                            const sessionDate = new Date(sessionParts[0]);
+                            if (isNaN(sessionDate.getTime())) {
+                                console.log(`跳过无效日期的会话: ${sessionId}`);
+                                continue;
+                            }
+                            
+                            if (sessionDate < oneMonthAgo) {
+                                console.log(`跳过一个月前的会话: ${sessionId}`);
+                                continue;
+                            }
+                            
+                            console.log(`处理会话: ${sessionId}`);
+                            
+                            // 获取学生出勤数据
+                            const studentsRef = collection(sessionDoc.ref, "students");
+                            const studentsSnapshot = await getDocs(studentsRef);
+                            
+                            let presentCount = 0;
+                            let absentCount = 0;
+                            
+                            studentsSnapshot.forEach(studentDoc => {
+                                const studentData = studentDoc.data();
+                                if (studentData.status === "present") {
+                                    presentCount++;
+                                } else if (studentData.status === "absent") {
+                                    absentCount++;
+                                }
+                            });
+                            
+                            console.log(`会话 ${sessionId} 统计:`, {
+                                出席: presentCount,
+                                缺席: absentCount,
+                                总人数: studentsSnapshot.size
+                            });
+                            
+                            totalPresent += presentCount;
+                            totalAbsent += absentCount;
+                            totalStudents += studentsSnapshot.size;
                         }
                     }
                 }
 
-                // 计算出席率
+                // 计算出勤率
                 let attendanceRate = 'N/A';
                 if (totalStudents > 0) {
-                    attendanceRate = `${Math.round((totalPresent / totalStudents) * 100)}%`;
+                    const rate = (totalPresent / totalStudents) * 100;
+                    attendanceRate = `${Math.round(rate)}%`;
+                    console.log(`最终出勤率计算:`, {
+                        总出席人次: totalPresent,
+                        总缺席人次: totalAbsent,
+                        总学生人次: totalStudents,
+                        出勤率: `${rate.toFixed(2)}%`
+                    });
+                } else {
+                    console.log(`没有找到学生出勤数据，无法计算出勤率`);
                 }
 
                 // 更新页面显示
                 document.querySelector('.statistics div:first-child p').textContent = attendanceRate;
                 
             } catch (error) {
-                console.error("Error loading attendance rate:", error);
+                console.error("加载出勤率时出错:", error);
                 document.querySelector('.statistics div:first-child p').textContent = 'Error';
             }
         }
@@ -906,7 +966,7 @@
                                     course: courseDoc.id,
                                     ...session,
                                     subjectName: subjectData.name,
-                                    class: subjectData.class,
+                                    class: subjectData.class || subjectData.venue || session.venue || session.class || '未分配',
                                     type: session.type || 'lecture'
                                 });
                             }
@@ -958,6 +1018,13 @@
                 html += `<div class="session-card" style="opacity:0.5;">-</div>`;
             } else {
                 sessions.forEach(session => {
+                    // 调试输出
+                    console.log("Session venue data:", {
+                        class: session.class,
+                        venue: session.venue,
+                        sessionData: session
+                    });
+                    
                     html += `
                     <div class="session-card">
                         <div class="session-title">
@@ -965,7 +1032,7 @@
                             <span class="session-type">${session.type}</span>
                         </div>
                         <div class="session-detail">Course: ${session.course}</div>
-                        <div class="session-detail">Venue: ${session.class}</div>
+                        <div class="session-detail">Venue: ${session.class || '未分配'}</div>
                         <div class="session-detail">Time: ${session.startTime} - ${session.endTime}</div>
                     </div>`;
                 });
