@@ -1358,7 +1358,7 @@
                     const [date, startTime, lecturerId, type, group] = sessionId.split('_');
                     
                     // 构建文档路径的关键部分 - 使用实际的讲师ID而非传入值
-                    const sessionDocId = `${date}_${startTime}_${lectureID}_${type}_all`; 
+                    const sessionDocId = `${date}_${startTime}_${lecturerId}_${type}_all`; 
                     
                     // 创建对学生文档的引用
                     const studentAttendanceRef = doc(db, 
@@ -1591,45 +1591,162 @@
 
     // Update function to handle viewing attendance with session details
     window.viewAttendance = function(courseId, subjectId, sessionDate, startTime, sessionType, group) {
-        // 确保时间格式统一使用冒号":"格式 (按照mobile_attendance的格式)
-        // 如果startTime包含句点"."，将其转换为冒号":"
-        if (startTime && startTime.includes('.')) {
-            startTime = startTime.replace('.', ':');
-        }
+        // 直接使用原始时间格式，不进行转换
+        console.log(`查看出勤记录，使用原始时间: ${startTime}`);
         
         // Store the session info in sessionStorage
         sessionStorage.setItem('selectedCourse', courseId);
         sessionStorage.setItem('selectedSubject', subjectId);
         sessionStorage.setItem('selectedDate', sessionDate);
-        sessionStorage.setItem('selectedTime', startTime);
+        sessionStorage.setItem('selectedTime', startTime); // 使用原始时间格式
         sessionStorage.setItem('selectedType', sessionType);
         sessionStorage.setItem('selectedGroup', group);
         sessionStorage.setItem('autoSelectSession', 'true');
         sessionStorage.setItem('checkExistingRecord', 'true'); // 添加标记，表示要检查现有记录
-        sessionStorage.setItem('useTimeFormat', 'colon'); // 添加标记，表示使用冒号格式（与mobile_attendance一致）
         
         // Redirect to attendance page
         window.location.href = 'attendance.html';
     };
 
-    // 添加一个新函数，用于检查现有记录时处理不同的时间格式
-    // 这个函数将协助checkExistingAttendanceRecord函数（需在attendance.html和mobile_attendance.html中实现）
-    function normalizeSessionId(sessionId) {
-        // 分解会话ID
-        const parts = sessionId.split('_');
-        if (parts.length < 3) return sessionId;
-        
-        // 检查时间部分是否包含句点或冒号
-        const timePart = parts[1];
-        if (timePart.includes('.')) {
-            // 转换为冒号格式
-            parts[1] = timePart.replace('.', ':');
-        } else if (timePart.includes(':')) {
-            // 已经是冒号格式
+    // 检查是否已存在相同的出勤记录
+    async function checkExistingAttendanceRecord(courseId, subjectId, date, time, lectureId, type, group = "all") {
+        try {
+            // 直接使用原始时间格式
+            console.log(`检查是否存在记录，使用原始时间: ${time}`);
+            
+            // 构建会话ID - 使用原始时间格式
+            const sessionId = `${date}_${time}_${lectureId}_${type}_${group}`;
+            console.log(`检查是否存在记录: ${sessionId}`);
+            
+            // 检查数据库中是否已存在该记录
+            const attendanceRef = doc(db, "attendance", courseId, subjectId, sessionId);
+            const attendanceDoc = await getDoc(attendanceRef);
+            
+            if (attendanceDoc.exists()) {
+                console.log(`找到现有记录: ${sessionId}`);
+                return {
+                    exists: true,
+                    data: attendanceDoc.data(),
+                    ref: attendanceRef,
+                    sessionId: sessionId
+                };
+            }
+            
+            console.log(`未找到记录，将创建新记录`);
+            return {
+                exists: false,
+                ref: attendanceRef,
+                sessionId: sessionId
+            };
+        } catch (error) {
+            console.error("检查现有出勤记录时出错:", error);
+            return {
+                exists: false,
+                error: error
+            };
         }
-        
-        // 重新组合会话ID
-        return parts.join('_');
+    }
+
+    // 修改您现有的创建记录函数 
+    async function createAttendanceRecord(courseId, subjectId, date, time, lectureId, type, studentsList, group = "all") {
+        try {
+            // 直接使用原始时间格式，不进行转换
+            console.log(`创建出勤记录，使用原始时间: ${time}`);
+            
+            // 首先检查是否有要求检查现有记录
+            const shouldCheckExisting = sessionStorage.getItem('checkExistingRecord') === 'true';
+            
+            if (shouldCheckExisting) {
+                console.log("正在检查是否已存在出勤记录...");
+                // 检查是否已存在相同的出勤记录
+                const existingRecord = await checkExistingAttendanceRecord(
+                    courseId, subjectId, date, time, lectureId, type, group
+                );
+                
+                if (existingRecord.exists) {
+                    console.log("使用现有出勤记录", existingRecord.sessionId);
+                    // 加载现有记录的学生数据
+                    await loadExistingStudentRecords(existingRecord.ref);
+                    return existingRecord.ref;
+                }
+            }
+            
+            // 如果不存在记录或者不需要检查，则创建新记录
+            console.log("创建新的出勤记录");
+            
+            // 构建会话ID - 直接使用原始时间格式
+            const sessionId = `${date}_${time}_${lectureId}_${type}_${group}`;
+            
+            const attendanceRef = doc(db, "attendance", courseId, subjectId, sessionId);
+            
+            // 设置出勤记录数据
+            await setDoc(attendanceRef, {
+                date: date,
+                startTime: time, // 使用原始时间
+                lectureID: lectureId,
+                type: type,
+                group: group,
+                totalStudents: studentsList.length,
+                presentStudents: 0,
+                absentStudents: 0,
+                status: "pending",
+                timestamp: new Date()
+            });
+            
+            // 标记已查询过现有记录，避免下次重复检查
+            sessionStorage.removeItem('checkExistingRecord');
+            
+            return attendanceRef;
+        } catch (error) {
+            console.error("创建出勤记录时出错:", error);
+            throw error;
+        }
+    }
+
+    // 加载现有记录中的学生出勤数据
+    async function loadExistingStudentRecords(attendanceRef) {
+        try {
+            console.log("加载现有学生出勤记录...");
+            
+            const attendanceDoc = await getDoc(attendanceRef);
+            if (!attendanceDoc.exists()) {
+                console.error("找不到出勤记录");
+                return;
+            }
+            
+            const attendanceData = attendanceDoc.data();
+            console.log("找到出勤记录数据:", attendanceData);
+            
+            // 加载学生列表
+            const studentsRef = collection(attendanceRef, "students");
+            const studentsSnapshot = await getDocs(studentsRef);
+            console.log(`找到 ${studentsSnapshot.size} 条学生出勤记录`);
+            
+            if (studentsSnapshot.size > 0) {
+                // 首先清空UI中的出勤状态
+                clearAttendanceUI();
+                
+                // 更新出勤统计
+                updateAttendanceCounters(attendanceData.presentStudents || 0, attendanceData.absentStudents || 0);
+                
+                // 遍历学生出勤记录
+                studentsSnapshot.forEach(doc => {
+                    const studentId = doc.id;
+                    const studentData = doc.data();
+                    
+                    // 更新学生的出勤状态显示
+                    updateStudentStatus(studentId, studentData.status, studentData.reason || '');
+                    
+                    console.log(`已更新学生 ${studentId} 的出勤状态: ${studentData.status}`);
+                });
+                
+                console.log("所有学生出勤状态已更新");
+            } else {
+                console.log("没有找到学生出勤记录，状态保持不变");
+            }
+        } catch (error) {
+            console.error("加载学生出勤记录时出错:", error);
+        }
     }
     </script>
 </head>
