@@ -967,7 +967,8 @@
                                     ...session,
                                     subjectName: subjectData.name,
                                     class: subjectData.class || subjectData.venue || session.venue || session.class || '未分配',
-                                    type: session.type || 'lecture'
+                                    type: session.type || 'lecture',
+                                    group: session.group || 'all'
                                 });
                             }
                         }
@@ -1034,6 +1035,7 @@
                         <div class="session-detail">Course: ${session.course}</div>
                         <div class="session-detail">Venue: ${session.class || '未分配'}</div>
                         <div class="session-detail">Time: ${session.startTime} - ${session.endTime}</div>
+                        <div class="session-detail">Group: <strong>${session.group || 'all'}</strong></div>
                     </div>`;
                 });
             }
