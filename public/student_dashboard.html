@@ -1005,6 +1005,12 @@
                 const [courseCode, subjectId, date, startTime, type] = checkbox.value.split('|');
                 const subjectName = checkbox.getAttribute('data-subject-name') || '';
                 const endTime = checkbox.getAttribute('data-end-time') || '';
+                const lectureID = checkbox.getAttribute('data-lecture-id') || '';  // 获取讲师ID
+                const sessionGroup = checkbox.getAttribute('data-session-group') || 'all';  // 获取课程会话组别，默认为'all'
+                
+                // 构建与attendance系统完全兼容的sessionId，使用课程会话的分组信息
+                const generatedSessionId = `${date}_${startTime}_${lectureID}_${type}_${sessionGroup}`;
+                console.log(`创建会话ID: ${generatedSessionId}，使用课程分组: ${sessionGroup}`);
                 
                 missedSessions.push({
                     courseCode,
@@ -1014,8 +1020,8 @@
                     startTime,
                     endTime,      // 添加结束时间
                     type,
-                    // 构建与attendance系统兼容的sessionId
-                    sessionId: `${date}_${startTime}_${type}_${group}`,
+                    lectureID,    // 存储讲师ID
+                    sessionId: generatedSessionId,
                     // 为每个会话添加初始状态
                     status: "pending"
                 });
@@ -1077,6 +1083,13 @@
                         );
                         
                         if (matchingSession && matchingSession.lectureID) {
+                            // 使用会话自己的组别，而不是学生的组别
+                            const sessionGroup = matchingSession.group || 'all';
+                            
+                            // 更新会话ID以包含讲师ID和正确的组别
+                            session.sessionId = `${session.date}_${session.startTime}_${matchingSession.lectureID}_${session.type}_${sessionGroup}`;
+                            console.log(`创建讲师通知的会话ID: ${session.sessionId}，使用会话组别: ${sessionGroup}`);
+                            
                             // 创建教师通知
                             const notificationRef = doc(db, "notifications", matchingSession.lectureID);
                             
@@ -1526,7 +1539,8 @@ async function updateAffectedCourses() {
                                                data-subject-name="${subjectData.name}"
                                                data-start-time="${session.startTime}"
                                                data-end-time="${session.endTime}"
-                                               data-lecturer-id="${session.lectureID || ''}"
+                                               data-lecture-id="${session.lectureID || ''}"
+                                               data-session-group="${session.group || 'all'}"
                                                checked>
                                     </div>
                                     <div class="session-info">

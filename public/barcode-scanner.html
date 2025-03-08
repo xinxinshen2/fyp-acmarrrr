@@ -94,6 +94,37 @@
             font-size: 16px;
             color: #777;
         }
+        
+        /* 添加Toast消息样式 */
+        .toast-message {
+            position: fixed;
+            top: 70px; /* 位于标题下方 */
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            z-index: 100;
+            transition: all 0.3s ease;
+            opacity: 0;
+            pointer-events: none;
+            max-width: 80%;
+        }
+        .toast-message.show {
+            opacity: 1;
+            transform: translate(-50%, 0);
+        }
+        .toast-message.success {
+            background-color: rgba(76, 175, 80, 0.9);
+        }
+        .toast-message.info {
+            background-color: rgba(33, 150, 243, 0.9);
+        }
+        .toast-message.warning {
+            background-color: rgba(255, 152, 0, 0.9);
+        }
     </style>
     <script src="https://unpkg.com/@zxing/library@latest"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-app-compat.js"></script>
@@ -134,6 +165,34 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
+        // 添加Toast提示消息函数
+        function showToastMessage(message, type = 'info', duration = 3000) {
+            // 检查是否已存在toast元素，如果有则移除
+            const existingToast = document.querySelector('.toast-message');
+            if (existingToast) {
+                existingToast.remove();
+            }
+            
+            // 创建新的toast元素
+            const toast = document.createElement('div');
+            toast.className = `toast-message ${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            // 触发显示动画
+            setTimeout(() => {
+                toast.classList.add('show');
+            }, 10);
+            
+            // 设置自动消失
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => {
+                    toast.remove();
+                }, 300);
+            }, duration);
+        }
+        
         // 从URL参数获取session信息
         let sessionId, courseId, subjectId, lectureId;
 
@@ -192,7 +251,6 @@
                     stopScanning();
                 });
         }
-
 
         // 修改扫描结果处理
         async function displayScanResult(text) {
@@ -324,7 +382,7 @@
         }
 
         // 修改初始化参数获取方式
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             const sessionData = JSON.parse(sessionStorage.getItem('attendanceSession'));
             
             if (!sessionData || !sessionData.sessionId || !sessionData.courseId || !sessionData.subjectId) {
@@ -338,6 +396,39 @@
             courseId = sessionData.courseId;
             subjectId = sessionData.subjectId;
             lectureId = sessionData.lectureId;
+            
+            // 检查会话状态并显示信息
+            try {
+                const sessionRef = db.collection("attendance")
+                    .doc(courseId)
+                    .collection(subjectId)
+                    .doc(sessionId);
+                
+                const sessionDoc = await sessionRef.get();
+                
+                if (sessionDoc.exists) {
+                    const sessionData = sessionDoc.data();
+                    const studentsSnapshot = await sessionRef.collection("students").get();
+                    const studentCount = studentsSnapshot.size;
+                    const presentCount = studentsSnapshot.docs.filter(doc => doc.data().status === "present").length;
+                    
+                    // 显示会话状态信息
+                    showToastMessage(
+                        `课程: ${courseId} - ${subjectId}\n` +
+                        `时间: ${sessionData.startTime || 'N/A'}\n` +
+                        `出席: ${presentCount}/${studentCount} 学生`, 
+                        'info', 
+                        5000
+                    );
+                    
+                    document.querySelector('h1').textContent = `${courseId} - ${subjectId}`;
+                } else {
+                    showToastMessage("警告: 未找到有效会话", 'warning', 3000);
+                }
+            } catch (error) {
+                console.error("检查会话状态出错:", error);
+                showToastMessage("加载会话数据出错", 'warning', 3000);
+            }
         });
 
         function stopScanning() {

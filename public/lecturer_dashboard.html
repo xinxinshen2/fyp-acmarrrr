@@ -1355,15 +1355,14 @@
             for (const session of sessionsToProcess) {
                 try {
                     const { courseCode, subjectId, sessionId, studentId } = session;
-                    const [date, startTime, lecturerId, type, group] = sessionId.split('_');
                     
-                    // 构建文档路径的关键部分 - 使用实际的讲师ID而非传入值
-                    const sessionDocId = `${date}_${startTime}_${lecturerId}_${type}_all`; 
+                    // 直接使用原始会话ID，不尝试解析和重建
+                    console.log(`使用原始会话ID: ${sessionId}，分析部分: ${sessionId.split('_').join(', ')}`);
                     
                     // 创建对学生文档的引用
                     const studentAttendanceRef = doc(db, 
                         "attendance", courseCode, 
-                        subjectId, sessionDocId, 
+                        subjectId, sessionId, 
                         "students", studentId
                     );
                     
@@ -1381,7 +1380,7 @@
                     await setDoc(studentAttendanceRef, studentRecord);
                     createdRecords++;
                     
-                    console.log(`已创建/更新出勤记录: attendance/${courseCode}/${subjectId}/${sessionDocId}/students/${studentId}`);
+                    console.log(`已创建/更新出勤记录: attendance/${courseCode}/${subjectId}/${sessionId}/students/${studentId}`);
                     
                 } catch (error) {
                     console.error(`创建出勤记录失败，会话信息:`, session, `错误:`, error);

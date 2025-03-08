@@ -808,10 +808,10 @@
                                     <div>Date: ${formatDate(sessionDate)}</div>
                                 </li>`;
                             
-                            // Convert time format from "HH.mm" to "HH:mm" for consistency
-                            const formattedStartTime = session.startTime.replace('.', ':');
+                            // 使用原始时间格式，不进行转换
+                            const startTime = session.startTime;
                             
-                            const optionValue = `${sessionDate}|${session.day}|${formattedStartTime}|${session.type}|${session.group || 'all'}`;
+                            const optionValue = `${sessionDate}|${session.day}|${startTime}|${session.type}|${session.group || 'all'}`;
                             const optionText = `${session.day} ${session.startTime} - ${session.endTime} (${formatDate(sessionDate)}) [${session.type}]`;
                             
                             const option = document.createElement('option');
@@ -947,7 +947,7 @@
             const currentSession = sessions.find(s => 
                 s.lectureID === lectureID &&
                 s.day === sessionDay &&
-                (s.startTime === sessionStartTime || s.startTime === sessionStartTime.replace(':', '.')) &&
+                s.startTime === sessionStartTime &&
                 s.type === sessionType
             );
             
@@ -956,12 +956,8 @@
                 console.log('No exact match found. Using parameters from selection.');
             }
 
-            // 构建会话ID，确保格式一致性
-            // 确保startTime格式一致 - 在数据库中可能是使用点(.)而不是冒号(:)
-            const formattedStartTime = sessionStartTime.replace(':', '.');
-            
-            // 构建正确格式的sessionId以匹配数据库中的文档ID
-            const sessionId = `${sessionDate}_${formattedStartTime}_${lectureID}_${sessionType}_${sessionGroup}`;
+            // 构建会话ID，使用原始时间格式
+            const sessionId = `${sessionDate}_${sessionStartTime}_${lectureID}_${sessionType}_${sessionGroup}`;
             console.log('Generated session ID:', sessionId);
 
             const excludedStudents = subjectDoc.data().excludedStudents || [];
@@ -1195,6 +1191,7 @@
                 }
 
                 const lectureID = sessionStorage.getItem('lectureID');
+                // 使用原始时间格式构建sessionId
                 const sessionId = `${sessionDate}_${sessionStartTime}_${lectureID}_${sessionType}_${sessionGroup}`;
 
                 const attendanceRef = db.collection("attendance")
@@ -1636,7 +1633,8 @@
             ] = selectedSessionParts;
 
             const lectureID = sessionStorage.getItem('lectureID');
-            const sessionId = `${sessionDate}_${sessionStartTime.replace(':', '.')}_${lectureID}_${sessionType}_${sessionGroup}`;
+            // 使用原始时间格式构建sessionId
+            const sessionId = `${sessionDate}_${sessionStartTime}_${lectureID}_${sessionType}_${sessionGroup}`;
             
             // 显示加载指示器
             const batchBtn = status === 'present' 
