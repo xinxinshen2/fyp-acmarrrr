@@ -1065,6 +1065,11 @@
         navButtons.forEach((button, index) => {
             button.addEventListener('click', function() {
                 if(pageMap[index]) {
+                    // 如果是出勤页面，添加参数
+                    if (pageMap[index] === 'attendance.html' || pageMap[index] === 'mobile_attendance.html') {
+                        sessionStorage.setItem('checkExistingRecord', 'true');
+                        sessionStorage.setItem('useTimeFormat', 'colon');
+                    }
                     window.location.href = pageMap[index];
                 }
             });
@@ -1586,6 +1591,12 @@
 
     // Update function to handle viewing attendance with session details
     window.viewAttendance = function(courseId, subjectId, sessionDate, startTime, sessionType, group) {
+        // 确保时间格式统一使用冒号":"格式 (按照mobile_attendance的格式)
+        // 如果startTime包含句点"."，将其转换为冒号":"
+        if (startTime && startTime.includes('.')) {
+            startTime = startTime.replace('.', ':');
+        }
+        
         // Store the session info in sessionStorage
         sessionStorage.setItem('selectedCourse', courseId);
         sessionStorage.setItem('selectedSubject', subjectId);
@@ -1594,10 +1605,32 @@
         sessionStorage.setItem('selectedType', sessionType);
         sessionStorage.setItem('selectedGroup', group);
         sessionStorage.setItem('autoSelectSession', 'true');
+        sessionStorage.setItem('checkExistingRecord', 'true'); // 添加标记，表示要检查现有记录
+        sessionStorage.setItem('useTimeFormat', 'colon'); // 添加标记，表示使用冒号格式（与mobile_attendance一致）
         
         // Redirect to attendance page
         window.location.href = 'attendance.html';
     };
+
+    // 添加一个新函数，用于检查现有记录时处理不同的时间格式
+    // 这个函数将协助checkExistingAttendanceRecord函数（需在attendance.html和mobile_attendance.html中实现）
+    function normalizeSessionId(sessionId) {
+        // 分解会话ID
+        const parts = sessionId.split('_');
+        if (parts.length < 3) return sessionId;
+        
+        // 检查时间部分是否包含句点或冒号
+        const timePart = parts[1];
+        if (timePart.includes('.')) {
+            // 转换为冒号格式
+            parts[1] = timePart.replace('.', ':');
+        } else if (timePart.includes(':')) {
+            // 已经是冒号格式
+        }
+        
+        // 重新组合会话ID
+        return parts.join('_');
+    }
     </script>
 </head>
 <body>
