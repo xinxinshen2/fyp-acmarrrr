@@ -88,6 +88,11 @@
             text-align: center;
         }
 
+        /* Update leave-info styling to support 3 items */
+        .leave-info div {
+            width: 31%;  /* Adjust width for 3 items */
+        }
+
         /* 修改时间表样式为admin风格 */
         .timeTableSpace {
             width: 90%;
@@ -565,6 +570,40 @@
             }
         }
 
+        // Load total classes count
+        async function loadTotalClasses() {
+            const lectureID = sessionStorage.getItem('lectureID');
+            if (!lectureID) {
+                console.error("No lecturer ID found");
+                return;
+            }
+
+            try {
+                let totalCount = 0;
+                const coursesSnapshot = await getDocs(collection(db, "course"));
+                
+                for (const courseDoc of coursesSnapshot.docs) {
+                    const courseId = courseDoc.id;
+                    const subjectsSnapshot = await getDocs(collection(db, "course", courseId, "subject"));
+                    
+                    for (const subjectDoc of subjectsSnapshot.docs) {
+                        const subjectData = subjectDoc.data();
+                        const sessions = subjectData.sessions || [];
+                        
+                        // Count sessions assigned to this lecturer
+                        const lecturerSessions = sessions.filter(session => session.lectureID === lectureID);
+                        totalCount += lecturerSessions.length;
+                    }
+                }
+                
+                // Update the display
+                document.getElementById('totalClassesCount').textContent = totalCount;
+            } catch (error) {
+                console.error("Error loading total classes:", error);
+                document.getElementById('totalClassesCount').textContent = 'Error';
+            }
+        }
+
         // 加载缺席申请统计
         async function loadAbsenceStatistics() {
             const lectureID = sessionStorage.getItem('lectureID');
@@ -855,6 +894,7 @@
             loadLecturerName();
             loadAbsenceStatistics();
             loadAttendanceRate();
+            loadTotalClasses();
             checkUnprocessedAttendance();
 
             // Check if we should show timetable
@@ -1081,8 +1121,9 @@
         const timetableBtn = navButtons[2];
         const homeBtn = navButtons[0];
         
-        // 添加缺席申请按钮
-        const absenceRequestsBtn = document.querySelector(".leave-info div:first-child");
+        // 添加缺席申请按钮 - Update selector for pending leaves
+        const pendingLeavesBtn = document.querySelector(".leave-info div:first-child");
+        const approvedLeavesBtn = document.querySelector(".leave-info div:nth-child(2)");
         
         const contentSections = {
             cards: document.querySelector(".dashboard-cards"),
@@ -1107,16 +1148,15 @@
             contentSections.absenceRequests.style.display = "none";
         });
         
-        // 点击"Approved Leaves"区域显示缺席申请
-        absenceRequestsBtn.addEventListener("click", function() {
+        // Click handlers for leave management sections
+        pendingLeavesBtn.addEventListener("click", function() {
             contentSections.cards.style.display = "none";
             contentSections.timetable.style.display = "none";
             contentSections.absenceRequests.style.display = "block";
             loadAbsenceRequests(); // 加载缺席申请
         });
         
-        // 点击"Leave Requests"区域也显示缺席申请
-        document.querySelector(".statistics div:last-child").addEventListener("click", function() {
+        approvedLeavesBtn.addEventListener("click", function() {
             contentSections.cards.style.display = "none";
             contentSections.timetable.style.display = "none";
             contentSections.absenceRequests.style.display = "block";
@@ -1781,22 +1821,26 @@
         <!-- 将原有卡片包裹在新的容器中 -->
         <div class="dashboard-cards">
             <div class="card">
-                <h2>My Statistics</h2>
+                <h2>Attendance Statistics</h2>
                 <div class="statistics">
                     <div>
                         <h3>Attendance Rate</h3>
                         <p>N/A</p>
                     </div>
                     <div>
-                        <h3>Leave Requests</h3>
-                        <p><span id="pendingRequestsCount">0</span> Pending</p>
+                        <h3>Total Classes</h3>
+                        <p id="totalClassesCount">0</p>
                     </div>
                 </div>
             </div>
 
             <div class="card">
-                <h2>Leave Information</h2>
+                <h2>Leave Management</h2>
                 <div class="leave-info">
+                    <div>
+                        <h3>Pending Leaves</h3>
+                        <p><span id="pendingRequestsCount">0</span></p>
+                    </div>
                     <div>
                         <h3>Approved Leaves</h3>
                         <p><span id="approvedLeavesCount">0</span></p>
