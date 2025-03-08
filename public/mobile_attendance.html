@@ -206,7 +206,6 @@
 
         async function loadSubjects() {
             const lectureID = sessionStorage.getItem('lectureID');
-            console.log("Current Lecture ID:", lectureID);
             const today = new Date();
             const todayString = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
 
@@ -220,7 +219,6 @@
                 const expiryDate = courseData.subjectExpiry?.toDate();
                 
                 if (expiryDate && expiryDate < new Date()) {
-                    console.log(`Skipping expired course: ${courseDoc.id}`);
                     return;
                 }
 
@@ -303,7 +301,6 @@
 
             try {
                 // 首先检查是否已存在相同的出勤记录
-                console.log(`检查是否已存在记录: ${sessionId}`);
                 const existingSessionRef = db.collection("attendance")
                     .doc(courseId)
                     .collection(subjectId)
@@ -312,10 +309,8 @@
                 const existingSessionDoc = await existingSessionRef.get();
                 
                 if (existingSessionDoc.exists) {
-                    console.log("找到现有出勤记录，使用该记录");
-                    
                     // 显示提示消息
-                    showToastMessage("使用已存在的出勤记录，不会创建重复记录", 2000);
+                    showToastMessage("Using existing attendance record", 2000);
                     
                     // 存储session数据，使用现有记录
                     const sessionData = {
@@ -335,8 +330,7 @@
                 }
                 
                 // 如果不存在记录，则创建新记录
-                console.log("未找到现有记录，创建新记录");
-                showToastMessage("正在创建新的出勤记录...", 1500);
+                showToastMessage("Creating new attendance record...", 1500);
                 
                 // 初始化所有学生为absent
                 const subjectRef = db.collection("course").doc(courseId).collection("subject").doc(subjectId);
@@ -391,7 +385,8 @@
                             sessionDate: sessionDate,
                             startTime: startTime, // 使用原始时间格式
                             sessionType: sessionType,
-                            group: group
+                            group: group,
+                            method: "barcode"  // Add method field
                         });
 
                         const batch = db.batch();
@@ -417,7 +412,8 @@
                                         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
                                         lectureID: lectureID,
                                         group: studentData.group || 'default',
-                                        isExtra: extraStudents.includes(studentDoc.id)
+                                        isExtra: extraStudents.includes(studentDoc.id),
+                                        method: "barcode"  // Add method field
                                     }, { merge: true });
                                 }
                             }
@@ -438,7 +434,8 @@
                                     timestamp: firebase.firestore.FieldValue.serverTimestamp(),
                                     lectureID: lectureID,
                                     group: 'extra',
-                                    isExtra: true
+                                    isExtra: true,
+                                    method: "barcode"  // Add method field
                                 }, { merge: true });
                             }
                         });
@@ -463,7 +460,6 @@
                     alert("Subject not found");
                 }
             } catch (error) {
-                console.error("确认选择出错:", error);
                 alert("Error: " + error.message);
             }
         }
