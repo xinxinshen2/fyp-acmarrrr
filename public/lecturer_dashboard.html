@@ -2073,10 +2073,21 @@ window.hideSessionDetail = function() {
             
             // 2. 更新学生的缺席申请状态
             for (const checkbox of checkboxes) {
-                const { course, subject, session } = checkbox.dataset;
-                const [date, startTime, type, group] = session.split('_');
+                const { course, subject, session, student } = checkbox.dataset;
                 
-                const absenceRef = doc(db, "absence", course, group, studentId);
+                // 获取正确的组信息 - 查询学生数据
+                const studentRef = doc(db, "student", studentId);
+                const studentDoc = await getDoc(studentRef);
+                
+                if (!studentDoc.exists()) {
+                    console.error("Student data not found for ID:", studentId);
+                    continue;
+                }
+                
+                const studentData = studentDoc.data();
+                const studentGroup = studentData.group;
+                
+                const absenceRef = doc(db, "absence", course, studentGroup, studentId);
                 const absenceDoc = await getDoc(absenceRef);
                 
                 if (absenceDoc.exists()) {
@@ -2084,7 +2095,12 @@ window.hideSessionDetail = function() {
                     const updatedForms = forms.map(form => {
                         const updatedSessions = (form.missedSessions || []).map(s => {
                             if (s.sessionId === session) {
-                                return { ...s, status: "rejected" };
+                                return { 
+                                    ...s, 
+                                    status: "rejected",
+                                    rejectedBy: lectureID,
+                                    rejectedAt: new Date()
+                                };
                             }
                             return s;
                         });
