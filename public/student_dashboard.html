@@ -966,7 +966,7 @@
                 fileLink = await window.uploadFile();
                 // 如果上传失败，fileLink将是空字符串
                 if (!fileLink) {
-                    console.log("文件上传失败或被取消");
+                    console.log("File upload failed or cancelled");
                     // 可以选择在这里中断表单提交，或者继续但不包含文件链接
                     // return; // 取消提交
                 }
@@ -982,7 +982,7 @@
             const studentRef = doc(db, "student", studentID);
             const studentDoc = await getDoc(studentRef);
             if (!studentDoc.exists()) {
-                alert("学生数据未找到");
+                alert("Student data not found");
                 return;
             }
 
@@ -993,8 +993,8 @@
             const email = studentData.email;
 
             if (!courseCode || !group) {
-                console.error("缺少课程或分组信息", { courseCode, group });
-                alert("学生数据不完整");
+                console.error("Missing course or group information", { courseCode, group });
+                alert("Student data is incomplete");
                 return;
             }
 
@@ -1129,14 +1129,14 @@
                     }
                 }
                 
-                alert("缺席申请已提交成功！");
+                alert("Absence request submitted successfully!");
                 // 重置表单
                 document.getElementById("absenceForm").reset();
                 document.getElementById("affectedCourses").innerHTML = "<p class='instruction'>Please select dates to see affected courses</p>";
                 
             } catch (error) {
-                console.error("保存数据出错：", error);
-                alert("保存数据出错：" + error.message);
+                console.error("Error saving data:", error);
+                alert("Error saving data: " + error.message);
             }
         });
 
@@ -1346,14 +1346,14 @@ window.uploadFile = async function () {
 
     const fileInput = document.getElementById("fileInput");
     if (!fileInput.files.length) {
-        alert("请选择文件");
+        alert("Please select a file");
         return;
     }
 
     // 获取学生 ID
     const studentID = sessionStorage.getItem("studentID");
     if (!studentID) {
-        alert("未找到学生 ID，请先登录");
+        alert("Student ID not found, please log in first");
         return;
     }
 
@@ -1362,7 +1362,7 @@ window.uploadFile = async function () {
     const studentDoc = await getDoc(studentRef);
 
     if (!studentDoc.exists()) {
-        alert("学生数据未找到");
+        alert("Student data not found");
         return;
     }
 
@@ -1400,22 +1400,22 @@ window.uploadFile = async function () {
 
         console.log("Response status:", response.status);
         const result = await response.json();
-        console.log("上传成功", result);
+        console.log("Upload successful", result);
         
         if (response.ok && result.id) {
       // 构造分享链接
       const fileLink = `https://drive.google.com/file/d/${result.id}/view?usp=sharing`;
-      alert("文件上传成功！");
+      alert("File uploaded successfully!");
       return fileLink;
     } else {
-      alert("文件上传失败，请重试！");
+      alert("File upload failed, please try again!");
       return "";
     }
 
 
     } catch (error) {
         console.error("上传失败", error);
-        alert("文件上传失败，请重试！");
+        alert("File upload failed, please try again!");
     }
 };
 
