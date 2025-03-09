@@ -88,7 +88,11 @@
             text-align: center;
         }
 
-        /* 修改时间表样式为admin风格 */
+        /* Update leave-info styling to support 3 items */
+        .leave-info div {
+            width: 31%;  /* Adjust width for 3 items */
+        }
+
         .timeTableSpace {
             width: 90%;
             margin: 20px auto;
@@ -190,7 +194,6 @@
             border-bottom: 2px solid rgba(255, 255, 255, 0.3);
         }
 
-        /* 新增按钮样式（如果需要有添加按钮） */
         .function-Btn {
             padding: 10px 20px;
             background-color: rgba(255, 255, 255, 0.5);
@@ -210,7 +213,6 @@
             margin: 0 10px;
         }
 
-        /* 新版横向表格样式 */
         .timeTableSpace {
             width: 90%;
             margin: 20px auto;
@@ -255,6 +257,59 @@
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         }
 
+        .session-card:hover{
+            background: rgba(255, 255, 255, 0.5);
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 6px;
+            box-shadow: 0 1px 6px rgba(0, 0, 0, 0.8);
+
+        }
+
+        .session-details {
+            padding: 20px;
+            height: auto;
+            background: rgba(255, 255, 255, 0.5);
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .session-details>h2{
+        color: #5782f5;
+        }
+
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 34px;
+            height: 20px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: 0.4s;
+            border-radius: 20px;
+        }
+        
+        input:checked + .slider {
+            background-color: #4CAF50;      
+        }
+
         .session-title {
             color: #5782f5;
             font-size: 0.95em;
@@ -277,7 +332,6 @@
             margin-left: 5px;
         }
 
-        /* 缺席申请样式 */
         .requests-list {
             display: flex;
             flex-direction: column;
@@ -368,7 +422,6 @@
             color: #f44336;
         }
 
-        /* 使统计卡片可点击 */
         .statistics div, .leave-info div {
             cursor: pointer;
             transition: transform 0.2s, box-shadow 0.2s;
@@ -379,7 +432,6 @@
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
 
-        /* 添加缺席申请页面样式 */
         .absenceRequestsSpace {
             width: 90%;
             margin: 20px auto;
@@ -397,7 +449,6 @@
             border-bottom: 2px solid rgba(255, 255, 255, 0.3);
         }
 
-        /* 缺席类型选择样式 */
         .absence-type-selection {
             margin: 15px 0;
             padding: 15px;
@@ -468,6 +519,88 @@
             filter: brightness(1.1);
             transform: translateY(-2px);
         }
+
+        .unprocessed-alert {
+            background-color: #fff3e0;
+            border-left: 4px solid #ff9800;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .unprocessed-alert:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .unprocessed-alert h4 {
+            color: #f57c00;
+            margin-bottom: 8px;
+        }
+
+        .unprocessed-alert p {
+            color: #666;
+            font-size: 0.9em;
+            margin: 5px 0;
+        }
+
+        .view-attendance-btn {
+            background: #ff9800;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: all 0.2s;
+        }
+
+        .view-attendance-btn:hover {
+            background: #f57c00;
+            transform: translateY(-2px);
+        }
+
+        .attendanceNotification {
+            position: fixed;
+            bottom: 10%;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(255, 255, 255, 0.5);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 15px 20px;
+            text-align: center;
+            font-size: 16px;
+            min-width: 250px;
+            max-width: 400px;
+            z-index: 9999;
+            opacity: 0;
+            transform: translateX(-50%) translateY(20px);
+            transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
+        }
+
+        /*  Fade-in effect */
+        .attendanceNotification.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* Fade-out effect */
+        .attendanceNotification.hide {
+            opacity: 0;
+            transform: translateX(-50%) translateY(20px);
+        }
+
+        /*  Attendance status colors */
+        .student-item.present { color: #4CAF50; font-weight: bold; } /* Green */
+        .student-item.invalid { color: #FF9800; font-weight: bold; } /* Orange */
+        .student-item.unknown { color: #F44336; font-weight: bold; } /* Red */
+
+
+
     </style>
 
     <script type="module">
@@ -481,9 +614,14 @@
             doc, 
             getDoc, 
             updateDoc, 
-            setDoc,  // 添加setDoc导入
+            setDoc,  
             arrayUnion, 
-            arrayRemove 
+            arrayRemove,
+            query,
+            where,
+            onSnapshot,
+            writeBatch,
+            serverTimestamp
         } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -519,6 +657,49 @@
                 document.getElementById('lecturerName').textContent = lecturerData.name;
             } else {
                 console.error("No such document!");
+            }
+        }
+
+        // Load total classes count
+        async function loadTotalClasses() {
+            const lectureID = sessionStorage.getItem('lectureID');
+            if (!lectureID) {
+                console.error("No lecturer ID found");
+                return;
+            }
+
+            try {
+                let totalCount = 0;
+                const coursesSnapshot = await getDocs(collection(db, "course"));
+                
+                for (const courseDoc of coursesSnapshot.docs) {
+                    const courseId = courseDoc.id;
+                    const courseData = courseDoc.data();
+                    const expiryDate = courseData.subjectExpiry?.toDate(); // Convert Firebase timestamp
+                    
+                    // Skip expired courses
+                    if (expiryDate && expiryDate < new Date()) {
+                        console.log(`Skipping expired course for total count: ${courseId}`);
+                        continue;
+                    }
+                    
+                    const subjectsSnapshot = await getDocs(collection(db, "course", courseId, "subject"));
+                    
+                    for (const subjectDoc of subjectsSnapshot.docs) {
+                        const subjectData = subjectDoc.data();
+                        const sessions = subjectData.sessions || [];
+                        
+                        // Count sessions assigned to this lecturer
+                        const lecturerSessions = sessions.filter(session => session.lectureID === lectureID);
+                        totalCount += lecturerSessions.length;
+                    }
+                }
+                
+                // Update the display
+                document.getElementById('totalClassesCount').textContent = totalCount;
+            } catch (error) {
+                console.error("Error loading total classes:", error);
+                document.getElementById('totalClassesCount').textContent = 'Error';
             }
         }
 
@@ -687,64 +868,122 @@
         async function loadAttendanceRate() {
             const lectureID = sessionStorage.getItem('lectureID');
             if (!lectureID) {
-                console.error("No lecturer ID found");
+                console.error("没有找到讲师ID");
                 return;
             }
 
             try {
+                console.log("开始加载出勤率数据，讲师ID:", lectureID);
                 const oneMonthAgo = new Date();
                 oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
 
                 let totalPresent = 0;
+                let totalAbsent = 0;
                 let totalStudents = 0;
                 
-                // 获取所有课程
+                // 1. 获取所有课程
                 const coursesSnapshot = await getDocs(collection(db, "course"));
+                console.log(`找到 ${coursesSnapshot.size} 个课程`);
                 
                 for (const courseDoc of coursesSnapshot.docs) {
                     const courseId = courseDoc.id;
+                    console.log(`正在处理课程: ${courseId}`);
                     
-                    // 获取课程下的所有科目
+                    // 2. 获取该课程下的所有科目
                     const subjectsSnapshot = await getDocs(collection(db, "course", courseId, "subject"));
+                    console.log(`课程 ${courseId} 有 ${subjectsSnapshot.size} 个科目`);
                     
                     for (const subjectDoc of subjectsSnapshot.docs) {
                         const subjectId = subjectDoc.id;
+                        console.log(`正在处理科目: ${courseId}/${subjectId}`);
                         
-                        // 获取该科目下的所有attendance会话
-                        const sessionsSnapshot = await getDocs(
-                            collection(db, "attendance", courseId, subjectId)
-                        );
-
+                        // 3. 直接获取attendance集合下的所有会话
+                        const attendanceRef = collection(db, "attendance", courseId, subjectId);
+                        const sessionsSnapshot = await getDocs(attendanceRef);
+                        console.log(`找到 ${sessionsSnapshot.size} 个出勤记录: ${courseId}/${subjectId}`);
+                        
+                        // 4. 遍历每个会话文档
                         for (const sessionDoc of sessionsSnapshot.docs) {
+                            const sessionId = sessionDoc.id;
                             const sessionData = sessionDoc.data();
                             
-                            // 解析会话信息
-                            const [sessionDate, startTime, sessionLecturerId, sessionType, group] = 
-                                sessionDoc.id.split('_');
-                            
-                            // 检查是否属于当前讲师且是最近一个月内的课程
-                            if (sessionLecturerId === lectureID) {
-                                const sessionDateObj = new Date(sessionDate);
-                                if (sessionDateObj >= oneMonthAgo) {
-                                    totalPresent += sessionData.presentStudents || 0;
-                                    totalStudents += sessionData.totalStudents || 0;
-                                }
+                            // 解析会话ID (格式: YYYY-MM-DD_HH:mm_lectureID_type_group)
+                            const sessionParts = sessionId.split('_');
+                            if (sessionParts.length < 3) {
+                                console.log(`跳过无效的会话ID格式: ${sessionId}`);
+                                continue;
                             }
+                            
+                            // 检查会话是否属于当前讲师
+                            const sessionLecturerId = sessionParts[2]; // 第三部分是讲师ID
+                            if (sessionLecturerId !== lectureID) {
+                                console.log(`跳过非当前讲师的会话: ${sessionId}`);
+                                continue;
+                            }
+                            
+                            // 检查日期
+                            const sessionDate = new Date(sessionParts[0]);
+                            if (isNaN(sessionDate.getTime())) {
+                                console.log(`跳过无效日期的会话: ${sessionId}`);
+                                continue;
+                            }
+                            
+                            if (sessionDate < oneMonthAgo) {
+                                console.log(`跳过一个月前的会话: ${sessionId}`);
+                                continue;
+                            }
+                            
+                            console.log(`处理会话: ${sessionId}`);
+                            
+                            // 获取学生出勤数据
+                            const studentsRef = collection(sessionDoc.ref, "students");
+                            const studentsSnapshot = await getDocs(studentsRef);
+                            
+                            let presentCount = 0;
+                            let absentCount = 0;
+                            
+                            studentsSnapshot.forEach(studentDoc => {
+                                const studentData = studentDoc.data();
+                                if (studentData.status === "present") {
+                                    presentCount++;
+                                } else if (studentData.status === "absent") {
+                                    absentCount++;
+                                }
+                            });
+                            
+                            console.log(`会话 ${sessionId} 统计:`, {
+                                出席: presentCount,
+                                缺席: absentCount,
+                                总人数: studentsSnapshot.size
+                            });
+                            
+                            totalPresent += presentCount;
+                            totalAbsent += absentCount;
+                            totalStudents += studentsSnapshot.size;
                         }
                     }
                 }
 
-                // 计算出席率
+                // 计算出勤率
                 let attendanceRate = 'N/A';
                 if (totalStudents > 0) {
-                    attendanceRate = `${Math.round((totalPresent / totalStudents) * 100)}%`;
+                    const rate = (totalPresent / totalStudents) * 100;
+                    attendanceRate = `${Math.round(rate)}%`;
+                    console.log(`最终出勤率计算:`, {
+                        总出席人次: totalPresent,
+                        总缺席人次: totalAbsent,
+                        总学生人次: totalStudents,
+                        出勤率: `${rate.toFixed(2)}%`
+                    });
+                } else {
+                    console.log(`没有找到学生出勤数据，无法计算出勤率`);
                 }
 
                 // 更新页面显示
                 document.querySelector('.statistics div:first-child p').textContent = attendanceRate;
                 
             } catch (error) {
-                console.error("Error loading attendance rate:", error);
+                console.error("加载出勤率时出错:", error);
                 document.querySelector('.statistics div:first-child p').textContent = 'Error';
             }
         }
@@ -753,7 +992,24 @@
         window.onload = function() {
             loadLecturerName();
             loadAbsenceStatistics();
-            loadAttendanceRate(); // 新增调用
+            loadAttendanceRate();
+            loadTotalClasses();
+            checkUnprocessedAttendance();
+
+            // Check if we should show timetable
+            const showTimetable = sessionStorage.getItem('showTimetable');
+            if (showTimetable === 'true') {
+                // Clear the flag
+                sessionStorage.removeItem('showTimetable');
+                
+                // Hide cards and show timetable
+                document.querySelector(".dashboard-cards").style.display = "none";
+                document.querySelector(".timeTableSpace").style.display = "block";
+                document.querySelector(".absenceRequestsSpace").style.display = "none";
+                
+                // Load the timetable
+                loadTimetable();
+            }
         };
 
         window.logout = function() {
@@ -849,8 +1105,10 @@
                                     course: courseDoc.id,
                                     ...session,
                                     subjectName: subjectData.name,
-                                    class: subjectData.class,
-                                    type: session.type || 'lecture'
+                                    subjectId:subjectData.id,
+                                    class: subjectData.class || subjectData.venue || session.venue || session.class || '未分配',
+                                    type: session.type || 'lecture',
+                                    group: session.group || 'all'
                                 });
                             }
                         }
@@ -901,15 +1159,23 @@
                 html += `<div class="session-card" style="opacity:0.5;">-</div>`;
             } else {
                 sessions.forEach(session => {
+                    // 调试输出
+                    console.log("Session venue data:", {
+                        class: session.class,
+                        venue: session.venue,
+                        sessionData: session
+                    });
+                    
                     html += `
-                    <div class="session-card">
+                    <div class="session-card" onclick="showSessionDetail('${session.lectureID}','${session.subjectName}', '${session.subjectId}', '${session.group}', '${session.course}', '${session.class}', '${session.startTime}', '${session.endTime}', '${session.day}', '${session.date || 'date'}', '${session.type}')">
                         <div class="session-title">
                             ${session.subjectName}
                             <span class="session-type">${session.type}</span>
                         </div>
                         <div class="session-detail">Course: ${session.course}</div>
-                        <div class="session-detail">Venue: ${session.class}</div>
+                        <div class="session-detail">Venue: ${session.class || '未分配'}</div>
                         <div class="session-detail">Time: ${session.startTime} - ${session.endTime}</div>
+                        <div class="session-detail">Group: <strong>${session.group || 'all'}</strong></div>
                     </div>`;
                 });
             }
@@ -925,7 +1191,460 @@
         loadTimetable();
     });
 
-    // 修改导航按钮事件
+
+    let studentUIDs = [];
+
+
+async function matchStudentAndRecordAttendance(subjectId, venue, course, group) {
+    console.log(`📡 Checking attendance for venue: ${venue}`);
+
+    const tempStudentRef = doc(db, "ESP32", venue);
+    const tempStudentDoc = await getDoc(tempStudentRef);
+
+    if (!tempStudentDoc.exists()) {
+        console.error(` No data found for venue: ${venue}`);
+        return;
+    }
+
+    const tempStudentData = tempStudentDoc.data();
+    const studentUIDs = tempStudentData.tempStudent || [];
+
+    if (studentUIDs.length === 0) {
+        console.warn(" No students detected in NFC tempStudent list");
+        return;
+    }
+
+    console.log(" NFC Read UIDs:", studentUIDs);
+
+    const studentsRef = collection(db, "student");
+    const q = query(studentsRef, where("UID", "in", studentUIDs));
+    const querySnapshot = await getDocs(q);
+
+    let matchedStudents = [];
+    let invalidStudents = [];
+    let unknownUIDs = [...studentUIDs]; 
+
+    querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        const uidIndex = unknownUIDs.indexOf(data.UID);
+        if (uidIndex > -1) {
+            unknownUIDs.splice(uidIndex, 1); 
+        }
+        if(group === "all"){
+            if(data.course === course){
+                matchedStudents.push({
+                id: doc.id,
+                name: data.name,
+                course: data.course,
+                group: data.group,
+                uid: data.UID
+            });
+            }
+        }else if(data.group === group) {
+            if(data.course === course){
+                matchedStudents.push({
+                id: doc.id,
+                name: data.name,
+                course: data.course,
+                group: data.group,
+                uid: data.UID
+            });
+            }
+        } else {
+            invalidStudents.push({
+                studentId: doc.id,
+                uid: data.UID,
+                name: data.name,
+                course: data.course,
+                group: data.group
+            });
+        }
+    });
+
+
+
+    console.log(" Matched Students:", matchedStudents);
+    console.log(" Invalid Students:", invalidStudents);
+    console.log(" Unknown UIDs:", unknownUIDs);
+
+    let studentRecords = [];
+    
+    matchedStudents.forEach(student => {
+        studentRecords.push({
+            uid: student.uid,
+            studentId: student.id,
+            courseId: student.course,
+            subjectId: subjectId,
+            status: "present"
+        });
+    });
+
+    invalidStudents.forEach(student => {
+        studentRecords.push({
+            uid: student.uid,
+            studentId: student.studentId,
+            courseId: student.course,
+            subjectId: subjectId,
+            status: "invalid"  // 课程或小组不匹配
+        });
+    });
+
+    unknownUIDs.forEach(uid => {
+        studentRecords.push({
+            uid: uid,
+            studentId: null,
+            courseId: null,
+            subjectId: subjectId,
+            status: "unknown"  // UID 没有对应的学生
+        });
+    });
+    return studentRecords; 
+
+    console.log(" studentRecords(M):", studentRecords);
+
+    alert(`Attendance updated: ${matchedStudents.length} present, ${invalidStudents.length} invalid, ${unknownUIDs.length} unknown.`);
+}
+
+async function saveAttendanceToFirestore(subjectId, courseId, group, studentRecords) {
+    if (!studentRecords || studentRecords.length === 0) {
+        console.error(" No student records to process.");
+        return;
+    }
+
+    const sessionId = sessionStorage.getItem("sessionId");
+    if (!sessionId) {
+        console.error(" Session ID not found");
+        alert(" Unable to save attendance, Session ID missing");
+        return;
+    }
+
+    if (!courseId || !subjectId || !sessionId) {
+        console.error(" Missing Firestore path parameters!", { courseId, subjectId, sessionId });
+        alert(" Unable to save attendance, Missing required parameters");
+        return;
+    }
+
+    console.log("Current Session ID:", sessionId);
+
+    const sessionRef = doc(db, `attendance/${courseId}/${subjectId}/${sessionId}`);
+    const sessionDoc = await getDoc(sessionRef);
+
+    //  如果 sessionId 还不存在，先创建 session 文档
+    if (!sessionDoc.exists()) {
+        await setDoc(sessionRef, {
+            createdAt: serverTimestamp(),
+            status: "active"
+        });
+        console.log(`✅ Subject ${courseId} - ${subjectId} - ${sessionId} Created!!!`);
+    }
+
+    // 1️ 查询该课程的所有学生
+    let studentsQuery;
+    if (group === "all") {
+        studentsQuery = query(collection(db, "student"), where("course", "==", courseId));
+    } else {
+        studentsQuery = query(collection(db, "student"), 
+            where("course", "==", courseId),
+            where("group", "==", group)
+        );
+    }
+
+    const studentsSnapshot = await getDocs(studentsQuery);
+    if (studentsSnapshot.empty) {
+        console.warn(`⚠️ No students found for Course: ${courseId}, Group: ${group}`);
+        alert("⚠️ No matching students found.");
+        return;
+    }
+
+    const batch = writeBatch(db);
+
+    // 2️ 先默认将所有学生设为 "absent"
+    studentsSnapshot.forEach(docSnap => {
+        const student = docSnap.data();
+        const studentId = docSnap.id;
+
+        const studentDocRef = doc(db, `attendance/${courseId}/${subjectId}/${sessionId}/students`, studentId);
+        batch.set(studentDocRef, {
+            uid: student.uid || "unknown",
+            status: "absent",
+            timestamp: serverTimestamp()
+        }, { merge: true });
+    });
+
+    // 3️ 然后遍历 studentRecords，将 "present" 的学生更新
+    studentRecords.forEach(record => {
+        if (!record.studentId || !record.uid) {
+            console.error("⚠️ Skipping invalid student record:", record);
+            return;
+        }
+
+        const studentDocRef = doc(db, `attendance/${courseId}/${subjectId}/${sessionId}/students`, record.studentId);
+        batch.set(studentDocRef, {
+            uid: record.uid,
+            status: "present",
+            timestamp: serverTimestamp()
+        }, { merge: true });
+    });
+
+    try {
+        await batch.commit();
+        alert(` Student attendance records have been saved\n Course: ${courseId}\n Subject: ${subjectId}\n Session: ${sessionId}`);
+        console.log("✅ Attendance successfully saved to Firestore!");
+    } catch (error) {
+        console.error(" Failed to save attendance:", error);
+        alert(" Error saving attendance: " + error.message);
+    }
+}
+
+
+window.toggleNFC = async function(subjectId, course, group, startTime, endTime, sessionDay, sessionDate, sessionType, venue) {
+    const enable = document.getElementById('nfcSwitch').checked;
+    console.log("📡 toggleNFC trigger", enable);
+
+    const todayIndex = new Date().getDay();
+    const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const todayName = daysOfWeek[todayIndex];
+
+    console.log(` Today is: ${todayName}, class is scheduled on: ${sessionDay}`);
+
+    if (todayName !== sessionDay) {
+        alert(` This class is not available today: ${todayName}!!! Please make it on ${sessionDay}`);
+        document.getElementById('nfcSwitch').checked = false;
+        return;
+    }
+
+    const lectureID = sessionStorage.getItem('lectureID');
+    const tempStudentRef = doc(db, "ESP32", venue);
+
+    try {
+        if (enable) {
+            if (unsubscribeAttendance) {
+                console.warn(" Already monitoring attendance, skipping duplicate listener.");
+                return;
+            }
+
+            console.log("🗑️ Clearing tempStudent before monitoring...");
+            await setDoc(tempStudentRef, {
+                tempStudent: [],
+                lecturerId: lectureID,
+                status: true,
+            }, { merge: true });
+
+            console.log(` Firestore updated: ${lectureID} (Venue: ${venue}) - NFC enabled`);
+            alert(`✅ NFC Reader is enabled, Course: ${course}, Subject: ${subjectId}`);
+
+            startMonitoringAttendance(venue, subjectId, course, group);
+        } else {
+            console.warn(" Stopping Firestore listener for attendance...");
+            if (unsubscribeAttendance) {
+                unsubscribeAttendance();
+                unsubscribeAttendance = null;
+                processedUIDs.clear();
+             
+            }
+
+            await setDoc(tempStudentRef, { status: false }, { merge: true });
+            console.log(" Firestore updated: NFC disabled");
+
+            const tempStudentSnap = await getDoc(tempStudentRef);
+
+            if (tempStudentSnap.exists() && tempStudentSnap.data().tempStudent.length > 0) {
+                const tempStudentUIDs = tempStudentSnap.data().tempStudent;
+                console.log(" UID List from Firestore:", tempStudentUIDs);
+
+                await processAttendance(subjectId, venue, course, group);
+
+            } else {
+                console.warn(" No tempStudent data found in Firestore!");
+                alert(" No student data found!");
+            }
+            document.getElementById('nfcSwitch').checked = false;
+            alert(" NFC Reader is closed");
+        }
+    } catch (error) {
+        console.error(" Error updating Firestore:", error);
+        alert(" Failed to update NFC status in Firestore");
+        document.getElementById('nfcSwitch').checked = false;
+    }
+};
+
+async function processAttendance(subjectId, venue, course, group) {
+    let studentRecords = await matchStudentAndRecordAttendance(subjectId, venue, course, group);
+
+    if (group !== "all") {
+        studentRecords = studentRecords.filter(student => student.group === group);
+    }
+
+    //  Remove invalid student records (null studentId or courseId)
+    studentRecords = studentRecords.filter(record => record.studentId && record.courseId);
+
+    if (studentRecords.length > 0) {
+        await saveAttendanceToFirestore(subjectId, course, group, studentRecords);
+    } else {
+        console.warn(" No valid student records found for attendance.");
+    }
+}
+
+
+
+
+
+let unsubscribeAttendance = null; // 用于存储 Firestore 监听实例
+let processedUIDs = new Set(); // To track already processed student UIDs
+
+function startMonitoringAttendance(venue, subjectId, course, group) {
+    console.log(` Listening for NFC data at venue: ${venue}...`);
+
+    const tempStudentRef = doc(db, "ESP32", venue);
+
+    if (unsubscribeAttendance) {
+        console.warn(" Stopping previous Firestore listener...");
+        unsubscribeAttendance();
+        unsubscribeAttendance = null;
+        processedUIDs.clear(); 
+    }
+    
+    unsubscribeAttendance = onSnapshot(tempStudentRef, async (docSnap) => {
+        if (!docSnap.exists()) {
+            console.warn(` No data found for venue: ${venue}`);
+            return;
+        }
+
+        const tempStudentData = docSnap.data();
+        let studentUIDs = tempStudentData.tempStudent || [];
+
+        // Remove duplicates
+        studentUIDs = [...new Set(studentUIDs)];
+
+        // Identify new UIDs that haven't been processed
+        let newUIDs = studentUIDs.filter(uid => !processedUIDs.has(uid));
+
+        if (newUIDs.length === 0) {
+            console.log(" No new NFC UIDs detected, waiting for data...");
+            return;
+        }
+
+        console.log(" New NFC Read UIDs:", newUIDs);
+
+        // Query Firestore for new UIDs
+        const studentsRef = collection(db, "student");
+        const q = query(studentsRef, where("UID", "in", newUIDs));
+        const querySnapshot = await getDocs(q);
+
+        let matchedStudents = [];
+        let unknownUIDs = new Set(newUIDs);
+
+        querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            unknownUIDs.delete(data.UID);
+
+            matchedStudents.push({
+                id: doc.id,
+                name: data.name,
+                course: data.course,
+                group: data.group,
+                uid: data.UID,
+                status: "present"
+            });
+        });
+
+        let unknownStudents = [...unknownUIDs].map(uid => ({
+            id: "N/A",
+            name: "Unknown",
+            course: "N/A",
+            group: "N/A",
+            uid: uid,
+            status: "unknown"
+        }));
+
+        let allStudents = [...matchedStudents, ...unknownStudents];
+
+        console.log(" New Attendance Data:", allStudents);
+        updateUI(allStudents);
+
+        // Add new UIDs to the processed set
+        newUIDs.forEach(uid => processedUIDs.add(uid));
+    });
+}
+
+async function updateUI(students) {
+    for (let student of students) {
+        let container = document.createElement("div");
+        container.className = "attendanceNotification"; // Use class instead of ID since multiple divs will be created
+
+        container.innerHTML = `
+            <p><strong>${student.name}</strong> (${student.id})</p>
+            <p><strong>UID:</strong> ${student.uid}</p>
+            <p><strong>Course:</strong> ${student.course} | <strong>Group:</strong> ${student.group}</p>
+            <p><strong>Status:</strong> <span class="${student.status}">${student.status.toUpperCase()}</span></p>
+        `;
+
+        document.body.appendChild(container);
+        container.classList.add("show");
+
+        let audio = new Audio("notify.mp3");
+        audio.play();
+
+        //  Wait for the fade-in animation + 2 seconds display time
+        await new Promise(resolve => setTimeout(resolve, 3000));
+
+        container.classList.add("hide");
+
+        //  Wait for the fade-out animation
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        // Remove the notification box after fading out
+        container.remove();
+    }
+}
+
+
+
+
+
+window.showSessionDetail = function(lectureID,subjectName, subjectId, group, course, venue, startTime, endTime, sessionDay, sessionDate, sessionType) {
+    const now = new Date();
+    sessionDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+    const sessionId = `${sessionDate}_${startTime}_${lectureID}_${sessionType}_${group}`;
+    sessionStorage.setItem("sessionId", sessionId);
+
+    const container = document.querySelector('.tableDisplay');
+    container.style.display = "none"; // 隐藏table
+
+    const detailContainer = document.querySelector('.detailDisplay');
+    detailContainer.innerHTML = `
+        <div class="session-details">
+            <h2>${subjectName}</h2><h2>${subjectId}</h2>
+            <p><strong>Course:</strong> ${course}</p>
+            <p><strong>Group:</strong> ${group}</p>
+            <p><strong>Venue:</strong> ${venue}</p>
+            <p><strong>Time:</strong> ${startTime} - ${endTime}</p>
+            <p>Click for scan</p>
+            <label class="switch">
+                <input type="checkbox" id="nfcSwitch" onchange="toggleNFC('${subjectId}', '${course}', '${group}', '${startTime}', '${endTime}', '${sessionDay}', '${sessionDate}', '${sessionType}','${venue}')">
+                <span class="slider"></span>                         
+                      
+            </label>
+            <button onclick="hideSessionDetail()">Back</button>
+        </div>
+    `;
+
+    detailContainer.style.display = "block";
+};
+
+
+window.hideSessionDetail = function() {
+    document.querySelector('.tableDisplay').style.display = "block";
+    document.querySelector('.detailDisplay').style.display = "none";
+};
+
+
+
+    
+
+
+
     document.addEventListener("DOMContentLoaded", function () {
         const navButtons = document.querySelectorAll(".nav2 .nav-btn");
         
@@ -934,12 +1653,17 @@
             0: '', // 首页不需要跳转
             1: 'attendance.html',
             2: '', // 时间表通过现有逻辑切换
-            3: 'mobile_attendance.html'
+            3: 'attendance_report.html'
         };
 
         navButtons.forEach((button, index) => {
             button.addEventListener('click', function() {
                 if(pageMap[index]) {
+                    // 如果是出勤页面，添加参数
+                    if (pageMap[index] === 'attendance.html' || pageMap[index] === 'mobile_attendance.html') {
+                        sessionStorage.setItem('checkExistingRecord', 'true');
+                        sessionStorage.setItem('useTimeFormat', 'colon');
+                    }
                     window.location.href = pageMap[index];
                 }
             });
@@ -949,8 +1673,9 @@
         const timetableBtn = navButtons[2];
         const homeBtn = navButtons[0];
         
-        // 添加缺席申请按钮
-        const absenceRequestsBtn = document.querySelector(".leave-info div:first-child");
+        // 添加缺席申请按钮 - Update selector for pending leaves
+        const pendingLeavesBtn = document.querySelector(".leave-info div:first-child");
+        const approvedLeavesBtn = document.querySelector(".leave-info div:nth-child(2)");
         
         const contentSections = {
             cards: document.querySelector(".dashboard-cards"),
@@ -975,16 +1700,15 @@
             contentSections.absenceRequests.style.display = "none";
         });
         
-        // 点击"Approved Leaves"区域显示缺席申请
-        absenceRequestsBtn.addEventListener("click", function() {
+        // Click handlers for leave management sections
+        pendingLeavesBtn.addEventListener("click", function() {
             contentSections.cards.style.display = "none";
             contentSections.timetable.style.display = "none";
             contentSections.absenceRequests.style.display = "block";
             loadAbsenceRequests(); // 加载缺席申请
         });
         
-        // 点击"Leave Requests"区域也显示缺席申请
-        document.querySelector(".statistics div:last-child").addEventListener("click", function() {
+        approvedLeavesBtn.addEventListener("click", function() {
             contentSections.cards.style.display = "none";
             contentSections.timetable.style.display = "none";
             contentSections.absenceRequests.style.display = "block";
@@ -1225,15 +1949,14 @@
             for (const session of sessionsToProcess) {
                 try {
                     const { courseCode, subjectId, sessionId, studentId } = session;
-                    const [date, startTime, lecturerId, type, group] = sessionId.split('_');
                     
-                    // 构建文档路径的关键部分 - 使用实际的讲师ID而非传入值
-                    const sessionDocId = `${date}_${startTime}_${lectureID}_${type}_all`; 
+                    // 直接使用原始会话ID，不尝试解析和重建
+                    console.log(`使用原始会话ID: ${sessionId}，分析部分: ${sessionId.split('_').join(', ')}`);
                     
                     // 创建对学生文档的引用
                     const studentAttendanceRef = doc(db, 
                         "attendance", courseCode, 
-                        subjectId, sessionDocId, 
+                        subjectId, sessionId, 
                         "students", studentId
                     );
                     
@@ -1251,7 +1974,7 @@
                     await setDoc(studentAttendanceRef, studentRecord);
                     createdRecords++;
                     
-                    console.log(`已创建/更新出勤记录: attendance/${courseCode}/${subjectId}/${sessionDocId}/students/${studentId}`);
+                    console.log(`已创建/更新出勤记录: attendance/${courseCode}/${subjectId}/${sessionId}/students/${studentId}`);
                     
                 } catch (error) {
                     console.error(`创建出勤记录失败，会话信息:`, session, `错误:`, error);
@@ -1359,6 +2082,265 @@
             alert("Error: " + error.message);
         }
     }
+
+    // Add new function to check unprocessed attendance
+    async function checkUnprocessedAttendance() {
+        const lectureID = sessionStorage.getItem('lectureID');
+        if (!lectureID) return;
+
+        try {
+            const twoWeeksAgo = new Date();
+            twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+            
+            const coursesSnapshot = await getDocs(collection(db, "course"));
+            let unprocessedSessions = [];
+
+            for (const courseDoc of coursesSnapshot.docs) {
+                const courseId = courseDoc.id;
+                const subjectsSnapshot = await getDocs(collection(db, "course", courseId, "subject"));
+
+                for (const subjectDoc of subjectsSnapshot.docs) {
+                    const subjectId = subjectDoc.id;
+                    const subjectData = subjectDoc.data();
+
+                    // Get attendance sessions
+                    const attendanceRef = collection(db, "attendance", courseId, subjectId);
+                    const sessionsSnapshot = await getDocs(attendanceRef);
+
+                    for (const sessionDoc of sessionsSnapshot.docs) {
+                        const sessionData = sessionDoc.data();
+                        const [sessionDate, startTime, sessionLecturerId, sessionType, group] = sessionDoc.id.split('_');
+
+                        // Check if this session belongs to the current lecturer
+                        if (sessionLecturerId === lectureID) {
+                            const sessionDateObj = new Date(sessionDate);
+                            
+                            // Check if session is older than 2 weeks
+                            if (sessionDateObj < twoWeeksAgo) {
+                                // Get students collection for this session
+                                const studentsRef = collection(sessionDoc.ref, "students");
+                                const studentsSnapshot = await getDocs(studentsRef);
+                                
+                                // Calculate unprocessed count
+                                const totalStudents = sessionData.totalStudents || 0;
+                                const processedCount = studentsSnapshot.size;
+                                
+                                if (processedCount < totalStudents) {
+                                    unprocessedSessions.push({
+                                        courseId,
+                                        subjectId,
+                                        sessionDate,
+                                        startTime,
+                                        sessionType: sessionType || 'lecture',
+                                        group: group || 'all',
+                                        unprocessedCount: totalStudents - processedCount,
+                                        totalStudents
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Update UI with unprocessed sessions
+            const notificationCard = document.getElementById('notificationCard');
+            const listContainer = document.getElementById('unprocessedAttendanceList');
+
+            if (unprocessedSessions.length > 0) {
+                notificationCard.style.display = 'block';
+                let html = '';
+
+                for (const session of unprocessedSessions) {
+                    const formattedDate = new Date(session.sessionDate).toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                    });
+
+                    html += `
+                        <div class="unprocessed-alert">
+                            <h4>${session.courseId} - ${session.subjectId}</h4>
+                            <p><strong>Date:</strong> ${formattedDate}</p>
+                            <p><strong>Time:</strong> ${session.startTime}</p>
+                            <p><strong>Unprocessed:</strong> ${session.unprocessedCount} out of ${session.totalStudents} students</p>
+                            <button class="view-attendance-btn" onclick="viewAttendance('${session.courseId}', '${session.subjectId}', '${session.sessionDate}', '${session.startTime}', '${session.sessionType}', '${session.group}')">
+                                View Attendance
+                            </button>
+                        </div>
+                    `;
+                }
+
+                listContainer.innerHTML = html;
+            } else {
+                notificationCard.style.display = 'none';
+            }
+
+        } catch (error) {
+            console.error("Error checking unprocessed attendance:", error);
+        }
+    }
+
+    // Update function to handle viewing attendance with session details
+    window.viewAttendance = function(courseId, subjectId, sessionDate, startTime, sessionType, group) {
+        // 直接使用原始时间格式，不进行转换
+        console.log(`查看出勤记录，使用原始时间: ${startTime}`);
+        
+        // Store the session info in sessionStorage
+        sessionStorage.setItem('selectedCourse', courseId);
+        sessionStorage.setItem('selectedSubject', subjectId);
+        sessionStorage.setItem('selectedDate', sessionDate);
+        sessionStorage.setItem('selectedTime', startTime); // 使用原始时间格式
+        sessionStorage.setItem('selectedType', sessionType);
+        sessionStorage.setItem('selectedGroup', group);
+        sessionStorage.setItem('autoSelectSession', 'true');
+        sessionStorage.setItem('checkExistingRecord', 'true'); // 添加标记，表示要检查现有记录
+        
+        // Redirect to attendance page
+        window.location.href = 'attendance.html';
+    };
+
+    // 检查是否已存在相同的出勤记录
+    async function checkExistingAttendanceRecord(courseId, subjectId, date, time, lectureId, type, group = "all") {
+        try {
+            // 直接使用原始时间格式
+            console.log(`检查是否存在记录，使用原始时间: ${time}`);
+            
+            // 构建会话ID - 使用原始时间格式
+            const sessionId = `${date}_${time}_${lectureId}_${type}_${group}`;
+            console.log(`检查是否存在记录: ${sessionId}`);
+            
+            // 检查数据库中是否已存在该记录
+            const attendanceRef = doc(db, "attendance", courseId, subjectId, sessionId);
+            const attendanceDoc = await getDoc(attendanceRef);
+            
+            if (attendanceDoc.exists()) {
+                console.log(`找到现有记录: ${sessionId}`);
+                return {
+                    exists: true,
+                    data: attendanceDoc.data(),
+                    ref: attendanceRef,
+                    sessionId: sessionId
+                };
+            }
+            
+            console.log(`未找到记录，将创建新记录`);
+            return {
+                exists: false,
+                ref: attendanceRef,
+                sessionId: sessionId
+            };
+        } catch (error) {
+            console.error("检查现有出勤记录时出错:", error);
+            return {
+                exists: false,
+                error: error
+            };
+        }
+    }
+
+    // 修改您现有的创建记录函数 
+    async function createAttendanceRecord(courseId, subjectId, date, time, lectureId, type, studentsList, group = "all") {
+        try {
+            // 直接使用原始时间格式，不进行转换
+            console.log(`创建出勤记录，使用原始时间: ${time}`);
+            
+            // 首先检查是否有要求检查现有记录
+            const shouldCheckExisting = sessionStorage.getItem('checkExistingRecord') === 'true';
+            
+            if (shouldCheckExisting) {
+                console.log("正在检查是否已存在出勤记录...");
+                // 检查是否已存在相同的出勤记录
+                const existingRecord = await checkExistingAttendanceRecord(
+                    courseId, subjectId, date, time, lectureId, type, group
+                );
+                
+                if (existingRecord.exists) {
+                    console.log("使用现有出勤记录", existingRecord.sessionId);
+                    // 加载现有记录的学生数据
+                    await loadExistingStudentRecords(existingRecord.ref);
+                    return existingRecord.ref;
+                }
+            }
+            
+            // 如果不存在记录或者不需要检查，则创建新记录
+            console.log("创建新的出勤记录");
+            
+            // 构建会话ID - 直接使用原始时间格式
+            const sessionId = `${date}_${time}_${lectureId}_${type}_${group}`;
+            
+            const attendanceRef = doc(db, "attendance", courseId, subjectId, sessionId);
+            
+            // 设置出勤记录数据
+            await setDoc(attendanceRef, {
+                date: date,
+                startTime: time, // 使用原始时间
+                lectureID: lectureId,
+                type: type,
+                group: group,
+                totalStudents: studentsList.length,
+                presentStudents: 0,
+                absentStudents: 0,
+                status: "pending",
+                timestamp: new Date()
+            });
+            
+            // 标记已查询过现有记录，避免下次重复检查
+            sessionStorage.removeItem('checkExistingRecord');
+            
+            return attendanceRef;
+        } catch (error) {
+            console.error("创建出勤记录时出错:", error);
+            throw error;
+        }
+    }
+
+    // 加载现有记录中的学生出勤数据
+    async function loadExistingStudentRecords(attendanceRef) {
+        try {
+            console.log("加载现有学生出勤记录...");
+            
+            const attendanceDoc = await getDoc(attendanceRef);
+            if (!attendanceDoc.exists()) {
+                console.error("找不到出勤记录");
+                return;
+            }
+            
+            const attendanceData = attendanceDoc.data();
+            console.log("找到出勤记录数据:", attendanceData);
+            
+            // 加载学生列表
+            const studentsRef = collection(attendanceRef, "students");
+            const studentsSnapshot = await getDocs(studentsRef);
+            console.log(`找到 ${studentsSnapshot.size} 条学生出勤记录`);
+            
+            if (studentsSnapshot.size > 0) {
+                // 首先清空UI中的出勤状态
+                clearAttendanceUI();
+                
+                // 更新出勤统计
+                updateAttendanceCounters(attendanceData.presentStudents || 0, attendanceData.absentStudents || 0);
+                
+                // 遍历学生出勤记录
+                studentsSnapshot.forEach(doc => {
+                    const studentId = doc.id;
+                    const studentData = doc.data();
+                    
+                    // 更新学生的出勤状态显示
+                    updateStudentStatus(studentId, studentData.status, studentData.reason || '');
+                    
+                    console.log(`已更新学生 ${studentId} 的出勤状态: ${studentData.status}`);
+                });
+                
+                console.log("所有学生出勤状态已更新");
+            } else {
+                console.log("没有找到学生出勤记录，状态保持不变");
+            }
+        } catch (error) {
+            console.error("加载学生出勤记录时出错:", error);
+        }
+    }
     </script>
 </head>
 <body>
@@ -1382,7 +2364,7 @@
             <div class="nav-btn"><p>Home</p></div>
             <div class="nav-btn"><p>Mark Attendance</p></div>
             <div class="nav-btn"><p>Timetable</p></div>
-            <div class="nav-btn"><p>Mobile Attendance(测试)</p></div>
+            <div class="nav-btn"><p>Reports</p></div>
         </div>
     </nav>
 
@@ -1390,22 +2372,26 @@
         <!-- 将原有卡片包裹在新的容器中 -->
         <div class="dashboard-cards">
             <div class="card">
-                <h2>My Statistics</h2>
+                <h2>Attendance Statistics</h2>
                 <div class="statistics">
                     <div>
                         <h3>Attendance Rate</h3>
                         <p>N/A</p>
                     </div>
                     <div>
-                        <h3>Leave Requests</h3>
-                        <p><span id="pendingRequestsCount">0</span> Pending</p>
+                        <h3>Total Classes</h3>
+                        <p id="totalClassesCount">0</p>
                     </div>
                 </div>
             </div>
 
             <div class="card">
-                <h2>Leave Information</h2>
+                <h2>Leave Management</h2>
                 <div class="leave-info">
+                    <div>
+                        <h3>Pending Leaves</h3>
+                        <p><span id="pendingRequestsCount">0</span></p>
+                    </div>
                     <div>
                         <h3>Approved Leaves</h3>
                         <p><span id="approvedLeavesCount">0</span></p>
@@ -1416,11 +2402,21 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Add new notification card -->
+            <div class="card" id="notificationCard" style="display: none;">
+                <h2><i class="fas fa-exclamation-triangle" style="color: #ff9800;"></i> Attendance Alerts</h2>
+                <div id="unprocessedAttendanceList" style="margin-top: 15px;">
+                    <!-- Will be populated dynamically -->
+                </div>
+            </div>
         </div>
 
         <div class="timeTableSpace" style="display: none;">
             <h2>My Timetable</h2>
             <div class="tableDisplay"></div>
+            <div class="detailDisplay" style="display:none;"></div>
+            <div id="attendanceList"></div>
         </div>
         
         <!-- 添加缺席申请部分 -->
