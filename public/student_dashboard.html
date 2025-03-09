@@ -959,11 +959,11 @@
             const fileInput = document.getElementById("fileInput");
             if (fileInput.files.length > 0) {
                 fileLink = await window.uploadFile();
-                // 如果上传失败，fileLink将是空字符串
+                // If upload fails, fileLink will be an empty string
                 if (!fileLink) {
-                    console.log("文件上传失败或被取消");
-                    // 可以选择在这里中断表单提交，或者继续但不包含文件链接
-                    // return; // 取消提交
+                    console.log("File upload failed or was cancelled");
+                    // You can choose to interrupt form submission here, or continue without the file link
+                    // return; // Cancel submission
                 }
             }
 
@@ -972,12 +972,12 @@
             const reason = document.getElementById("reason").value.trim();
             const comments = document.getElementById("comments").value.trim();
 
-            // 获取学生信息
+            // Get student information
             const studentID = sessionStorage.getItem('studentID');
             const studentRef = doc(db, "student", studentID);
             const studentDoc = await getDoc(studentRef);
             if (!studentDoc.exists()) {
-                alert("学生数据未找到");
+                alert("Student data not found");
                 return;
             }
 
@@ -988,41 +988,41 @@
             const email = studentData.email;
 
             if (!courseCode || !group) {
-                console.error("缺少课程或分组信息", { courseCode, group });
-                alert("学生数据不完整");
+                console.error("Missing course or group information", { courseCode, group });
+                alert("Student data incomplete");
                 return;
             }
 
-            // 获取选中的缺席课程
+            // Get selected absence sessions
             const missedSessions = [];
             const checkboxes = document.querySelectorAll('input[name="missedSession"]:checked');
             checkboxes.forEach(checkbox => {
                 const [courseCode, subjectId, date, startTime, type] = checkbox.value.split('|');
                 const subjectName = checkbox.getAttribute('data-subject-name') || '';
                 const endTime = checkbox.getAttribute('data-end-time') || '';
-                const lectureID = checkbox.getAttribute('data-lecture-id') || '';  // 获取讲师ID
-                const sessionGroup = checkbox.getAttribute('data-session-group') || 'all';  // 获取课程会话组别，默认为'all'
+                const lectureID = checkbox.getAttribute('data-lecture-id') || '';  // Get lecturer ID
+                const sessionGroup = checkbox.getAttribute('data-session-group') || 'all';  // Get session group, default to 'all'
                 
-                // 构建与attendance系统完全兼容的sessionId，使用课程会话的分组信息
+                // Build sessionId compatible with attendance system, using session group info
                 const generatedSessionId = `${date}_${startTime}_${lectureID}_${type}_${sessionGroup}`;
-                console.log(`创建会话ID: ${generatedSessionId}，使用课程分组: ${sessionGroup}`);
+                console.log(`Creating session ID: ${generatedSessionId}, using course group: ${sessionGroup}`);
                 
                 missedSessions.push({
                     courseCode,
                     subjectId,
-                    subjectName,  // 添加科目名称
+                    subjectName,  // Add subject name
                     date,
                     startTime,
-                    endTime,      // 添加结束时间
+                    endTime,      // Add end time
                     type,
-                    lectureID,    // 存储讲师ID
+                    lectureID,    // Store lecturer ID
                     sessionId: generatedSessionId,
-                    // 为每个会话添加初始状态
+                    // Add initial status for each session
                     status: "pending"
                 });
             });
 
-            // 构造要保存的数据对象
+            // Construct data object to save
             const formData = {
                 formId: Date.now().toString(), // Generate a unique ID
                 studentId: studentID,
@@ -1037,33 +1037,33 @@
                 notificationDismissed: false // Add notification status
             };
             
-            // 只有当文件链接存在时才添加到formData中
+            // Only add file link to formData if it exists
             if (fileLink) {
                 formData.file = fileLink;
             }
 
-            // 指定要更新的 Firestore 文档路径：absence/DIIT2308/G1/23083140
+            // Specify Firestore document path to update: absence/DIIT2308/G1/23083140
             const pathString = `absence/${courseCode}/${group}/${studentID}`;
             const absenceDocRef = doc(db, pathString);
 
             try {
-                // 先获取当前文档数据
+                // Get current document data first
                 const docSnap = await getDoc(absenceDocRef);
                 if (docSnap.exists()) {
-                    // 如果文档存在，读取已有的 Form 数组（如果不存在则初始化为空数组）
+                    // If document exists, read existing Form array (initialize as empty array if doesn't exist)
                     let currentForms = docSnap.data().Form || [];
-                    // 将新的表单数据追加到数组末尾
+                    // Append new form data to end of array
                     currentForms.push(formData);
-                    // 更新文档，保留其他字段（merge: true）
+                    // Update document, preserving other fields (merge: true)
                     await setDoc(absenceDocRef, { Form: currentForms }, { merge: true });
                 } else {
-                    // 文档不存在，则创建新文档并写入 Form 数组
+                    // Document doesn't exist, create new document and write Form array
                     await setDoc(absenceDocRef, { Form: [formData] });
                 }
                 
-                // 为每个受影响的课程创建通知
+                // Create notifications for each affected course
                 for (const session of missedSessions) {
-                    // 获取该课程的教师ID
+                    // Get instructor ID for this course
                     const subjectRef = doc(db, "course", session.courseCode, "subject", session.subjectId);
                     const subjectDoc = await getDoc(subjectRef);
                     
@@ -1071,55 +1071,55 @@
                         const subjectData = subjectDoc.data();
                         const sessions = subjectData.sessions || [];
                         
-                        // 找到匹配的session
+                        // Find matching session
                         const matchingSession = sessions.find(s => 
                             s.startTime === session.startTime && 
                             s.type === session.type
                         );
                         
                         if (matchingSession && matchingSession.lectureID) {
-                            // 使用会话自己的组别，而不是学生的组别
+                            // Use session's own group, not student's group
                             const sessionGroup = matchingSession.group || 'all';
                             
-                            // 更新会话ID以包含讲师ID和正确的组别
+                            // Update session ID to include lecturer ID and correct group
                             session.sessionId = `${session.date}_${session.startTime}_${matchingSession.lectureID}_${session.type}_${sessionGroup}`;
-                            console.log(`创建讲师通知的会话ID: ${session.sessionId}，使用会话组别: ${sessionGroup}`);
+                            console.log(`Creating lecturer notification session ID: ${session.sessionId}, using session group: ${sessionGroup}`);
                             
-                            // 创建教师通知
+                            // Create instructor notification
                             const notificationRef = doc(db, "notifications", matchingSession.lectureID);
                             
-                            // 创建通知对象
+                            // Create notification object
                             const notificationData = {
                                 studentId: studentID,
                                 studentName: fullName,
                                 courseCode: session.courseCode,
                                 subjectId: session.subjectId,
-                                subjectName: session.subjectName,  // 添加科目名称
+                                subjectName: session.subjectName,  // Add subject name
                                 date: session.date,
                                 startTime: session.startTime,
-                                endTime: session.endTime,          // 添加结束时间
+                                endTime: session.endTime,          // Add end time
                                 sessionId: session.sessionId,
                                 reason: reason,
-                                status: "pending",  // 初始状态为pending
+                                status: "pending",  // Initial status is pending
                                 submittedAt: new Date()
                             };
                             
-                            // 只有当文件链接存在时才添加到通知中
+                            // Only add file link to notification if it exists
                             if (fileLink) {
                                 notificationData.file = fileLink;
                             }
                             
-                            // 添加通知
+                            // Add notification
                             await setDoc(notificationRef, {
                                 absenceRequests: arrayUnion(notificationData)
                             }, { merge: true });
                             
-                            // 检查是否已经存在该session的考勤记录
+                            // Check if attendance record already exists for this session
                             const attendanceRef = doc(db, "attendance", session.courseCode, session.subjectId, session.sessionId, "students", studentID);
                             const attendanceDoc = await getDoc(attendanceRef);
                             
-                            // 如果考勤记录不存在，则创建一个标记为"pending_absence"的记录
-                            // 这样可以防止与其他考勤方式冲突
+                            // If attendance record doesn't exist, create one marked as "pending_absence"
+                            // This prevents conflicts with other attendance methods
                             if (!attendanceDoc.exists()) {
                                 await setDoc(attendanceRef, {
                                     status: "pending_absence",
@@ -1133,14 +1133,14 @@
                     }
                 }
                 
-                alert("缺席申请已提交成功！");
-                // 重置表单
+                alert("Absence request submitted successfully!");
+                // Reset form
                 document.getElementById("absenceForm").reset();
                 document.getElementById("affectedCourses").innerHTML = "<p class='instruction'>Please select dates to see affected courses</p>";
                 
             } catch (error) {
-                console.error("保存数据出错：", error);
-                alert("保存数据出错：" + error.message);
+                console.error("Error saving data:", error);
+                alert("Error saving data: " + error.message);
             }
         });
 
@@ -1350,23 +1350,23 @@ window.uploadFile = async function () {
 
     const fileInput = document.getElementById("fileInput");
     if (!fileInput.files.length) {
-        alert("请选择文件");
+        alert("Please select a file");
         return;
     }
 
-    // 获取学生 ID
+    // Get student ID
     const studentID = sessionStorage.getItem("studentID");
     if (!studentID) {
-        alert("未找到学生 ID，请先登录");
+        alert("Student ID not found, please login first");
         return;
     }
 
-    // ✅ 获取 Firebase 学生数据
+    // Get Firebase student data
     const studentRef = doc(db, "student", studentID);
     const studentDoc = await getDoc(studentRef);
 
     if (!studentDoc.exists()) {
-        alert("学生数据未找到");
+        alert("Student data not found");
         return;
     }
 
@@ -1374,27 +1374,27 @@ window.uploadFile = async function () {
     const course = studentData.course || "UNKNOWN_COURSE";
     const studentName = studentData.name || "UNKNOWN_NAME";
 
-    // ✅ 生成文件名
-    const today = new Date().toISOString().split("T")[0]; // 获取 YYYY-MM-DD 格式
+    // Generate filename
+    const today = new Date().toISOString().split("T")[0]; // Get YYYY-MM-DD format
     const file = fileInput.files[0];
     const fileName = `${course}_${studentName}_${studentID}_${today}.${file.name.split('.').pop()}`;
 
-    // ✅ 先获取 Google Drive 授权
+    // Get Google Drive authorization
     await authenticate();
 
-    // ✅ 创建文件元数据
+    // Create file metadata
     const metadata = {
         name: fileName,
         mimeType: file.type,
-        parents: ["REMOVED"], // 确保是一个有效的 Google Drive 文件夹 ID
+        parents: ["REMOVED"], // Ensure this is a valid Google Drive folder ID
     };
 
-    // ✅ 构造表单数据
+    // Construct form data
     const formData = new FormData();
     formData.append("metadata", new Blob([JSON.stringify(metadata)], { type: "application/json" }));
     formData.append("file", file);
 
-    // ✅ 发送请求到 Google Drive
+    // Send request to Google Drive
     try {
         const response = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart", {
             method: "POST",
@@ -1404,22 +1404,22 @@ window.uploadFile = async function () {
 
         console.log("Response status:", response.status);
         const result = await response.json();
-        console.log("上传成功", result);
+        console.log("Upload successful", result);
         
         if (response.ok && result.id) {
-      // 构造分享链接
+      // Create sharing link
       const fileLink = `https://drive.google.com/file/d/${result.id}/view?usp=sharing`;
-      alert("文件上传成功！");
+      alert("File uploaded successfully!");
       return fileLink;
     } else {
-      alert("文件上传失败，请重试！");
+      alert("File upload failed, please try again!");
       return "";
     }
 
 
     } catch (error) {
-        console.error("上传失败", error);
-        alert("文件上传失败，请重试！");
+        console.error("Upload failed", error);
+        alert("File upload failed, please try again!");
     }
 };
 
