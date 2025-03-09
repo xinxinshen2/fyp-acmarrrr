@@ -389,7 +389,15 @@
                             method: "barcode"  // Add method field
                         });
 
+                        // 修改: 先获取所有现有的学生记录
+                        const existingStudentsSnapshot = await sessionRef.collection("students").get();
+                        const existingStudentIds = new Set();
+                        existingStudentsSnapshot.forEach(doc => {
+                            existingStudentIds.add(doc.id);
+                        });
+                        
                         const batch = db.batch();
+                        let skipCount = 0; // 跟踪跳过的学生数量
                         
                         // 处理常规学生
                         studentsSnapshot.forEach(studentDoc => {
@@ -399,6 +407,12 @@
                                     studentData.group === group || 
                                     extraStudents.includes(studentDoc.id)) {
                                     
+                                    // 检查学生记录是否已存在
+                                    if (existingStudentIds.has(studentDoc.id)) {
+                                        skipCount++; // 记录跳过数量
+                                        return; // 如果已存在，跳过此学生
+                                    }
+                                    
                                     const attendanceRef = db.collection("attendance")
                                         .doc(courseId)
                                         .collection(subjectId)
@@ -406,15 +420,15 @@
                                         .collection("students")
                                         .doc(studentDoc.id);
                                     
-                                    // 初始状态设为absent
+                                    // 初始状态设为absent (只对新学生)
                                     batch.set(attendanceRef, {
                                         status: "absent",
                                         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
                                         lectureID: lectureID,
                                         group: studentData.group || 'default',
                                         isExtra: extraStudents.includes(studentDoc.id),
-                                        method: "barcode"  // Add method field
-                                    }, { merge: true });
+                                        method: "barcode"
+                                    });
                                 }
                             }
                         });
@@ -422,6 +436,12 @@
                         // 处理额外学生
                         extraStudents.forEach(studentId => {
                             if (!excludedStudents.includes(studentId)) {
+                                // 检查学生记录是否已存在
+                                if (existingStudentIds.has(studentId)) {
+                                    skipCount++; // 记录跳过数量
+                                    return; // 如果已存在，跳过此学生
+                                }
+                                
                                 const attendanceRef = db.collection("attendance")
                                     .doc(courseId)
                                     .collection(subjectId)
@@ -435,12 +455,17 @@
                                     lectureID: lectureID,
                                     group: 'extra',
                                     isExtra: true,
-                                    method: "barcode"  // Add method field
-                                }, { merge: true });
+                                    method: "barcode"
+                                });
                             }
                         });
 
                         await batch.commit();
+                        
+                        // 如果有跳过的学生，显示提示消息
+                        if (skipCount > 0) {
+                            showToastMessage(`Skipped ${skipCount} existing student records`, 2000);
+                        }
 
                         // 存储session数据
                         const sessionData = {

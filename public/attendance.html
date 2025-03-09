@@ -1714,23 +1714,38 @@
                 // 提交剩余的批量更新
                 await batch.commit();
                 
-                // 更新会话统计数据
+                // 更新会话统计数据 - 使用准确计算而不是增量操作
                 const sessionRef = db.collection("attendance")
                     .doc(courseId)
                     .collection(subjectId)
                     .doc(sessionId);
                 
+                // 获取当前会话数据
+                const sessionDoc = await sessionRef.get();
+                const sessionData = sessionDoc.data() || {};
+                
+                // 计算新的出勤统计数据
+                let presentStudents = sessionData.presentStudents || 0;
+                let absentStudents = sessionData.absentStudents || 0;
+                const totalStudents = sessionData.totalStudents || 0;
+                
                 if (status === "present") {
-                    await sessionRef.update({
-                        presentStudents: firebase.firestore.FieldValue.increment(unmarkedStudents.length),
-                        absentStudents: firebase.firestore.FieldValue.increment(-unmarkedStudents.length)
-                    });
+                    // 将未标记的学生加入到出席学生数量中
+                    presentStudents += unmarkedStudents.length;
+                    // 确保缺席学生数量正确
+                    absentStudents = totalStudents - presentStudents;
                 } else {
-                    await sessionRef.update({
-                        presentStudents: firebase.firestore.FieldValue.increment(-unmarkedStudents.length),
-                        absentStudents: firebase.firestore.FieldValue.increment(unmarkedStudents.length)
-                    });
+                    // 将未标记的学生加入到缺席学生数量中
+                    absentStudents += unmarkedStudents.length;
+                    // 确保出席学生数量正确
+                    presentStudents = totalStudents - absentStudents;
                 }
+                
+                // 更新会话统计数据
+                await sessionRef.update({
+                    presentStudents: presentStudents,
+                    absentStudents: absentStudents
+                });
                 
                 // 刷新学生列表以显示更新后的状态
                 alert(`Successfully marked ${unmarkedStudents.length} students as ${status.toUpperCase()}.`);
