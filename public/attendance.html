@@ -416,7 +416,6 @@
             <div class="nav-btn"><p>Home</p></div>
             <div class="nav-btn"><p>Mark Attendance</p></div>
             <div class="nav-btn"><p>Timetable</p></div>
-            <div class="nav-btn"><p>Mobile Attendance</p></div>
             <div class="nav-btn"><p>Reports</p></div>
         </div>
     </nav>
@@ -581,12 +580,10 @@
                 window.location.href = 'lecturer_dashboard.html';
             });
             
-            navButtons[3].addEventListener('click', () => {
-                window.location.href = 'mobile_attendance.html';
-            });
+            
             
             // Reports button
-            navButtons[4].addEventListener('click', () => {
+            navButtons[3].addEventListener('click', () => {
                 window.location.href = 'attendance_report.html';
             });
         });

@@ -298,12 +298,6 @@
                 <button class="print-btn" onclick="printReport()" disabled id="printBtn">
                     <i class="fas fa-print"></i> Print
                 </button>
-                <button class="generate-btn" onclick="generateTestReport()" style="background-color: #ff9800;">
-                    <i class="fas fa-vial"></i> Generate Test Data
-                </button>
-                <button class="generate-btn" onclick="showDebugInfo()" style="background-color: #607d8b;">
-                    <i class="fas fa-bug"></i> Show Debug Info
-                </button>
             </div>
         </div>
 
@@ -1129,144 +1123,263 @@
 
         // Print report
         function printReport() {
-            window.print();
-        }
-
-        // Generate a test report with mock data
-        function generateTestReport() {
-            const courseId = document.getElementById('courseSelect').value || "TEST-COURSE";
-            const subjectId = document.getElementById('subjectSelect').value || "TEST-SUBJECT";
-            const startDate = document.getElementById('startDate').value;
-            const endDate = document.getElementById('endDate').value;
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
             
-            // Create test data
-            const testData = [
-                {
-                    studentId: "TP123456",
-                    studentName: "Test Student 1",
-                    date: "2025-03-01",
-                    sessionType: "Lecture",
-                    startTime: "10:00",
-                    status: "present",
-                    method: "manual",
-                    reason: "-"  // 出席状态使用"-"
-                },
-                {
-                    studentId: "TP123456",
-                    studentName: "Test Student 1",
-                    date: "2025-03-05",
-                    sessionType: "Tutorial",
-                    startTime: "14:00",
-                    status: "absent",
-                    method: "manual",
-                    reason: "NR"
-                },
-                {
-                    studentId: "TP654321",
-                    studentName: "Test Student 2",
-                    date: "2025-03-01",
-                    sessionType: "Lecture",
-                    startTime: "10:00",
-                    status: "approved_absence",
-                    method: "absence_request_approved",
-                    reason: "Medical appointment"
-                },
-                {
-                    studentId: "TP654321",
-                    studentName: "Test Student 2",
-                    date: "2025-03-05",
-                    sessionType: "Tutorial",
-                    startTime: "14:00",
-                    status: "pending_absence",
-                    method: "manual",
-                    reason: "Pending approval"
-                }
-            ];
-            
-            // Display the test report
-            displayReport(testData, courseId, subjectId, startDate, endDate);
-            
-            // Enable export/print buttons
-            document.getElementById('exportBtn').disabled = false;
-            document.getElementById('printBtn').disabled = false;
-            
-            console.log("Generated test report with mock data");
-        }
-        
-        // Show debug information to help troubleshoot attendance data retrieval
-        function showDebugInfo() {
+            // Get report information
             const courseId = document.getElementById('courseSelect').value;
             const subjectId = document.getElementById('subjectSelect').value;
-            const lectureID = sessionStorage.getItem('lectureID');
+            const startDate = formatDate(document.getElementById('startDate').value);
+            const endDate = formatDate(document.getElementById('endDate').value);
             
-            if (!courseId || !subjectId) {
-                alert("Please select a course and subject first");
-                return;
-            }
+            // Show a loading message
+            const printBtn = document.getElementById('printBtn');
+            const originalText = printBtn.innerHTML;
+            printBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Preparing...';
+            printBtn.disabled = true;
             
-            const debugInfo = {
-                "期望的数据库路径": `attendance/${courseId}/${subjectId}/{日期_时间_${lectureID}_类型}/students/{学生ID}`,
-                "您可以尝试": [
-                    `检查 attendance/${courseId}/${subjectId} 集合中的文档`,
-                    `确保文档ID包含讲师ID "${lectureID}"`,
-                    `检查文档下是否有 students 子集合`
-                ],
-                "当前讲师ID": lectureID,
-                "测试路径样例": `attendance/${courseId}/${subjectId}/2025-03-01_09:30_${lectureID}_lecture/students/23087224`
+            // Set a timeout to reset the button if something goes wrong
+            const resetTimeout = setTimeout(() => {
+                printBtn.innerHTML = originalText;
+                printBtn.disabled = false;
+            }, 10000); // 10 seconds timeout
+            
+            // Function to reset the button state
+            const resetButton = () => {
+                clearTimeout(resetTimeout);
+                printBtn.innerHTML = originalText;
+                printBtn.disabled = false;
             };
             
-            // 创建一个模态框来显示调试信息
-            const modal = document.createElement('div');
-            modal.style.position = 'fixed';
-            modal.style.top = '0';
-            modal.style.left = '0';
-            modal.style.width = '100%';
-            modal.style.height = '100%';
-            modal.style.backgroundColor = 'rgba(0,0,0,0.5)';
-            modal.style.zIndex = '9999';
-            modal.style.display = 'flex';
-            modal.style.justifyContent = 'center';
-            modal.style.alignItems = 'center';
-            
-            const content = document.createElement('div');
-            content.style.backgroundColor = 'white';
-            content.style.padding = '20px';
-            content.style.borderRadius = '10px';
-            content.style.maxWidth = '80%';
-            content.style.maxHeight = '80%';
-            content.style.overflow = 'auto';
-            
-            let html = '<h3 style="color:#4f46e5">调试信息</h3>';
-            html += '<p>以下是系统期望的数据结构路径及帮助信息：</p>';
-            
-            for (const [key, value] of Object.entries(debugInfo)) {
-                html += `<p><strong>${key}:</strong> `;
-                if (Array.isArray(value)) {
-                    html += '<ul>';
-                    value.forEach(item => {
-                        html += `<li>${item}</li>`;
+            // Get lecturer name asynchronously
+            loadLecturerName().then(lecturerName => {
+                try {
+                    // Add report title and header
+                    doc.setFontSize(20);
+                    doc.setTextColor(79, 70, 229); // Purple color matching the UI
+                    doc.text('Advanced Attendance System', 105, 15, { align: 'center' });
+                    
+                    doc.setFontSize(16);
+                    doc.setTextColor(0, 0, 0);
+                    doc.text('Attendance Report', 105, 25, { align: 'center' });
+                    
+                    // Add report metadata
+                    doc.setFontSize(11);
+                    doc.text(`Course: ${courseId}`, 14, 40);
+                    doc.text(`Subject: ${subjectId}`, 14, 47);
+                    doc.text(`Period: ${startDate} to ${endDate}`, 14, 54);
+                    doc.text(`Generated by: ${lecturerName || 'N/A'}`, 14, 61);
+                    doc.text(`Date: ${formatDate(new Date().toISOString().split('T')[0])}`, 14, 68);
+                    
+                    // Add a divider line
+                    doc.setDrawColor(79, 70, 229);
+                    doc.setLineWidth(0.5);
+                    doc.line(14, 72, 196, 72);
+                    
+                    // Create table header styles
+                    const tableStyles = {
+                        headStyles: { 
+                            fillColor: [79, 70, 229],
+                            textColor: 255,
+                            fontStyle: 'bold',
+                            fontSize: 10
+                        },
+                        bodyStyles: { 
+                            fontSize: 9,
+                            lineColor: [220, 220, 220]
+                        },
+                        alternateRowStyles: { 
+                            fillColor: [248, 250, 252]
+                        },
+                        margin: { top: 75 }
+                    };
+                    
+                    // Get table data
+                    const tableElement = document.getElementById('reportTable');
+                    
+                    // Count records by status
+                    const rows = document.querySelectorAll('#reportBody tr');
+                    let presentCount = 0;
+                    let absentCount = 0;
+                    let approvedAbsenceCount = 0;
+                    let pendingCount = 0;
+                    
+                    rows.forEach(row => {
+                        const statusCell = row.querySelector('td:nth-child(6)');
+                        if (statusCell) {
+                            const statusText = statusCell.textContent.trim();
+                            if (statusText === 'Present') presentCount++;
+                            else if (statusText === 'Absent') absentCount++;
+                            else if (statusText === 'Approved Absence') approvedAbsenceCount++;
+                            else if (statusText === 'Pending Absence') pendingCount++;
+                        }
                     });
-                    html += '</ul>';
-                } else {
-                    html += `${value}`;
+                    
+                    // Use jspdf-autotable to create the table
+                    doc.autoTable({
+                        html: '#reportTable',
+                        startY: 75,
+                        styles: tableStyles.bodyStyles,
+                        headStyles: tableStyles.headStyles,
+                        alternateRowStyles: tableStyles.alternateRowStyles,
+                        margin: { left: 15, right: 15 }, // Center the table with equal margins
+                        columnStyles: { 
+                            0: { cellWidth: 12 },    // No. column (narrower)
+                            1: { cellWidth: 20 },   // Student ID
+                            2: { cellWidth: 40 },   // Student Name
+                            3: { cellWidth: 25 },   // Date
+                            4: { cellWidth: 20 },   // Session
+                            5: { cellWidth: 20 },   // Status
+                            6: { cellWidth: 20 },   // Method
+                            7: { cellWidth: 20 }    // Reason
+                        },
+                        didDrawPage: function(data) {
+                            // Add page number to each page
+                            doc.setFontSize(9);
+                            doc.text(`Page ${data.pageNumber} of ${doc.getNumberOfPages()}`, 
+                                data.settings.margin.left, 
+                                doc.internal.pageSize.height - 10);
+                        }
+                    });
+                    
+                    // Add summary after the table
+                    const finalY = (doc.lastAutoTable.finalY || 75) + 10;
+                    
+                    // Calculate total height needed for the summary
+                    const summaryHeight = 70; // Height needed for title and 5 lines of statistics
+                    
+                    // Check if we need a new page for the summary - use a more conservative check
+                    // to ensure the entire summary fits nicely on the page
+                    if (finalY > doc.internal.pageSize.height - summaryHeight) {
+                        // Not enough space for summary - create a new page
+                        doc.addPage();
+                        
+                        // Add a title centered at the top
+                        doc.setFontSize(16);
+                        doc.setTextColor(79, 70, 229);
+                        doc.text('Attendance Summary', doc.internal.pageSize.width / 2, 30, { align: 'center' });
+                        
+                        // Add summary box
+                        doc.setDrawColor(220, 220, 220);
+                        doc.setFillColor(248, 250, 252);
+                        doc.roundedRect(20, 40, doc.internal.pageSize.width - 40, 70, 3, 3, 'FD');
+                        
+                        // Add summary statistics with improved formatting
+                        doc.setFontSize(11);
+                        doc.setTextColor(0, 0, 0);
+                        
+                        // Center the content in the summary box
+                        const centerX = doc.internal.pageSize.width / 2;
+                        
+                        // Calculate percentages safely
+                        const totalRecords = rows.length;
+                        const presentPercent = totalRecords > 0 ? Math.round(presentCount/totalRecords*100) : 0;
+                        const absentPercent = totalRecords > 0 ? Math.round(absentCount/totalRecords*100) : 0;
+                        const approvedAbsencePercent = totalRecords > 0 ? Math.round(approvedAbsenceCount/totalRecords*100) : 0;
+                        const pendingPercent = totalRecords > 0 ? Math.round(pendingCount/totalRecords*100) : 0;
+                        
+                        // Left column (left-aligned)
+                        doc.text(`Total Records: ${totalRecords}`, 30, 55);
+                        doc.text(`Present: ${presentCount} (${presentPercent}%)`, 30, 67);
+                        doc.text(`Absent: ${absentCount} (${absentPercent}%)`, 30, 79);
+                        
+                        // Right column (left-aligned but positioned on right side)
+                        doc.text(`Approved Absence: ${approvedAbsenceCount} (${approvedAbsencePercent}%)`, centerX + 10, 67);
+                        doc.text(`Pending: ${pendingCount} (${pendingPercent}%)`, centerX + 10, 79);
+                        
+                        // Add a footer note
+                        doc.setFontSize(9);
+                        doc.setTextColor(100, 100, 100);
+                        doc.text('Generated by Advanced Attendance System', centerX, 120, { align: 'center' });
+                    } else {
+                        // There's enough space for the summary on the current page
+                        // Add a title for the summary
+                        doc.setFontSize(14);
+                        doc.setTextColor(79, 70, 229);
+                        doc.text('Attendance Summary', 105, finalY, { align: 'center' });
+                        
+                        // Add a box around the summary
+                        doc.setDrawColor(220, 220, 220);
+                        doc.setFillColor(248, 250, 252);
+                        doc.roundedRect(20, finalY + 5, doc.internal.pageSize.width - 40, 60, 3, 3, 'FD');
+                        
+                        // Calculate percentages safely
+                        const totalRecords = rows.length;
+                        const presentPercent = totalRecords > 0 ? Math.round(presentCount/totalRecords*100) : 0;
+                        const absentPercent = totalRecords > 0 ? Math.round(absentCount/totalRecords*100) : 0;
+                        const approvedAbsencePercent = totalRecords > 0 ? Math.round(approvedAbsenceCount/totalRecords*100) : 0;
+                        const pendingPercent = totalRecords > 0 ? Math.round(pendingCount/totalRecords*100) : 0;
+                        
+                        // Add summary statistics
+                        doc.setFontSize(11);
+                        doc.setTextColor(0, 0, 0);
+                        
+                        // Center the content in the summary box
+                        const centerX = doc.internal.pageSize.width / 2;
+                        
+                        // Left column (left-aligned)
+                        doc.text(`Total Records: ${totalRecords}`, 30, finalY + 20);
+                        doc.text(`Present: ${presentCount} (${presentPercent}%)`, 30, finalY + 32);
+                        doc.text(`Absent: ${absentCount} (${absentPercent}%)`, 30, finalY + 44);
+                        
+                        // Right column (left-aligned but positioned on right side)
+                        doc.text(`Approved Absence: ${approvedAbsenceCount} (${approvedAbsencePercent}%)`, centerX + 10, finalY + 32);
+                        doc.text(`Pending: ${pendingCount} (${pendingPercent}%)`, centerX + 10, finalY + 44);
+                    }
+                    
+                    try {
+                        // Setup autoPrint
+                        doc.autoPrint();
+                        
+                        // Open PDF in a new window for printing
+                        const blob = doc.output('blob');
+                        const blobURL = URL.createObjectURL(blob);
+                        
+                        // Try to open in new window
+                        const printWindow = window.open(blobURL);
+                        
+                        if (printWindow) {
+                            // If window opened successfully
+                            console.log("Print window opened successfully");
+                            
+                            // Reset button after window is loaded
+                            printWindow.onload = function() {
+                                // Reset the button after a short delay
+                                setTimeout(resetButton, 1000);
+                                
+                                // Also try to catch the print completion
+                                if (printWindow.onafterprint !== undefined) {
+                                    printWindow.onafterprint = function() {
+                                        URL.revokeObjectURL(blobURL);
+                                        resetButton();
+                                    };
+                                }
+                            };
+                            
+                            // Fallback: if the window closes or loses focus
+                            printWindow.onunload = resetButton;
+                            window.onfocus = resetButton;
+                        } else {
+                            // If popup blocked, fallback to standard print
+                            console.log("Print window was blocked. Falling back to default print method.");
+                            resetButton();
+                            window.print();
+                        }
+                    } catch (error) {
+                        console.error("Error with print window:", error);
+                        // Fallback to standard print
+                        resetButton();
+                        window.print();
+                    }
+                } catch (error) {
+                    console.error("Error preparing print document:", error);
+                    alert("Error preparing document for printing. Please try again.");
+                    resetButton();
                 }
-                html += '</p>';
-            }
-            
-            html += '<p>您可以在控制台中执行以下命令来查询数据：</p>';
-            html += `<pre style="background:#f5f5f5;padding:10px;border-radius:5px;overflow:auto">db.collection("attendance").doc("${courseId}").collection("${subjectId}").get().then(snap => {
-    console.log("找到 " + snap.size + " 个会话");
-    snap.docs.forEach(doc => console.log(doc.id));
-})</pre>`;
-            
-            html += '<button id="closeDebugModal" style="background:#4f46e5;color:white;border:none;padding:10px 15px;border-radius:5px;margin-top:15px;cursor:pointer">关闭</button>';
-            
-            content.innerHTML = html;
-            modal.appendChild(content);
-            document.body.appendChild(modal);
-            
-            document.getElementById('closeDebugModal').addEventListener('click', () => {
-                document.body.removeChild(modal);
+            }).catch(error => {
+                console.error("Error getting lecturer name:", error);
+                alert("Error preparing document for printing. Please try again.");
+                resetButton();
             });
         }
     </script>
