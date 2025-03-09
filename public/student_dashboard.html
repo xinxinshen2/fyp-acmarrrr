@@ -1006,6 +1006,7 @@
                 const subjectName = checkbox.getAttribute('data-subject-name') || '';
                 const endTime = checkbox.getAttribute('data-end-time') || '';
                 const lectureID = checkbox.getAttribute('data-lecturer-id') || '';
+                const sessionGroup = checkbox.getAttribute('data-session-group') || 'all';
                 
                 missedSessions.push({
                     courseCode,
@@ -1016,8 +1017,9 @@
                     endTime,      // 添加结束时间
                     type,
                     lectureID,    // Add lecturer ID
+                    sessionGroup, // Add session group
                     // 构建与attendance系统兼容的sessionId
-                    sessionId: `${date}_${startTime}_${lectureID}_${type}_${group}`,
+                    sessionId: `${date}_${startTime}_${lectureID}_${type}_${sessionGroup}`,
                     // 为每个会话添加初始状态
                     status: "pending"
                 });
@@ -1120,7 +1122,7 @@
                                     reason: reason,
                                     timestamp: new Date(),
                                     method: "absence_request",
-                                    group: group
+                                    group: session.sessionGroup
                                 });
                             }
                         }
@@ -1529,6 +1531,7 @@ async function updateAffectedCourses() {
                                                data-start-time="${session.startTime}"
                                                data-end-time="${session.endTime}"
                                                data-lecturer-id="${session.lectureID || ''}"
+                                               data-session-group="${session.group || 'all'}"
                                                checked>
                                     </div>
                                     <div class="session-info">
