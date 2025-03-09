@@ -1899,13 +1899,28 @@ window.hideSessionDetail = function() {
             
             // 2. 更新学生的缺席申请状态 - 保留文件信息
             // 按课程和组分组处理以减少数据库调用
+            const studentGroupsMap = {};
+            for (const session of sessionsToProcess) {
+                const studentId = session.studentId;
+                if (!studentGroupsMap[studentId]) {
+                    // 获取学生信息
+                    const studentRef = doc(db, "student", studentId);
+                    const studentDoc = await getDoc(studentRef);
+                    if (studentDoc.exists()) {
+                        const studentData = studentDoc.data();
+                        studentGroupsMap[studentId] = studentData.group;
+                    }
+                }
+            }
+
             const sessionsByGroup = {};
             sessionsToProcess.forEach(session => {
-                const groupKey = `${session.courseCode}_${session.sessionId.split('_')[3]}_${session.studentId}`;
+                const studentGroup = studentGroupsMap[session.studentId] || "unknown";
+                const groupKey = `${session.courseCode}_${studentGroup}_${session.studentId}`;
                 if (!sessionsByGroup[groupKey]) {
                     sessionsByGroup[groupKey] = {
                         course: session.courseCode,
-                        group: session.sessionId.split('_')[3],
+                        group: studentGroup, // 使用从学生数据获取的正确组信息
                         student: session.studentId,
                         sessions: []
                     };
@@ -1977,8 +1992,8 @@ window.hideSessionDetail = function() {
                     
                     // 准备学生的缺席记录数据
                     const studentRecord = {
-                        status: "absent",           // 缺席状态
-                        method: "leave",            // 请假方式
+                        status: "approved_absence",  // 修改为approved_absence而不是absent
+                        method: "absence_request_approved",  // 修改为absence_request_approved
                         timestamp: new Date(),      // 时间戳
                         reason: absenceTypeValue,   // 缺席类型代码
                         approvedBy: lectureID,      // 批准人
