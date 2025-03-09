@@ -584,6 +584,15 @@
                 
                 for (const courseDoc of coursesSnapshot.docs) {
                     const courseId = courseDoc.id;
+                    const courseData = courseDoc.data();
+                    const expiryDate = courseData.subjectExpiry?.toDate(); // Convert Firebase timestamp
+                    
+                    // Skip expired courses
+                    if (expiryDate && expiryDate < new Date()) {
+                        console.log(`Skipping expired course for total count: ${courseId}`);
+                        continue;
+                    }
+                    
                     const subjectsSnapshot = await getDocs(collection(db, "course", courseId, "subject"));
                     
                     for (const subjectDoc of subjectsSnapshot.docs) {
