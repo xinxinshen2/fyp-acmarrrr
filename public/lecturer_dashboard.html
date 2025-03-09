@@ -295,15 +295,20 @@
         }
 
         .slider {
+            height: 45px;
+            width: 70px;
             position: absolute;
             cursor: pointer;
-            top: 0;
-            left: 0;
+            top: -12px;
+            left: -30px;
             right: 0;
             bottom: 0;
             background-color: #ccc;
             transition: 0.4s;
             border-radius: 20px;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-bottom: 1px solid rgba(221, 221, 221, 0.5);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
         
         input:checked + .slider {
@@ -599,7 +604,17 @@
         .student-item.invalid { color: #FF9800; font-weight: bold; } /* Orange */
         .student-item.unknown { color: #F44336; font-weight: bold; } /* Red */
 
+        .btn-toHideSessionDetial{
+            margin-top: 16px;
+            margin-left: 40px;
+            padding: 15px 20px;
+            background-color: rgba(255, 255, 255, 0.5);
+            backdrop-filter: blur(10px);
+            border-radius: 15px; 
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 
+        }
 
     </style>
 
@@ -1626,7 +1641,7 @@ window.showSessionDetail = function(lectureID,subjectName, subjectId, group, cou
                 <span class="slider"></span>                         
                       
             </label>
-            <button onclick="hideSessionDetail()">Back</button>
+            <button class="btn-toHideSessionDetial" onclick="hideSessionDetail()">Back</button>
         </div>
     `;
 
