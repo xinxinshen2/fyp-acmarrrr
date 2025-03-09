@@ -1005,6 +1005,7 @@
                 const [courseCode, subjectId, date, startTime, type] = checkbox.value.split('|');
                 const subjectName = checkbox.getAttribute('data-subject-name') || '';
                 const endTime = checkbox.getAttribute('data-end-time') || '';
+                const lectureID = checkbox.getAttribute('data-lecturer-id') || '';
                 
                 missedSessions.push({
                     courseCode,
@@ -1014,8 +1015,9 @@
                     startTime,
                     endTime,      // 添加结束时间
                     type,
+                    lectureID,    // Add lecturer ID
                     // 构建与attendance系统兼容的sessionId
-                    sessionId: `${date}_${startTime}_${type}_${group}`,
+                    sessionId: `${date}_${startTime}_${lectureID}_${type}_${group}`,
                     // 为每个会话添加初始状态
                     status: "pending"
                 });
