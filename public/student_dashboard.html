@@ -1111,7 +1111,7 @@
                             
                             // 如果考勤记录不存在，则创建一个标记为"pending_absence"的记录
                             // 这样可以防止与其他考勤方式冲突
-                            if (!attendanceDoc.exists()) {
+                            /*if (!attendanceDoc.exists()) {
                                 await setDoc(attendanceRef, {
                                     status: "pending_absence",
                                     reason: reason,
@@ -1119,7 +1119,7 @@
                                     method: "absence_request",
                                     group: session.sessionGroup
                                 });
-                            }
+                            }*/
                         }
                     }
                 }
