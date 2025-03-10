@@ -1305,6 +1305,7 @@ async function matchStudentAndRecordAttendance(subjectId, venue, course, group) 
             courseId: student.course,
             subjectId: subjectId,
             status: "present",
+            method: "nfc",
             group: student.group // Include group in the record
         });
     });
@@ -1395,6 +1396,7 @@ async function saveAttendanceToFirestore(subjectId, courseId, group, studentReco
         batch.set(studentDocRef, {
             uid: student.uid || "unknown",
             status: "absent",
+            method: "nfc",
             timestamp: serverTimestamp()
         }, { merge: true });
     });
@@ -1410,6 +1412,7 @@ async function saveAttendanceToFirestore(subjectId, courseId, group, studentReco
         batch.set(studentDocRef, {
             uid: record.uid,
             status: "present",
+            method: "nfc",
             timestamp: serverTimestamp()
         }, { merge: true });
     });
