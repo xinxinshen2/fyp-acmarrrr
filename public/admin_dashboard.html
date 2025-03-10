@@ -1639,7 +1639,7 @@ let tableHTML ="";
       // <td>${alertItem.group}</td>
   alerts.forEach(alertItem => {
     tableHTML += `<tr data-student="${alertItem.studentId}">
-        <td><input type="checkbox" class="alertCheckbox" value="${alertItem.studentId}" /></td>
+        <td class="checkAlert"><input type="checkbox" class="alertCheckbox" value="${alertItem.studentId}" /></td>
         <td>${alertItem.studentId}</td>
         
         <td>${alertItem.course}</td>
@@ -2249,13 +2249,14 @@ document.addEventListener("DOMContentLoaded", () => {
           border-radius: 4px;
           cursor: pointer;
           font-size: 16px;
-
         }
+
+        
         #deleteSelectedBtn:hover{
           background-color: #e43f51;          
         }
 
-        .deleteCheckbox {
+        .deleteCheckbox ,.alertCheckbox {
           -webkit-appearance: none; 
           -moz-appearance: none;   
           appearance: none;
@@ -2269,6 +2270,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
         .deleteCheckbox:checked {
           background-color: #ff4b5c;
+          border: 2px solid rgba(255, 255, 255, 0.5);;
+        }
+
+        .alertCheckbox:checked::after {
+          content: "";
+          position: absolute;
+          left: 5px;
+          top: 0px;
+          width: 5px;
+          height: 10px;
+          border: solid white;
+          border-width: 0 2px 2px 0;
+          transform: rotate(45deg);
+        }
+
+        .alertCheckbox:checked {
+          background-color: #4a90ff;
           border: 2px solid rgba(255, 255, 255, 0.5);;
         }
 
@@ -2360,7 +2378,7 @@ document.addEventListener("DOMContentLoaded", () => {
             
             <div class="nav-btn"> <p> Home  </p> </div>
             <div class="nav-btn"> <p> View User  </p> </div>
-            <div class="nav-btn"> <p> Data Analysis </p></div>
+            <div class="-btnavn"> <p> Data Analysis </p></div>
             <div class="nav-btn"> <p> Timetable  </p> </div>
             <!-- <div class="nav-btn"> <p> Setting  </p> </div> -->
 
