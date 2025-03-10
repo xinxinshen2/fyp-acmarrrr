@@ -77,7 +77,7 @@ window.onload = function() {
     const startProgress = () => {
         let time = 0;
         const totalTime = 3000; 
-        const circumference = 284; // 矩形周长 (2 * (width + height) - 8 * rx)
+        const circumference = 284;
 
         progressInterval = setInterval(() => {
             time += 10; // Update every 10ms
@@ -205,8 +205,8 @@ async function fetchUsers() {
         displayUsers(filteredUsers);
 
     } catch (error) {
-        console.error("获取数据时出错:", error);
-        userContainer.innerHTML = "<p>数据加载失败，请检查数据库连接。</p>";
+        console.error("Error getting data:", error);
+        userContainer.innerHTML = "<p>Data loading failed, please check the database connection.</p>";
     }
 }
 
@@ -361,8 +361,8 @@ document.addEventListener('DOMContentLoaded', () => {
       courseSelect.appendChild(option);
     });
   } catch (error) {
-    console.error("获取课程列表出错:", error);
-    alert("获取课程列表出错，请检查控制台了解详细信息。");
+    console.error("Error getting course list:", error);
+    alert("There was an error getting the course list, please check the console for details.");
   }
 }
 populateCourseOptions();
@@ -402,11 +402,6 @@ document.getElementById("role").addEventListener("change", function() {
   }
 });
 
-// margin-bottom: 15px;
-//     display: flex
-// ;
-//     align-items: center;
-//     justify-content: center;
 
 
 document.getElementById("course").addEventListener("change", async (e) => {
@@ -452,15 +447,14 @@ try {
 }
 
 } catch (error) {
-  console.error("查询记录出错：", error);
-  alert("查询记录出错，请检查控制台了解详细信息。");
+  console.error("Error in querying records:", error);
+  alert("Error querying records, please check the console for details.");
 }
 });
 
 document.getElementById("role").addEventListener("change", async (e) => {
   const role = e.target.value;
   if (role === "lecturer") {
-    // Since lecturers don't need a course, immediately calculate lecturer ID
     try {
       let newLecturerID = "";
       const lecturersSnapshot = await getDocs(collection(db, "lecturer"));
@@ -479,13 +473,12 @@ document.getElementById("role").addEventListener("change", async (e) => {
       alert("Error calculating lecturer ID. Check the console for details.");
     }
   } else if (role === "student") {
-    // Optionally clear the idDisplay or let the course event handle it
     document.getElementById("idDisplay").textContent = "";
   }
 });
 
 
-// 绑定表单提交事件
+
 const form = document.getElementById("addUserForm");
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -676,7 +669,6 @@ function displayUsersForDelete(users) {
 
   const table = document.createElement("table");
   table.border = "1";
-  // table.style.width = "100%";
   table.style.borderCollapse = "collapse";
   table.id = "deleteTable";
 
@@ -745,7 +737,7 @@ function displayUsersForDelete(users) {
         return;
     }
 
-    // 删除 Firestore 里对应角色的用户文档
+    // delete the selected user from Firestore document
     for (const userObj of usersToDelete) {
         let collectionName;
         if (userObj.role === "admin") {
@@ -764,20 +756,18 @@ function displayUsersForDelete(users) {
         }
     }
 
-    // **删除 `user` 集合中的文档（优化查询）**
     try {
     const userCollectionRef = collection(db, "user");
-    const userSnapshot = await getDocs(userCollectionRef); // 读取所有文档
+    const userSnapshot = await getDocs(userCollectionRef); //read all document
 
     for (const docSnap of userSnapshot.docs) {
-        const userData = docSnap.data(); // 获取文档数据
-        const docID = docSnap.id; // Firestore 文档ID
-        const userID = userData.ID; // 读取文档内部的 "ID" 字段
+        const userData = docSnap.data(); 
+        const docID = docSnap.id; 
+        const userID = userData.ID; 
 
-        // 检查 userID 是否在 usersToDelete 列表中
         if (usersToDelete.some(userObj => userObj.id === userID)) {
             try {
-                await deleteDoc(doc(db, "user", userID)); // 根据文档ID删除
+                await deleteDoc(doc(db, "user", userID)); 
                 console.log(`Deleted user ${docID} with ID ${userID} from user collection`);
             } catch (error) {
                 console.error("Error deleting Firestore document from user collection:", error);
@@ -789,7 +779,7 @@ function displayUsersForDelete(users) {
 }
     alert("Selected users deleted.");
 
-    fetchUsers(); // 重新获取用户列表
+    fetchUsers(); 
 });
 }
 
@@ -835,7 +825,6 @@ async function loadGroups(courseId) {
 //TIMETABLE
 let selectedGroup = "";
 
-  // 1. 加载课程列表，并在 .selectCourse 中生成下拉框
   async function loadCourses() {
     const courseContainer = document.querySelector(".selectCourse");
 
@@ -844,7 +833,7 @@ let selectedGroup = "";
       const courseSnapshot = await getDocs(collection(db, "course"));
       let html = `<select id="courseSelect"><option value="">Choose Course</option>`;
       courseSnapshot.forEach(docSnap => {
-        const courseId = docSnap.id; // 假设文档ID为课程代码，如 DIIT2308
+        const courseId = docSnap.id; 
         html += `<option value="${courseId}">${courseId}</option>`;
       });
       html += `</select>`;
@@ -893,15 +882,10 @@ let selectedGroup = "";
 
       subjectSnapshot.forEach(subDoc => {
       const subjectData = subDoc.data();
-      // Check that sessions is an array and process it
       if (subjectData.sessions && Array.isArray(subjectData.sessions)) {
         subjectData.sessions.forEach(session => {
-          // Assume session.day is a full day name like "Monday"
           if (sessionsByDay[session.day]) {
-            // If a group filter is active, only add session if its group matches.
-            // (If session.group is not provided, you might choose to always add it.)
             if (groupFilter && session.group && session.group !== groupFilter) {
-              // Skip this session because it does not belong to the filtered group.
             } else {
               sessionsByDay[session.day].push({
                 subjectName: subjectData.name,
@@ -931,17 +915,13 @@ let selectedGroup = "";
     }
   }
 
-  // 3. 根据 sessionsByDay 对象渲染 timetable 表格
   function renderTimetable(sessionsByDay) {
     const tableDisplay = document.querySelector(".tableDisplay");
     let html = "<table style='width: 100%; border-collapse: collapse; table-layout: fixed;'>"; //border-spacing: 0;
-    // 每一行显示一个星期的 session
     const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
     days.forEach(day => {
       html += `<tr style="border: 1px solid #ccc;">`;
-      // 第一列显示星期名称
       html += `<td style="padding: 8px; border: 1px solid #ccc; font-weight: bold; background: #f2f2f2; width: 15%; text-align: center; vertical-align: middle;">${day}</td>`;
-      // 后续列显示当天所有的 sessions（如果有多个 session，则各自占用一个 cell）
       if (sessionsByDay[day].length > 0) {
         sessionsByDay[day].forEach(session => {
           html += `
@@ -950,9 +930,9 @@ let selectedGroup = "";
                 border: 1px solid #ccc; 
                 text-align: center; 
                 vertical-align: top;
-                width: 25%; /* 课程占据剩余空间 */
-                min-height: 80px; /* 设定最小高度，确保单元格大小一致 */
-                word-wrap: break-word; /* 让长文本自动换行 */
+                width: 25%; 
+                min-height: 80px; 
+                word-wrap: break-word; 
                 overflow-wrap: break-word;">
                    <strong>${session.subjectName}</strong> (${session.type}) <br><br>
                    <strong> Group: </strong> ${session.group}<br>
@@ -1162,19 +1142,15 @@ document.getElementById("subjectSelect").addEventListener("change", function() {
 });
 
 function getSubjectExpiry() {
-    const now = new Date();
-    now.setFullYear(now.getFullYear() + 2); // 加 2 年
-    now.setMonth(3); // 设定为 4 月（JavaScript 的月份从 0 开始，所以 3 代表 4 月）
-    now.setDate(6); // 设定为 6 日
-    now.setHours(0, 0, 0, 0); // 设定时间为 00:00:00
+    const expiryDate = new Date();
+    expiryDate.setFullYear(2025); 
+    expiryDate.setMonth(3); 
+    expiryDate.setDate(6); 
+    expiryDate.setHours(0, 0, 0, 0); 
 
-    // 格式化为 "YYYY年MM月DD日 UTC+8 00:00:00"
-    const year = now.getFullYear();
-    const month = now.getMonth() + 1; // JavaScript 月份是 0-11，所以要 +1
-    const day = now.getDate();
-
-    return `${year}年${month}月${day}日 UTC+8 00:00:00`;
+    return expiryDate.getTime(); // Return timestamp in milliseconds
 }
+
 
     
    // Form submission handling
@@ -1314,7 +1290,8 @@ if (subjectSelectValue === "addNew") {
       async function loadStudentGroups(courseId) {
   const groupSelect = document.getElementById("groupSelectAdd");
   // Clear any existing options, keep a default prompt
-  groupSelect.innerHTML = '<option value="">Select Student Group</option>';
+  groupSelect.innerHTML = '<option value="">Select Student Group</option><option value="all">all</option> ';
+  
   try {
     // Query students for the given course
     const q = query(collection(db, "student"), where("course", "==", courseId));
@@ -1537,31 +1514,32 @@ function parseDate(dateStr) {
 // Helper: Calculate maximum consecutive days from an array of date strings.
 function getMaxConsecutiveDays(dateStrArray) {
   if (dateStrArray.length === 0) return 0;
-  const dates = dateStrArray.map(parseDate).sort((a, b) => a - b);
+  
+  // 先去重并排序
+  const uniqueDates = [...new Set(dateStrArray.map(parseDate))].sort((a, b) => a - b);
   let maxStreak = 1, currentStreak = 1;
-  for (let i = 1; i < dates.length; i++) {
-    const diff = (dates[i] - dates[i - 1]) / (1000 * 60 * 60 * 24);
+
+  for (let i = 1; i < uniqueDates.length; i++) {
+    const diff = (uniqueDates[i] - uniqueDates[i - 1]) / (1000 * 60 * 60 * 24);
+    
     if (diff === 1) {
       currentStreak++;
     } else {
       currentStreak = 1;
     }
-    if (currentStreak > maxStreak) maxStreak = currentStreak;
+    maxStreak = Math.max(maxStreak, currentStreak);
   }
   return maxStreak;
 }
 
-// Placeholder: Function to send an email notification.
+
+
 async function sendEmailToStudent(emailAddress, subject, message) {
-  // Construct a mailto URL with proper URL encoding.
   const mailtoLink = `mailto:${encodeURIComponent(emailAddress)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
-  // Open the user's default mail client by navigating to the mailto URL.
   window.location.href = mailtoLink;
-  // Return a resolved promise for consistency.
   return Promise.resolve();
 }
 
-// Get the list of subject IDs from the course's "subject" subcollection in the course collection.
 async function getSubjectsForCourse(courseIDattend) {
   const courseDocRef = doc(db, "course", courseIDattend);
   const subjectsSnapshot = await getDocs(collection(courseDocRef, "subject"));
@@ -1575,32 +1553,30 @@ async function getSubjectsForCourse(courseIDattend) {
 
 async function analyzeAttendance(courseIDattend) {
   console.log("Analyzing attendance for course:", courseIDattend);
-  const studentAbsences = {}; // Format: { studentId: { group, course, dates: [], details: [] } }
+  const studentAbsences = {}; 
 
   try {
-    // Retrieve subject IDs from the course document's "subject" subcollection.
     const subjects = await getSubjectsForCourse(courseIDattend);
+    console.log("Subjects retrieved:", subjects);
 
-    // For each subject, retrieve its attendance records from the attendance document.
     for (const subjectId of subjects) {
-      // Build a reference to the subject subcollection under attendance.
-      // Path: /attendance/{courseIDattend}/{subjectId}/...
       const subjectCollectionRef = collection(db, "attendance", courseIDattend, subjectId);
       const recordsSnapshot = await getDocs(subjectCollectionRef);
       console.log(`Subject ${subjectId} has ${recordsSnapshot.size} attendance records.`);
 
       // Process each attendance record.
       for (const recordDoc of recordsSnapshot.docs) {
-        // Record ID format: "2025-02-24_10:00_99998888_lecture"
         const recordId = recordDoc.id;
         const parts = recordId.split("_");
-        const dateStr = parts[0]; // e.g., "2025-02-24"
-        // Get the "students" subcollection under this record.
+        const dateStr = parts[0];
+
         const studentsSnapshot = await getDocs(collection(recordDoc.ref, "students"));
         console.log(`Record ${recordId} has ${studentsSnapshot.size} student records.`);
-        studentsSnapshot.forEach(studentDoc => {
+
+        for (const studentDoc of studentsSnapshot.docs) {
           const studentId = studentDoc.id;
           const studentData = studentDoc.data();
+
           if (studentData.status === "absent") {
             if (!studentAbsences[studentId]) {
               studentAbsences[studentId] = {
@@ -1612,14 +1588,14 @@ async function analyzeAttendance(courseIDattend) {
             }
             studentAbsences[studentId].dates.push(dateStr);
             studentAbsences[studentId].details.push({
-              subject: subjectId, // Use subjectId as subject name.
+              subject: subjectId,
               date: dateStr,
               time: parts[1],
               lecturerID: parts[2],
               classType: parts[3]
             });
           }
-        });
+        }
       }
     }
 
@@ -1628,7 +1604,7 @@ async function analyzeAttendance(courseIDattend) {
       const record = studentAbsences[studentId];
       const uniqueDates = Array.from(new Set(record.dates));
       const maxConsecutive = getMaxConsecutiveDays(uniqueDates);
-      if (maxConsecutive >= 1) {
+      if (maxConsecutive >= 1) { 
         alerts.push({
           studentId: studentId,
           group: record.group,
@@ -1638,44 +1614,53 @@ async function analyzeAttendance(courseIDattend) {
         });
       }
     }
-    // Sort alerts in descending order.
+
     alerts.sort((a, b) => b.consecutiveDays - a.consecutiveDays);
-    window.alertsData = alerts; // Store globally if needed.
+    window.alertsData = alerts; 
+    console.log("Final alerts:", alerts);
 
-// Build the table HTML.
-let tableHTML = `<table id="alertsTable" style="width:100%; border-collapse: collapse;">
-  <thead>
-    <tr>
-      <th>Select</th>
-      <th>ID</th>
-      <th>Group</th>
-      <th>Course</th>
-      <th>Consecutive Absent Days</th>
-      <th>Details</th>
-    </tr>
-  </thead>
-  <tbody>`;
-alerts.forEach(alertItem => {
-  tableHTML += `<tr data-student="${alertItem.studentId}">
-      <td><input type="checkbox" class="alertCheckbox" value="${alertItem.studentId}" /></td>
-      <td>${alertItem.studentId}</td>
-      <td>${alertItem.group}</td>
-      <td>${alertItem.course}</td>
-      <td>${alertItem.consecutiveDays}</td>
-      <td><button style="margin:0; padding:10px;" class="viewDetailsBtn " data-student="${alertItem.studentId}">View Details</button></td>
-    </tr>`;
-});
-const finalHTML = tableHTML + `</tbody></table>
-  <button id="sendAlert-btn" style="margin-top: 10px;">Send Alert</button>`;
+let tableHTML ="";
+    if (alerts.length === 0) {
+  tableHTML = `<p>No students have reached the alert threshold.</p>`;
+} else {
+  tableHTML = `<table id="alertsTable" style="width:100%; border-collapse: collapse;">
+    <thead>
+      <tr>
+        <th>Select</th>
+        <th>ID</th>
+       
+        <th>Course</th>
+        <th>Consecutive Absent Days</th>
+        <th>Details</th>
+      </tr>
+    </thead>
+    <tbody>`;
+      // <th>Group</th>
+      // <td>${alertItem.group}</td>
+  alerts.forEach(alertItem => {
+    tableHTML += `<tr data-student="${alertItem.studentId}">
+        <td><input type="checkbox" class="alertCheckbox" value="${alertItem.studentId}" /></td>
+        <td>${alertItem.studentId}</td>
+        
+        <td>${alertItem.course}</td>
+        <td>${alertItem.consecutiveDays}</td>
+        <td><button style="margin:0; padding:10px;" class="viewDetailsBtn" data-student="${alertItem.studentId}">View Details</button></td>
+      </tr>`;
+  });
 
-console.log("Final HTML:", finalHTML);  // Debug log
+  tableHTML += `</tbody></table>
+    <button id="sendAlert-btn" style="margin-top: 10px;">Send Alert</button>`;
+}
+
+console.log("Final HTML:", tableHTML);
 
 const displayContainer = document.querySelector(".displayAnalysis");
-displayContainer.innerHTML = finalHTML;
+displayContainer.innerHTML = tableHTML;
 
-// Attach event listeners.
-attachTableEventListeners(alerts, finalHTML);
-// console.log("Final HTML:", finalHTML);
+if (alerts.length > 0) {
+  attachTableEventListeners(alerts, tableHTML);
+}
+
 
   } catch (error) {
     console.error("Error analyzing attendance: ", error);
@@ -1683,69 +1668,97 @@ attachTableEventListeners(alerts, finalHTML);
   }
 }
 
-// Helper function to attach event listeners to the table elements.
-// Helper function to attach event listeners to the table elements.
 function attachTableEventListeners(alerts, tableHTML) {
   const displayContainer = document.querySelector(".displayAnalysis");
-  
-  // Attach event listener for "View Details" buttons.
+
   document.querySelectorAll(".viewDetailsBtn").forEach(btn => {
-    btn.addEventListener("click", (e) => {
-      const studentId = e.target.getAttribute("data-student");
-      const alertItem = alerts.find(a => a.studentId === studentId);
-      if (alertItem) {
-        let detailsHTML = `<div id="detailsView" style=" cursor: pointer; padding: 10px;">
-           <h3 style="padding:10px;">Details for Student ${studentId}</h3> <br><br>
-            <div class="dataShowDetail" style="text-align:center; padding-top:30px; font-size:larger;">`;
-        alertItem.details.forEach(d => {
-          detailsHTML += `<p>
-              <strong>Subject:</strong> ${d.subject}<br>
-              <strong>Date:</strong> ${d.date}<br>
-              <strong>Time:</strong> ${d.time}<br>
-              <strong>LecturerID:</strong> ${d.lecturerID}<br>
-              <strong>Class Type:</strong> ${d.classType}<br>
-            </div>`;
-        });
-        detailsHTML += `</p>
-           <br><br><br><br><br> <p><em>Tap anywhere to go back.</em></p>
-          </div>`;
-        displayContainer.innerHTML = detailsHTML;
-        // When details view is clicked, revert to the table view.
-        document.getElementById("detailsView").addEventListener("click", () => {
-          displayContainer.innerHTML = tableHTML;
-          attachTableEventListeners(alerts, tableHTML);
-        });
-      }
+  btn.addEventListener("click", (e) => {
+    const studentId = e.target.getAttribute("data-student");
+    const alertItem = alerts.find(a => a.studentId === studentId);
+
+    if (alertItem && alertItem.details.length > 0) {
+      showDetail(alertItem, displayContainer, alerts, tableHTML);
+    }
     });
   });
 
 
   // Attach event listener for the "Send Alert" button.
   document.getElementById("sendAlert-btn").addEventListener("click", async () => {
-    const checkedBoxes = document.querySelectorAll(".alertCheckbox:checked");
-    for (const checkbox of checkedBoxes) {
-      const studentId = checkbox.value;
-      const alertItem = alerts.find(a => a.studentId === studentId);
-      if (alertItem) {
-        const studentDocSnap = await getDoc(doc(db, "student", studentId));
-        if (studentDocSnap.exists()) {
-          const studentInfo = studentDocSnap.data();
-          console.log("Student info:", studentInfo);
-          const emailAddress = studentInfo.email;
-          const emailSubject = `Absence Alert for ${studentId}`;
-          const emailMessage = `Dear Student ${studentId},\n\n` +
-            `Our records indicate that you have been absent for ${alertItem.consecutiveDays} consecutive days in course ${alertItem.course}.\n` +
-            `Group: ${alertItem.group}\n` +
-            `Details:\n` +
-            alertItem.details.map(d => `${d.subject} on ${d.date} at ${d.time} (${d.classType})`).join("\n") +
-            `\n\nPlease contact your instructor if you have any questions.\n\nRegards,\nAttendance Team`;
-          await sendEmailToStudent(emailAddress, emailSubject, emailMessage);
-        }
+  const checkedBoxes = document.querySelectorAll(".alertCheckbox:checked");
+  const mailtoLinks = [];
+
+  for (const checkbox of checkedBoxes) {
+    const studentId = checkbox.value;
+    const alertItem = alerts.find(a => a.studentId === studentId);
+
+    if (alertItem) {
+      const studentDocSnap = await getDoc(doc(db, "student", studentId));
+      if (studentDocSnap.exists()) {
+        const studentInfo = studentDocSnap.data();
+        const emailAddress = studentInfo.email;
+        const emailSubject = `Absence Alert for ${studentId}`;
+        const emailMessage = `Dear Student ${studentId},\n\n` +
+          `Our records indicate that you have been absent for ${alertItem.consecutiveDays} consecutive days in course ${alertItem.course}.\n` +
+          `Group: ${alertItem.group}\n` +
+          `Details:\n` +
+          alertItem.details.map(d => `${d.subject} on ${d.date} at ${d.time} (${d.classType})`).join("\n") +
+          `\n\nPlease contact your instructor if you have any questions.\n\nRegards,\nAttendance Team`;
+
+        const mailtoLink = `mailto:${encodeURIComponent(emailAddress)}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailMessage)}`;
+        mailtoLinks.push(mailtoLink);
       }
     }
-    alert("Alerts sent.");
+  }
+
+  if (mailtoLinks.length === 0) {
+    alert("No student was selected or the corresponding email address was not found.");
+    return;
+  }
+
+   mailtoLinks.forEach((link, index) => {
+    setTimeout(() => {
+      window.open(link, "_blank");
+    }, index * 1000); 
   });
+
+  setTimeout(() => {
+    alert("All emails have been popped up, please check your email client!");
+  }, mailtoLinks.length * 1000 + 500);
+});
+
+
+
+
+
 }
+
+function showDetail(alertItem, displayContainer, alerts, tableHTML) {
+      let detailsHTML = `<div id="detailsView" style="cursor: pointer; padding: 10px;">
+        <h3 style="padding:10px;">Details for Student ${alertItem.studentId}</h3> 
+        <div class="dataShowDetail" style="text-align:center; padding-top:30px; font-size:larger;">`;
+        
+      alertItem.details.forEach((d, index) => {
+        detailsHTML += `<hr><br><p>
+          <strong>Subject:</strong> ${d.subject}<br>
+          <strong>Date:</strong> ${d.date}<br>
+          <strong>Time:</strong> ${d.time}<br>
+          <strong>LecturerID:</strong> ${d.lecturerID}<br>
+          <strong>Class Type:</strong> ${d.classType}<br>
+        </p><br><hr>`;
+      });
+    
+      detailsHTML += `</div><br><br>
+        <p style="text-align:center;"><em>Tap to go back</em></p>
+      </div>`;
+    
+      displayContainer.innerHTML = detailsHTML;
+    
+      document.getElementById("detailsView").addEventListener("click", () => {
+        displayContainer.innerHTML = tableHTML; 
+        attachTableEventListeners(alerts, tableHTML);
+      });
+    }
 
 
 // Function to load attendance courses into the select element.
@@ -1827,7 +1840,6 @@ document.addEventListener("DOMContentLoaded", () => {
             /* background-color: black; */
             display: flex;
             align-items: center;
-             /* 垂直居中 */
             padding: 10px 30px;
             border-bottom: 1px solid rgb(156, 156, 156);
             /* box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.3); */
@@ -1846,8 +1858,7 @@ document.addEventListener("DOMContentLoaded", () => {
         background-color:#343A40;
         color: white;
        }
-       
-
+      
        .nav2>.nav-btn{
             font-size: larger;
             font-weight: bolder;
@@ -1861,21 +1872,13 @@ document.addEventListener("DOMContentLoaded", () => {
         -webkit-text-fill-color: transparent;
         /* font-weight:lighter;  */
         /* border-bottom: 2px solid  #5782f5; */
-      
         /* box-shadow: 1px 1px 1px #ffff; */
-
-        
        }
 
        .nav2>.nav-btn:active{
-            /* border-bottom: #e43f51 block 1px; */
             cursor: grab;
-
        }
 
-    
-
-        /* Title Section */
         .title {
             /* margin: 2% 2% 0 2%; */
             font-size: 20px;
@@ -1922,7 +1925,7 @@ document.addEventListener("DOMContentLoaded", () => {
         background-color: #e43f51;
     }
 
-/* 进度条样式 */
+/* loading ring */
     .progress-ring {
         position: absolute;
         top: 0;
@@ -1932,8 +1935,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     .progress-ring-rect {
-        stroke-dasharray: 284; /* 矩形周长 (2 * (width + height) - 8 * rx) */
-        stroke-dashoffset: 284; /* 初始状态为 0% */
+        stroke-dasharray: 284; 
+        stroke-dashoffset: 284; 
         transition: stroke-dashoffset 0.1s linear;
         /* background-color: #ff1e38; */
     }
@@ -2061,10 +2064,7 @@ document.addEventListener("DOMContentLoaded", () => {
              flex-wrap: wrap; 
              justify-content: center;
              }
-            /* .function-Btn {
-                width: 16%;
-                height: 60px;
-            } */
+
             .function-Btn {
                 width: 25%; 
                 height: 50px;
@@ -2093,10 +2093,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 width: 100%;
                 margin: 10px auto;
             }
-            /* .function-Btn {
-                width: 16%;
-                height: 40px;
-            } */
+
             .function-Btn {
                  width: 30%;
                 height: 45px;
@@ -2258,10 +2255,9 @@ document.addEventListener("DOMContentLoaded", () => {
           background-color: #e43f51;          
         }
 
-        /* Remove default styling and create custom appearance */
         .deleteCheckbox {
-          -webkit-appearance: none; /* for Safari/Chrome */
-          -moz-appearance: none;    /* for Firefox */
+          -webkit-appearance: none; 
+          -moz-appearance: none;   
           appearance: none;
           width:20px;
           height: 20px;
@@ -2271,13 +2267,11 @@ document.addEventListener("DOMContentLoaded", () => {
           position: relative;
         }
 
-        /* Style when checkbox is checked */
         .deleteCheckbox:checked {
           background-color: #ff4b5c;
           border: 2px solid rgba(255, 255, 255, 0.5);;
         }
 
-        /* Optionally, add a checkmark using a pseudo-element */
         .deleteCheckbox:checked::after {
           content: "";
           position: absolute;
@@ -2306,7 +2300,6 @@ document.addEventListener("DOMContentLoaded", () => {
            /* width: 100%; */
         }    
 
-      /* 让 select 也继承这个样式，如果是 <select> */
       .selectCourse select, .filterGroup>select#groupSelect , select#attendanceCourseSelect{
           appearance: none;
           -webkit-appearance: none;
@@ -2324,7 +2317,8 @@ document.addEventListener("DOMContentLoaded", () => {
           margin: 0 30px;
       }
       .displayAnalysis {
-        min-height: 300px;
+        max-height: 450px;
+        overflow-y: auto;
       }      
       #detailsView{
         background-color: rgba(255, 255, 255, 0.6);
@@ -2341,20 +2335,10 @@ document.addEventListener("DOMContentLoaded", () => {
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
       }
 
-
- 
-        /* 
-
-        
-
-
-.button input:hover {
-    background: linear-gradient(-229deg, #cf91ff, #5782f5);
+.tableDisplay{
+      font-size: 12px;
 }
-
-.button input:active {
-    background-color: #777;
-} */
+ 
     </style>
 </head>
 <body>
@@ -2438,32 +2422,29 @@ document.addEventListener("DOMContentLoaded", () => {
     const homeSpace = document.querySelector(".homeSpace");
     const timeTableSpace = document.querySelector(".timeTableSpace");
 
-    // 初始状态：显示 Data Analysis，隐藏 functionSpace
-    homeSpace.style.display = "block";
+    homeSpace.style.display = "none";
     dataSpace.style.display = "block";
     functionSpace.style.display = "block";
     timeTableSpace.style.display= "block";
 
 
-    // 点击 "View User" 按钮时
     viewUserBtn.addEventListener("click", function () {
-        dataSpace.style.display = "none";  // 隐藏数据分析
+        dataSpace.style.display = "none";  
         homeSpace.style.display = "none";
-        functionSpace.style.display = "block"; // 显示用户管理功能
+        functionSpace.style.display = "block"; 
         timeTableSpace.style.display= "none";
 
     });
 
-    // 点击 "Data Analysis" 按钮时
     dataAnalysisBtn.addEventListener("click", function () {
         homeSpace.style.display="none";
-        dataSpace.style.display = "block";  // 显示数据分析
-        functionSpace.style.display = "none"; // 隐藏用户管理功能
+        dataSpace.style.display = "block";  
+        functionSpace.style.display = "none"; 
         timeTableSpace.style.display= "none";
     });
 
     homeBtn.addEventListener("click",function(){
-        homeSpace.style.display="block";
+        homeSpace.style.display="none";
         functionSpace.style.display = "block"; 
         dataSpace.style.display = "block";
         timeTableSpace.style.display= "block";

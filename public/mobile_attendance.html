@@ -43,6 +43,13 @@
         .course-select, .student-list {
             margin-bottom: 20px;
         }
+        
+        /* Improve course-select container for better mobile display */
+        .course-select {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+        }
         .student {
             display: flex;
             justify-content: space-between;
@@ -127,6 +134,16 @@
             transition: border-color 0.2s;
             font-size: 0.95rem;
         }
+        
+        /* Adding improved select styling for mobile */
+        select {
+            width: 100%;
+            padding: 8px 5px 8px 8px; /* Reduced left padding */
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+        
         select:focus, input[type="time"]:focus {
             border-color: #4f46e5;
             outline: none;
