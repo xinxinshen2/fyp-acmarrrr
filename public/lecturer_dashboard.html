@@ -1212,6 +1212,7 @@
 
 async function matchStudentAndRecordAttendance(subjectId, venue, course, group) {
     console.log(`📡 Checking attendance for venue: ${venue}`);
+    console.log(`Course: ${course}, Group: ${group}`);
 
     const tempStudentRef = doc(db, "ESP32", venue);
     const tempStudentDoc = await getDoc(tempStudentRef);
@@ -1245,27 +1246,42 @@ async function matchStudentAndRecordAttendance(subjectId, venue, course, group) 
         if (uidIndex > -1) {
             unknownUIDs.splice(uidIndex, 1); 
         }
-        if(group === "all"){
-            if(data.course === course){
+        
+        // Check if student belongs to the course first
+        if(data.course === course) {
+            // For "all" group, include all students in the course
+            if(group === "all") {
                 matchedStudents.push({
-                id: doc.id,
-                name: data.name,
-                course: data.course,
-                group: data.group,
-                uid: data.UID
-            });
-            }
-        }else if(data.group === group) {
-            if(data.course === course){
+                    id: doc.id,
+                    name: data.name,
+                    course: data.course,
+                    group: data.group,
+                    uid: data.UID
+                });
+            } 
+            // For specific group, only include students in that group
+            else if(data.group === group) {
                 matchedStudents.push({
-                id: doc.id,
-                name: data.name,
-                course: data.course,
-                group: data.group,
-                uid: data.UID
-            });
+                    id: doc.id,
+                    name: data.name,
+                    course: data.course,
+                    group: data.group,
+                    uid: data.UID
+                });
+            } 
+            // Students in the right course but wrong group are invalid
+            else {
+                invalidStudents.push({
+                    studentId: doc.id,
+                    uid: data.UID,
+                    name: data.name,
+                    course: data.course,
+                    group: data.group
+                });
             }
-        } else {
+        } 
+        // Students in the wrong course are also invalid
+        else {
             invalidStudents.push({
                 studentId: doc.id,
                 uid: data.UID,
@@ -1275,8 +1291,6 @@ async function matchStudentAndRecordAttendance(subjectId, venue, course, group) 
             });
         }
     });
-
-
 
     console.log(" Matched Students:", matchedStudents);
     console.log(" Invalid Students:", invalidStudents);
@@ -1290,7 +1304,8 @@ async function matchStudentAndRecordAttendance(subjectId, venue, course, group) 
             studentId: student.id,
             courseId: student.course,
             subjectId: subjectId,
-            status: "present"
+            status: "present",
+            group: student.group // Include group in the record
         });
     });
 
@@ -1300,7 +1315,8 @@ async function matchStudentAndRecordAttendance(subjectId, venue, course, group) 
             studentId: student.studentId,
             courseId: student.course,
             subjectId: subjectId,
-            status: "invalid"  // 课程或小组不匹配
+            status: "invalid",  // Course or group doesn't match
+            group: student.group // Include group in the record
         });
     });
 
@@ -1310,14 +1326,11 @@ async function matchStudentAndRecordAttendance(subjectId, venue, course, group) 
             studentId: null,
             courseId: null,
             subjectId: subjectId,
-            status: "unknown"  // UID 没有对应的学生
+            status: "unknown"  // UID has no corresponding student
         });
     });
-    return studentRecords; 
-
-    console.log(" studentRecords(M):", studentRecords);
-
-    alert(`Attendance updated: ${matchedStudents.length} present, ${invalidStudents.length} invalid, ${unknownUIDs.length} unknown.`);
+    
+    return studentRecords;
 }
 
 async function saveAttendanceToFirestore(subjectId, courseId, group, studentRecords) {
@@ -1486,11 +1499,7 @@ window.toggleNFC = async function(subjectId, course, group, startTime, endTime, 
 async function processAttendance(subjectId, venue, course, group) {
     let studentRecords = await matchStudentAndRecordAttendance(subjectId, venue, course, group);
 
-    if (group !== "all") {
-        studentRecords = studentRecords.filter(student => student.group === group);
-    }
-
-    //  Remove invalid student records (null studentId or courseId)
+    // Remove invalid student records (null studentId or courseId)
     studentRecords = studentRecords.filter(record => record.studentId && record.courseId);
 
     if (studentRecords.length > 0) {
@@ -1509,6 +1518,7 @@ let processedUIDs = new Set(); // To track already processed student UIDs
 
 function startMonitoringAttendance(venue, subjectId, course, group) {
     console.log(` Listening for NFC data at venue: ${venue}...`);
+    console.log(` For Course: ${course}, Subject: ${subjectId}, Group: ${group}`);
 
     const tempStudentRef = doc(db, "ESP32", venue);
 
@@ -1547,20 +1557,60 @@ function startMonitoringAttendance(venue, subjectId, course, group) {
         const querySnapshot = await getDocs(q);
 
         let matchedStudents = [];
+        let invalidStudents = [];
         let unknownUIDs = new Set(newUIDs);
 
         querySnapshot.forEach((doc) => {
             const data = doc.data();
             unknownUIDs.delete(data.UID);
 
-            matchedStudents.push({
-                id: doc.id,
-                name: data.name,
-                course: data.course,
-                group: data.group,
-                uid: data.UID,
-                status: "present"
-            });
+            // Check if student belongs to the course first
+            if(data.course === course) {
+                // For "all" group, include all students in the course
+                if(group === "all") {
+                    matchedStudents.push({
+                        id: doc.id,
+                        name: data.name,
+                        course: data.course,
+                        group: data.group,
+                        uid: data.UID,
+                        status: "present"
+                    });
+                } 
+                // For specific group, only include students in that group
+                else if(data.group === group) {
+                    matchedStudents.push({
+                        id: doc.id,
+                        name: data.name,
+                        course: data.course,
+                        group: data.group,
+                        uid: data.UID,
+                        status: "present"
+                    });
+                } 
+                // Students in the right course but wrong group are invalid
+                else {
+                    invalidStudents.push({
+                        id: doc.id,
+                        name: data.name,
+                        course: data.course,
+                        group: data.group,
+                        uid: data.UID,
+                        status: "invalid"
+                    });
+                }
+            } 
+            // Students in the wrong course are also invalid
+            else {
+                invalidStudents.push({
+                    id: doc.id,
+                    name: data.name,
+                    course: data.course,
+                    group: data.group,
+                    uid: data.UID,
+                    status: "invalid"
+                });
+            }
         });
 
         let unknownStudents = [...unknownUIDs].map(uid => ({
@@ -1572,7 +1622,7 @@ function startMonitoringAttendance(venue, subjectId, course, group) {
             status: "unknown"
         }));
 
-        let allStudents = [...matchedStudents, ...unknownStudents];
+        let allStudents = [...matchedStudents, ...invalidStudents, ...unknownStudents];
 
         console.log(" New Attendance Data:", allStudents);
         updateUI(allStudents);
