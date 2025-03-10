@@ -2112,6 +2112,9 @@ document.getElementById("absenceForm").addEventListener("submit", async (event) 
                 Thursday: [], Friday: [], Saturday: [], Sunday: []
             };
 
+            // Create a cache for lecturer information to avoid duplicate fetches
+            const lecturerCache = {};
+
             try {
                 // Get student data
                 const studentRef = doc(db, "student", studentID);
@@ -2183,6 +2186,36 @@ document.getElementById("absenceForm").addEventListener("submit", async (event) 
                     return;
                 }
 
+                // Fetch lecturer information for each session
+                for (const day in sessionsByDay) {
+                    for (const session of sessionsByDay[day]) {
+                        if (session.lectureID) {
+                            // Check if lecturer is already cached
+                            if (!lecturerCache[session.lectureID]) {
+                                try {
+                                    const lecturerRef = doc(db, "lecturer", session.lectureID);
+                                    const lecturerDoc = await getDoc(lecturerRef);
+                                    
+                                    if (lecturerDoc.exists()) {
+                                        const lecturerData = lecturerDoc.data();
+                                        lecturerCache[session.lectureID] = lecturerData.name || "Unknown Lecturer";
+                                    } else {
+                                        lecturerCache[session.lectureID] = "Unknown Lecturer";
+                                    }
+                                } catch (err) {
+                                    console.error(`Error fetching lecturer ${session.lectureID}:`, err);
+                                    lecturerCache[session.lectureID] = "Unknown Lecturer";
+                                }
+                            }
+                            
+                            // Add lecturer name to session data
+                            session.lecturerName = lecturerCache[session.lectureID];
+                        } else {
+                            session.lecturerName = "Not Assigned";
+                        }
+                    }
+                }
+
                 // Sort sessions by time for each day
                 for (const day in sessionsByDay) {
                     sessionsByDay[day].sort((a, b) => 
@@ -2228,6 +2261,7 @@ document.getElementById("absenceForm").addEventListener("submit", async (event) 
                                 <span class="session-type">${session.type}</span>
                             </div>
                             <div class="session-detail">Course: ${session.course}</div>
+                            <div class="session-detail">Lecturer: ${session.lecturerName || 'Not Assigned'}</div>
                             <div class="session-detail">Venue: ${session.class}</div>
                             <div class="session-detail">Time: ${session.startTime} - ${session.endTime}</div>
                             ${session.isExtra ? '<div class="session-detail" style="color: #48bb78;">Extra Course</div>' : ''}
