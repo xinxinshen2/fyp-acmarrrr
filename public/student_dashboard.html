@@ -827,7 +827,6 @@
             <div class="nav-btn"> <p> Home  </p> </div>
             <div class="nav-btn"> <p> Absence Form  </p> </div>
             <div class="nav-btn"> <p> History  </p> </div>
-            <div class="nav-btn"> <p> Data Analysis </p> </div>
             <div class="nav-btn"> <p> Timetable  </p> </div>
         </div>
     </nav>
@@ -865,10 +864,6 @@
         <div id="absenceHistory" class="history-container">
             <p class="loading">Loading your absence history...</p>
         </div>
-    </div>
-
-    <div class="dataSpace" style="display: none;">
-        <h2>Data Analysis</h2>
     </div>
 
     <div class="functionSpace" style="display: none;">
@@ -1220,7 +1215,6 @@
                 home: document.querySelector(".homeSpace"),
                 absenceForm: document.querySelector(".absenceFormSpace"),
                 history: document.querySelector(".historySpace"),
-                data: document.querySelector(".dataSpace"),
                 timetable: document.querySelector(".timeTableSpace")
             };
 
@@ -1252,9 +1246,6 @@
                             loadAbsenceHistory();
                             break;
                         case 3:
-                            spaces.data.style.display = "block";
-                            break;
-                        case 4:
                             spaces.timetable.style.display = "block";
                             loadTimetable();
                             break;
@@ -2282,7 +2273,6 @@ document.getElementById("absenceForm").addEventListener("submit", async (event) 
                 home: document.querySelector(".homeSpace"),
                 absenceForm: document.querySelector(".absenceFormSpace"),
                 history: document.querySelector(".historySpace"),
-                data: document.querySelector(".dataSpace"),
                 timetable: document.querySelector(".timeTableSpace")
             };
 
@@ -2314,9 +2304,6 @@ document.getElementById("absenceForm").addEventListener("submit", async (event) 
                             loadAbsenceHistory();
                             break;
                         case 3:
-                            spaces.data.style.display = "block";
-                            break;
-                        case 4:
                             spaces.timetable.style.display = "block";
                             loadTimetable();
                             break;
