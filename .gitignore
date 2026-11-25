@@ -67,3 +67,8 @@ node_modules/
 
 # dataconnect generated files
 .dataconnect
+
+# Local configuration and generated browser configuration
+.env.*
+!.env.example
+public/app-config.js

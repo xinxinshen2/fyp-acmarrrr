@@ -14,7 +14,7 @@ Traditional classroom attendance involves manual record keeping, which can make 
 | --- | --- |
 | Administrator | Manage student and lecturer records, courses, subjects, groups, classrooms, and timetables; review attendance statistics. |
 | Lecturer | View scheduled classes, record attendance using NFC/RFID, mobile barcode scanning, or manual marking; review absence requests and generate attendance reports. |
-| Student | View timetables and attendance information, submit absence requests with supporting documents, and review request history and notifications. |
+| Student | View timetables and attendance information, submit absence requests (optional supporting documents require Google Drive configuration), and review request history and notifications. |
 
 - Firebase email/password authentication and role-specific dashboard navigation.
 - ESP32 attendance integration through card UID records stored in Cloud Firestore.
@@ -35,7 +35,7 @@ Traditional classroom attendance involves manual record keeping, which can make 
 | ZXing | Camera-based barcode recognition |
 | Chart.js | Dashboard visualizations |
 | jsPDF / AutoTable | Attendance report PDF export |
-| Google Drive API | Supporting document upload integration |
+| Google Drive API | Optional supporting document upload integration |
 
 ## System Architecture
 
@@ -88,9 +88,31 @@ This academic prototype is not a self-contained demo with a provisioned backend 
    ```
 
 2. Create your own Firebase project and web app. Enable email/password authentication and create a Cloud Firestore database.
-3. Replace the legacy Firebase web configuration in the HTML pages with your own configuration. Set your own Firebase project and hosting site in the local hosting configuration.
+3. Install Node.js 22 or newer. Copy the configuration template to a local `.env` file:
+
+   Windows PowerShell:
+
+   ```powershell
+   Copy-Item .env.example .env
+   ```
+
+   macOS/Linux:
+
+   ```bash
+   cp .env.example .env
+   ```
+
+   Fill in the Firebase web app configuration from Firebase Console → Project settings → Your apps. Then generate the browser configuration:
+
+   ```bash
+   node scripts/configure.mjs
+   ```
+
+   The script writes `public/app-config.js`. Both `.env` and the generated file are ignored by Git. Run the script again after editing `.env`. Do not put secrets into frontend configuration. The browser necessarily receives Firebase web configuration and the optional OAuth client ID and folder ID.
+
+   The original Firebase Hosting project/site references remain in `.firebaserc` and `firebase.json`. Replace or remove those references before deploying to a different project; always select your intended project explicitly.
 4. Implement and verify restrictive Firestore security rules before enabling data access. Create authorized test accounts and synthetic role profiles, course records, and attendance sessions. Do not use public read/write rules.
-5. Replace or disable the legacy Google Drive integration. Configure your own OAuth client and appropriate permissions if document uploads are needed, and connect an independently configured ESP32 device if testing card-based attendance.
+5. Configure the optional Google Drive integration below if needed. Connect an independently configured ESP32 device if testing card-based attendance.
 6. Install Node.js and the Firebase CLI, then serve the hosting files locally:
 
    ```bash
@@ -102,9 +124,30 @@ This academic prototype is not a self-contained demo with a provisioned backend 
 
 A complete hardware firmware setup, database seed, deployed security configuration, and end-to-end test suite have not been verified.
 
+## Environment Configuration
+
+| Variable | Required | Where to obtain it |
+| --- | --- | --- |
+| `FIREBASE_API_KEY` | Yes | Firebase web app configuration |
+| `FIREBASE_AUTH_DOMAIN` | Yes | Firebase web app configuration |
+| `FIREBASE_PROJECT_ID` | Yes | Firebase web app configuration |
+| `FIREBASE_APP_ID` | Yes | Firebase web app configuration |
+| `FIREBASE_MESSAGING_SENDER_ID` | Yes | Firebase web app configuration |
+| `FIREBASE_STORAGE_BUCKET` | No | Firebase web app configuration |
+| `FIREBASE_DATABASE_URL` | No | Firebase Realtime Database URL, if applicable |
+| `FIREBASE_MEASUREMENT_ID` | No | Firebase web app configuration, if applicable |
+| `GOOGLE_DRIVE_CLIENT_ID` | No | Google Cloud OAuth 2.0 Web application client ID |
+| `GOOGLE_DRIVE_FOLDER_ID` | No | Destination Drive folder ID accessible to the OAuth application |
+
+### Optional Google Drive uploads
+
+Enable Google Drive API in your own Google Cloud project, configure the OAuth consent screen and create a Web application OAuth client. Add the exact development or hosting origin to Authorized JavaScript origins. Fill in the client ID in `.env` and regenerate the browser configuration. The folder ID is optional; if omitted, Drive uses the signed-in user's default location. With the limited `drive.file` scope, the application must have access to the selected destination folder; an arbitrary folder ID alone does not grant access. Reviewers need appropriate file/folder access separately.
+
+No Google API key or OAuth client secret is needed for the browser token flow. Never place an OAuth client secret, service account private key, access token, refresh token or real user password in this frontend configuration. If Drive is unconfigured, students can submit absence requests without attachments. Prior credentials in Git history must be revoked or rotated separately; removing them from the latest source does not revoke them.
+
 ## Known Limitations and Future Improvements
 
-- Centralize Firebase and third-party configuration and replace legacy project-specific integration settings.
+- Verify Firebase security rules and replace legacy hosting targets for independent deployments.
 - Enforce role-based authorization and ownership checks through backend authorization or security rules rather than relying on browser session state.
 - Replace the original default-password account creation flow with secure account provisioning and password setup.
 - Validate attendance updates, handle concurrent writes, and ensure attendance and absence records remain consistent.

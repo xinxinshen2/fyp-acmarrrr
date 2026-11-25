@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script src="app-config.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" href="dumbbell.png" type="image/icon type">
@@ -639,16 +640,11 @@
             serverTimestamp
         } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-firestore.js";
 
-        const firebaseConfig = {
-            apiKey: "REMOVED",
-            authDomain: "advanceas-d8db4.firebaseapp.com",
-            databaseURL: "https://advanceas-d8db4-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "advanceas-d8db4",
-            storageBucket: "advanceas-d8db4.firebasestorage.app",
-            messagingSenderId: "878892786344",
-            appId: "1:878892786344:web:33bb5a97d99daf049d189d",
-            measurementId: "G-PLRRKT6RWW"
-        };
+        const firebaseConfig = window.FYP_CONFIG?.firebase;
+        if (!firebaseConfig) {
+            alert("Firebase is not configured. Copy .env.example to .env and run node scripts/configure.mjs.");
+            throw new Error("Missing generated app-config.js");
+        }
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
