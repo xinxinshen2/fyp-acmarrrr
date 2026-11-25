@@ -4,6 +4,12 @@ A Diploma in Information Technology final-year project developed to simplify cla
 
 **Project status:** Academic prototype (2025). This repository preserves the original student project for educational and portfolio review. It is not intended for production deployment.
 
+## Live Demo
+
+**[Open the Advanced Attendance System](https://advanceattendance.firebaseapp.com/)**
+
+The hosted academic prototype may differ from the latest repository version. Some features require authentication or hardware configuration.
+
 ## Overview
 
 Traditional classroom attendance involves manual record keeping, which can make it difficult to consolidate records, identify absences, and prepare reports. This project explores an integrated approach to student identification, scheduled class attendance, centralized records, and role-specific access to attendance information.
