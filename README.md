@@ -166,4 +166,14 @@ No Google API key or OAuth client secret is needed for the browser token flow. N
 
 Developed as a Diploma in IT final-year project at Sunway College (2025). The project demonstrates web application development, cloud data integration, role-specific workflows, hardware-assisted attendance recording, and report generation.
 
+## Project Team
+
+This project was developed collaboratively by three Diploma in IT students at Sunway College.
+
+| Team member | GitHub |
+| --- | --- |
+| Tan Weijun | [@xinxinshen2](https://github.com/xinxinshen2) |
+| Teoh Jing Whei | [@JWBourbon](https://github.com/JWBourbon) |
+| Lee Sze Ying | [@leeszeying](https://github.com/leeszeying) / [@xinxindebaobei2324](https://github.com/xinxindebaobei2324) |
+
 This repository is provided for academic and portfolio review. No open-source license is asserted here; obtain permission from the relevant contributors before reusing or redistributing their work.
